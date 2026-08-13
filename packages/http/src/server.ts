@@ -11,6 +11,7 @@ import {
   deleteBlueprint,
   renderStored,
   healthz,
+  writeJson,
   type RouteHandler
 } from './routes.js'
 
@@ -56,26 +57,20 @@ function matchRoute(
   return undefined
 }
 
-function writeJson(res: ServerResponse, status: number, body: unknown): void {
-  const text = JSON.stringify(body)
-  res.writeHead(status, {
-    'content-type': 'application/json',
-    'content-length': Buffer.byteLength(text)
-  })
-  res.end(text)
-}
-
 async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const pathname = new URL(req.url ?? '/', 'http://localhost').pathname
+  const segments = pathname.split('/').filter(Boolean)
 
   // Cheapest possible rejection: auth before routing, routing before any
-  // body read. /healthz is the sole exception, checked by exact path.
-  if (pathname !== '/healthz' && !isAuthorized(req)) {
+  // body read. /healthz is the sole exception, exempted by the same
+  // segments computation the router uses below (not a separate string
+  // compare) so the two can't disagree about what counts as "/healthz".
+  const isHealthz = segments.length === 1 && segments[0] === 'healthz'
+  if (!isHealthz && !isAuthorized(req)) {
     writeJson(res, 401, { error: 'unauthorized' })
     return
   }
 
-  const segments = pathname.split('/').filter(Boolean)
   const match = matchRoute(req.method ?? 'GET', segments)
   if (!match) {
     writeJson(res, 404, { error: 'not found' })
@@ -88,6 +83,13 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
 /** Builds the HTTP server. `config` is currently unused here (consumed by index.ts for listen/bind) but kept for signature parity and future request-scoped config. */
 export function createServer(_config: Config): Server {
   return createHttpServer((req, res) => {
+    // Defensive no-ops: without a listener, an 'error' event on either
+    // stream (e.g. a proxy resetting the connection, write-after-destroy on
+    // some future Node version) is an uncaught exception that crashes the
+    // process. Not real error handling — just insurance.
+    req.on('error', () => {})
+    res.on('error', () => {})
+
     handleRequest(req, res).catch((error: unknown) => {
       console.error('[resume-blueprint-http] unhandled error:', error)
       if (!res.headersSent) {

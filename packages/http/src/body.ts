@@ -17,18 +17,30 @@ function taggedError(message: string, httpStatus: number): HttpTaggedError {
  * routes (`GET`, `DELETE`) have an optional or absent body.
  *
  * Enforces `maxBytes` while streaming, not after buffering the whole thing,
- * so an oversized body is rejected without holding it all in memory first.
+ * so an oversized body is never held in memory in full: once `total`
+ * crosses `maxBytes` we stop pushing chunks onto `chunks`, but we still
+ * drain the async iterator to the end (rather than throwing immediately
+ * and abandoning it) so the request reaches a clean 'end' instead of being
+ * left mid-body — `routes.ts`'s `writeJson` separately forces the socket
+ * closed on the 413 response this produces, which is the piece that
+ * actually keeps that connection from lingering.
  */
 export async function readJsonBody(req: IncomingMessage, maxBytes = 5 * 1024 * 1024): Promise<unknown> {
   const chunks: Buffer[] = []
   let total = 0
+  let exceeded = false
 
   for await (const chunk of req) {
     total += chunk.length
     if (total > maxBytes) {
-      throw taggedError(`request body exceeds ${maxBytes} bytes`, 413)
+      exceeded = true
+      continue
     }
     chunks.push(chunk as Buffer)
+  }
+
+  if (exceeded) {
+    throw taggedError(`request body exceeds ${maxBytes} bytes`, 413)
   }
 
   if (total === 0) return undefined

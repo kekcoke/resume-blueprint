@@ -9,6 +9,7 @@ import type { AddressInfo } from 'node:net'
 
 import { createServer } from '../dist/server.js'
 import { loadConfig } from '../dist/config.js'
+import { MAX_CONCURRENT_RENDERS } from '../dist/renderLimit.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const FIXTURES = resolve(HERE, '..', '..', '..', 'fixtures')
@@ -192,6 +193,14 @@ describe('auth', () => {
 
     const healthRes = await fetch(`${harness.baseUrl}/healthz`)
     assert.equal(healthRes.status, 200)
+
+    // Trailing slash must be exempt too: the router is trailing-slash
+    // tolerant (segments computed via split('/').filter(Boolean)), so
+    // /healthz/ resolves to the same route and must not require auth.
+    const healthSlashRes = await fetch(`${harness.baseUrl}/healthz/`, {
+      headers: {} // deliberately no Authorization header
+    })
+    assert.equal(healthSlashRes.status, 200)
   })
 })
 
@@ -234,6 +243,7 @@ describe('resource limits', () => {
       body: JSON.stringify({ id: 'big', blueprint: { basics: { summary: big } } })
     })
     assert.equal(res.status, 413)
+    await res.text() // drain the body, matching every other test in this file
   })
 
   test('deeply nested patch is rejected cleanly, not a crash', async () => {
@@ -253,7 +263,43 @@ describe('resource limits', () => {
       method: 'PATCH',
       body: JSON.stringify({ patch: deep })
     })
-    assert.ok(res.status >= 400 && res.status < 500, `expected 4xx, got ${res.status}`)
+    assert.equal(res.status, 400)
+    const body = (await res.json()) as { error: string }
+    assert.match(body.error, /nested too deeply/)
+  })
+})
+
+describe('render concurrency cap', () => {
+  test('excess concurrent renders get 503, the rest still produce valid PDFs', async () => {
+    harness = await startServer({ RESUME_BLUEPRINT_HOME: dir, RESUME_BLUEPRINT_PORT: '0' })
+    const sample = await readFixture('sample.json')
+
+    const totalRequests = MAX_CONCURRENT_RENDERS + 11 // 15 when the cap is 4
+    const responses = await Promise.all(
+      Array.from({ length: totalRequests }, () =>
+        fetch(`${harness.baseUrl}/render`, { method: 'POST', body: JSON.stringify(sample) })
+      )
+    )
+
+    const succeeded = responses.filter((res) => res.status === 200)
+    const throttled = responses.filter((res) => res.status === 503)
+
+    assert.ok(succeeded.length > 0, 'expected at least one 200')
+    assert.ok(throttled.length > 0, 'expected at least one 503 once the cap is exceeded')
+    assert.equal(succeeded.length + throttled.length, totalRequests, 'no other status codes expected')
+    assert.ok(succeeded.length <= totalRequests, 'sanity: cannot succeed more than requested')
+
+    for (const res of throttled) {
+      assert.equal(res.headers.get('retry-after'), '5')
+      const body = (await res.json()) as { error: string }
+      assert.equal(body.error, 'too many concurrent renders, try again shortly')
+    }
+
+    for (const res of succeeded) {
+      assert.equal(res.headers.get('content-type'), 'application/pdf')
+      const buf = Buffer.from(await res.arrayBuffer())
+      assert.equal(buf.subarray(0, 5).toString(), '%PDF-')
+    }
   })
 })
 
