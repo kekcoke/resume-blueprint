@@ -1,0 +1,23 @@
+{
+  "name": "@resume-blueprint/cli",
+  "version": "0.1.0",
+  "description": "Command-line interface for rendering and validating resume blueprints.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "resume": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@resume-blueprint/core": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3"
+  }
+}
