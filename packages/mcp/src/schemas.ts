@@ -58,10 +58,16 @@ export const ResumeValidateInput = z.object({
   blueprint: z.record(z.unknown())
 })
 
+// 300_000ms (5 minutes) is generous enough for a cold-cache first Tectonic
+// compile — core's own tests budget up to 180s for that — while ruling out
+// a caller pipelining renders with multi-day timeouts to hold subprocesses
+// alive indefinitely (see Gate 2 MCP review, finding 1).
+const MAX_RENDER_TIMEOUT_MS = 300_000
+
 export const ResumeRenderInput = z.object({
   id: z.string(),
   template: TemplateId.optional(),
-  timeoutMs: z.number().int().positive().optional()
+  timeoutMs: z.number().int().positive().max(MAX_RENDER_TIMEOUT_MS).optional()
 })
 
 export const ResumeTexInput = z.object({
@@ -69,9 +75,13 @@ export const ResumeTexInput = z.object({
   template: TemplateId.optional()
 })
 
+// Capped for the same reason as timeoutMs above: an unbounded `limit` lets a
+// caller force an arbitrarily large `git log` read.
+const MAX_HISTORY_LIMIT = 500
+
 export const ResumeHistoryInput = z.object({
   id: z.string(),
-  limit: z.number().int().positive().optional()
+  limit: z.number().int().positive().max(MAX_HISTORY_LIMIT).optional()
 })
 
 export const ResumeDiffInput = z.object({
@@ -87,3 +97,72 @@ export const ResumeRevertInput = z.object({
 })
 
 export const ResumeTemplatesInput = z.object({})
+
+// --- Output schemas -----------------------------------------------------
+//
+// Declared so the SDK's validateToolOutput actually checks structuredContent
+// rather than being a no-op (see docs/phase-2-plan-b.md's Gate 3 note and
+// Gate 2 MCP review, finding 7). Kept as loose as the underlying data itself
+// is loosely-typed, matching the philosophy already used for input schemas
+// above — a blueprint's shape is `z.record(z.unknown())` on the way in, so
+// it stays that way on the way out too.
+
+/** Shared by every mutation tool that returns just the new `{ id, rev }`. */
+const IdRevOutput = { id: z.string(), rev: z.string() }
+
+export const ResumeListOutput = z.object({
+  blueprints: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string().optional(),
+      updatedAt: z.string(),
+      rev: z.string()
+    })
+  )
+})
+
+export const ResumeGetOutput = z.object({
+  blueprint: z.record(z.unknown()),
+  rev: z.string()
+})
+
+export const ResumeCreateOutput = z.object(IdRevOutput)
+export const ResumePatchOutput = z.object(IdRevOutput)
+export const ResumeSectionAppendOutput = z.object(IdRevOutput)
+export const ResumeSectionUpdateOutput = z.object(IdRevOutput)
+export const ResumeSectionRemoveOutput = z.object(IdRevOutput)
+export const ResumeRemoveOutput = z.object(IdRevOutput)
+export const ResumeRevertOutput = z.object(IdRevOutput)
+
+export const ResumeValidateOutput = z.object({
+  valid: z.boolean(),
+  errors: z.string().optional()
+})
+
+export const ResumeRenderOutput = z.object({
+  path: z.string(),
+  pageCount: z.number().int().nonnegative(),
+  byteSize: z.number().int().nonnegative()
+})
+
+export const ResumeTexOutput = z.object({
+  texDoc: z.string()
+})
+
+export const ResumeHistoryOutput = z.object({
+  commits: z.array(
+    z.object({
+      rev: z.string(),
+      date: z.string(),
+      message: z.string()
+    })
+  )
+})
+
+export const ResumeDiffOutput = z.object({
+  diff: z.string()
+})
+
+export const ResumeTemplatesOutput = z.object({
+  templates: z.array(z.number())
+})

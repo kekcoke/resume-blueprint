@@ -26,10 +26,33 @@ import {
   ResumeHistoryInput,
   ResumeDiffInput,
   ResumeRevertInput,
-  ResumeTemplatesInput
+  ResumeTemplatesInput,
+  ResumeListOutput,
+  ResumeGetOutput,
+  ResumeCreateOutput,
+  ResumePatchOutput,
+  ResumeSectionAppendOutput,
+  ResumeSectionUpdateOutput,
+  ResumeSectionRemoveOutput,
+  ResumeRemoveOutput,
+  ResumeValidateOutput,
+  ResumeRenderOutput,
+  ResumeTexOutput,
+  ResumeHistoryOutput,
+  ResumeDiffOutput,
+  ResumeRevertOutput,
+  ResumeTemplatesOutput
 } from './schemas.js'
 import { toToolError } from './errors.js'
-import { renderDir, renderPath, writeRenderFile, pruneOldRenders, countPages } from './render.js'
+import {
+  renderDir,
+  renderPath,
+  writeRenderFile,
+  pruneOldRenders,
+  countPages,
+  withRenderLock
+} from './render.js'
+import { assertReasonableDepth } from './validate.js'
 
 /** Actor recorded on every commit this server makes. */
 const ACTOR = 'mcp'
@@ -52,6 +75,7 @@ export function registerTools(server: McpServer): void {
       title: 'List blueprints',
       description: 'Lists every stored blueprint with its id, name, and last-modified revision.',
       inputSchema: ResumeListInput,
+      outputSchema: ResumeListOutput,
       annotations: { readOnlyHint: true }
     },
     async () => {
@@ -76,6 +100,7 @@ export function registerTools(server: McpServer): void {
       title: 'Get blueprint',
       description: 'Fetches a stored blueprint and its current revision.',
       inputSchema: ResumeGetInput,
+      outputSchema: ResumeGetOutput,
       annotations: { readOnlyHint: true }
     },
     async ({ id }) => {
@@ -97,6 +122,7 @@ export function registerTools(server: McpServer): void {
       title: 'Create blueprint',
       description: 'Creates a new blueprint, optionally seeded with initial content.',
       inputSchema: ResumeCreateInput,
+      outputSchema: ResumeCreateOutput,
       annotations: { readOnlyHint: false }
     },
     async ({ id, blueprint }) => {
@@ -118,10 +144,17 @@ export function registerTools(server: McpServer): void {
       title: 'Patch blueprint',
       description: 'Applies an RFC 7386 JSON Merge Patch to a stored blueprint. A `null` value deletes a key.',
       inputSchema: ResumePatchInput,
+      outputSchema: ResumePatchOutput,
       annotations: { readOnlyHint: false }
     },
     async ({ id, patch, expectedRev }) => {
       try {
+        // Store's applyMergePatch recurses to the depth of `patch` with no
+        // cap, before parseBlueprint validates anything — reject
+        // unreasonably deep patches here, at the MCP boundary, rather than
+        // risking a stack overflow inside the store (packages/store is out
+        // of scope for this gate; see validate.ts).
+        assertReasonableDepth(patch)
         const { rev } = await store.patch(id, patch, { actor: ACTOR, expectedRev })
         return {
           content: [{ type: 'text', text: `patched "${id}" @ ${revText(rev)}` }],
@@ -139,6 +172,7 @@ export function registerTools(server: McpServer): void {
       title: 'Append section item',
       description: 'Appends an item to one of a blueprint\'s array sections (e.g. work, education, skills).',
       inputSchema: ResumeSectionAppendInput,
+      outputSchema: ResumeSectionAppendOutput,
       annotations: { readOnlyHint: false }
     },
     async ({ id, section, item, expectedRev }) => {
@@ -160,6 +194,7 @@ export function registerTools(server: McpServer): void {
       title: 'Update section item',
       description: 'Replaces the item at a given index within one of a blueprint\'s array sections.',
       inputSchema: ResumeSectionUpdateInput,
+      outputSchema: ResumeSectionUpdateOutput,
       annotations: { readOnlyHint: false }
     },
     async ({ id, section, index, item, expectedRev }) => {
@@ -181,6 +216,7 @@ export function registerTools(server: McpServer): void {
       title: 'Remove section item',
       description: 'Removes the item at a given index from one of a blueprint\'s array sections.',
       inputSchema: ResumeSectionRemoveInput,
+      outputSchema: ResumeSectionRemoveOutput,
       annotations: { readOnlyHint: false }
     },
     async ({ id, section, index, expectedRev }) => {
@@ -202,6 +238,7 @@ export function registerTools(server: McpServer): void {
       title: 'Remove blueprint',
       description: 'Deletes a stored blueprint entirely.',
       inputSchema: ResumeRemoveInput,
+      outputSchema: ResumeRemoveOutput,
       annotations: { readOnlyHint: false }
     },
     async ({ id, expectedRev }) => {
@@ -223,6 +260,7 @@ export function registerTools(server: McpServer): void {
       title: 'Validate blueprint',
       description: 'Validates a blueprint against the schema without storing or rendering it.',
       inputSchema: ResumeValidateInput,
+      outputSchema: ResumeValidateOutput,
       annotations: { readOnlyHint: true }
     },
     // Deliberately does not go through toToolError: reporting "invalid" is
@@ -256,6 +294,7 @@ export function registerTools(server: McpServer): void {
         'Renders a stored blueprint to a typeset PDF, writing it to disk under $RESUME_BLUEPRINT_HOME/renders ' +
         'and returning its path, page count, and byte size (never the PDF bytes themselves).',
       inputSchema: ResumeRenderInput,
+      outputSchema: ResumeRenderOutput,
       // Writes a file — a real side effect, unlike resume_tex.
       annotations: { readOnlyHint: false }
     },
@@ -269,8 +308,20 @@ export function registerTools(server: McpServer): void {
 
         const home = resolveHome()
         const path = join(renderDir(home), renderPath(id, rev, effectiveTemplate))
-        await writeRenderFile(pdf, path)
-        await pruneOldRenders(home, id)
+
+        // Serialized per id: concurrent renders of the same blueprint would
+        // otherwise race pruneOldRenders's readdir -> stat -> unlink
+        // sequence (a stale-but-already-removed candidate throws ENOENT).
+        // A prune failure must never fail an otherwise-successful render, so
+        // it's caught and logged to stderr rather than left to propagate.
+        await withRenderLock(id, async () => {
+          await writeRenderFile(pdf, path)
+          try {
+            await pruneOldRenders(home, id)
+          } catch (pruneError) {
+            console.error(`[resume-blueprint-mcp] pruneOldRenders failed for "${id}":`, pruneError)
+          }
+        })
 
         const pageCount = countPages(pdf)
         const byteSize = pdf.length
@@ -294,6 +345,7 @@ export function registerTools(server: McpServer): void {
       title: 'Get LaTeX source',
       description: 'Renders a stored blueprint to its LaTeX source, without compiling it to PDF.',
       inputSchema: ResumeTexInput,
+      outputSchema: ResumeTexOutput,
       annotations: { readOnlyHint: true }
     },
     async ({ id, template }) => {
@@ -317,6 +369,7 @@ export function registerTools(server: McpServer): void {
       title: 'Blueprint history',
       description: 'Lists a blueprint\'s revisions, newest first.',
       inputSchema: ResumeHistoryInput,
+      outputSchema: ResumeHistoryOutput,
       annotations: { readOnlyHint: true }
     },
     async ({ id, limit }) => {
@@ -339,6 +392,7 @@ export function registerTools(server: McpServer): void {
       title: 'Diff revisions',
       description: 'Shows the unified diff between two revisions of a blueprint (revB defaults to the current revision).',
       inputSchema: ResumeDiffInput,
+      outputSchema: ResumeDiffOutput,
       annotations: { readOnlyHint: true }
     },
     async ({ id, revA, revB }) => {
@@ -360,6 +414,7 @@ export function registerTools(server: McpServer): void {
       title: 'Revert blueprint',
       description: 'Restores a blueprint to its content at a prior revision, as a new commit.',
       inputSchema: ResumeRevertInput,
+      outputSchema: ResumeRevertOutput,
       annotations: { readOnlyHint: false }
     },
     async ({ id, rev, expectedRev }) => {
@@ -381,6 +436,7 @@ export function registerTools(server: McpServer): void {
       title: 'List templates',
       description: 'Lists the available template ids.',
       inputSchema: ResumeTemplatesInput,
+      outputSchema: ResumeTemplatesOutput,
       annotations: { readOnlyHint: true }
     },
     async () => {
