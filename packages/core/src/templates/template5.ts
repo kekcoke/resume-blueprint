@@ -1,6 +1,6 @@
 import { stripIndent, source } from 'common-tags'
-import { WHITESPACE } from './constants'
-import type { FormValues, Generator } from '../../types'
+import { WHITESPACE } from './constants.js'
+import type { FormValues, Generator } from '../types.js'
 
 const generator: Omit<Generator, 'resumeHeader'> = {
   profileSection(basics) {

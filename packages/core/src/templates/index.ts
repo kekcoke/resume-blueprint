@@ -1,12 +1,12 @@
-import template1 from './template1'
-import template2 from './template2'
-import template3 from './template3'
-import template4 from './template4'
-import template5 from './template5'
-import template6 from './template6'
-import template7 from './template7'
-import template8 from './template8'
-import template9 from './template9'
+import template1 from './template1.js'
+import template2 from './template2.js'
+import template3 from './template3.js'
+import template4 from './template4.js'
+import template5 from './template5.js'
+import template6 from './template6.js'
+import template7 from './template7.js'
+import template8 from './template8.js'
+import template9 from './template9.js'
 import {
   TEMPLATE1,
   TEMPLATE2,
@@ -17,8 +17,8 @@ import {
   TEMPLATE7,
   TEMPLATE8,
   TEMPLATE9
-} from './constants'
-import { FormValues, TemplateData } from '../../types'
+} from './constants.js'
+import { FormValues, TemplateData } from '../types.js'
 
 /**
  * Generates the LaTeX document based on the selected template
@@ -44,29 +44,29 @@ export default function getTemplateData(data: FormValues): TemplateData {
         opts: {
           cmd: 'xelatex',
           inputs: [
-            '/templates/template2/awesome-cv.cls',
-            '/templates/template2/fontawesome.sty'
+            'template2/awesome-cv.cls',
+            'template2/fontawesome.sty'
           ],
           fonts: [
-            '/templates/template2/fonts/FontAwesome.otf',
-            '/templates/template2/fonts/Roboto-Bold.ttf',
-            '/templates/template2/fonts/Roboto-BoldItalic.ttf',
-            '/templates/template2/fonts/Roboto-Italic.ttf',
-            '/templates/template2/fonts/Roboto-Light.ttf',
-            '/templates/template2/fonts/Roboto-LightItalic.ttf',
-            '/templates/template2/fonts/Roboto-Medium.ttf',
-            '/templates/template2/fonts/Roboto-MediumItalic.ttf',
-            '/templates/template2/fonts/Roboto-Regular.ttf',
-            '/templates/template2/fonts/Roboto-Thin.ttf',
-            '/templates/template2/fonts/Roboto-ThinItalic.ttf',
-            '/templates/template2/fonts/SourceSansPro-Bold.otf',
-            '/templates/template2/fonts/SourceSansPro-BoldIt.otf',
-            '/templates/template2/fonts/SourceSansPro-It.otf',
-            '/templates/template2/fonts/SourceSansPro-Light.otf',
-            '/templates/template2/fonts/SourceSansPro-LightIt.otf',
-            '/templates/template2/fonts/SourceSansPro-Regular.otf',
-            '/templates/template2/fonts/SourceSansPro-Semibold.otf',
-            '/templates/template2/fonts/SourceSansPro-SemiboldIt.otf'
+            'template2/fonts/FontAwesome.otf',
+            'template2/fonts/Roboto-Bold.ttf',
+            'template2/fonts/Roboto-BoldItalic.ttf',
+            'template2/fonts/Roboto-Italic.ttf',
+            'template2/fonts/Roboto-Light.ttf',
+            'template2/fonts/Roboto-LightItalic.ttf',
+            'template2/fonts/Roboto-Medium.ttf',
+            'template2/fonts/Roboto-MediumItalic.ttf',
+            'template2/fonts/Roboto-Regular.ttf',
+            'template2/fonts/Roboto-Thin.ttf',
+            'template2/fonts/Roboto-ThinItalic.ttf',
+            'template2/fonts/SourceSansPro-Bold.otf',
+            'template2/fonts/SourceSansPro-BoldIt.otf',
+            'template2/fonts/SourceSansPro-It.otf',
+            'template2/fonts/SourceSansPro-Light.otf',
+            'template2/fonts/SourceSansPro-LightIt.otf',
+            'template2/fonts/SourceSansPro-Regular.otf',
+            'template2/fonts/SourceSansPro-Semibold.otf',
+            'template2/fonts/SourceSansPro-SemiboldIt.otf'
           ]
         }
       }
@@ -84,17 +84,17 @@ export default function getTemplateData(data: FormValues): TemplateData {
         texDoc: template4(data),
         opts: {
           cmd: 'xelatex',
-          inputs: ['/templates/template4/deedy-resume-openfont.cls'],
+          inputs: ['template4/deedy-resume-openfont.cls'],
           fonts: [
-            '/templates/template4/fonts/Raleway-Bold.otf',
-            '/templates/template4/fonts/Raleway-ExtraBold.otf',
-            '/templates/template4/fonts/Raleway-ExtraLight.otf',
-            '/templates/template4/fonts/Raleway-Heavy.otf',
-            '/templates/template4/fonts/Raleway-Light.otf',
-            '/templates/template4/fonts/Raleway-Medium.otf',
-            '/templates/template4/fonts/Raleway-Regular.otf',
-            '/templates/template4/fonts/Raleway-SemiBold.otf',
-            '/templates/template4/fonts/Raleway-Thin.otf'
+            'template4/fonts/Raleway-Bold.otf',
+            'template4/fonts/Raleway-ExtraBold.otf',
+            'template4/fonts/Raleway-ExtraLight.otf',
+            'template4/fonts/Raleway-Heavy.otf',
+            'template4/fonts/Raleway-Light.otf',
+            'template4/fonts/Raleway-Medium.otf',
+            'template4/fonts/Raleway-Regular.otf',
+            'template4/fonts/Raleway-SemiBold.otf',
+            'template4/fonts/Raleway-Thin.otf'
           ]
         }
       }
@@ -105,8 +105,8 @@ export default function getTemplateData(data: FormValues): TemplateData {
         opts: {
           cmd: 'xelatex',
           inputs: [
-            '/templates/template5/helvetica.sty',
-            '/templates/template5/res.cls'
+            'template5/helvetica.sty',
+            'template5/res.cls'
           ]
         }
       }
@@ -117,21 +117,21 @@ export default function getTemplateData(data: FormValues): TemplateData {
         opts: {
           cmd: 'xelatex',
           inputs: [
-            '/templates/template6/custom-command.tex',
-            '/templates/template6/minimal-resume-config.tex',
-            '/templates/template6/minimal-resume.sty'
+            'template6/custom-command.tex',
+            'template6/minimal-resume-config.tex',
+            'template6/minimal-resume.sty'
           ],
           fonts: [
-            '/templates/template6/fonts/CrimsonText-Bold.ttf',
-            '/templates/template6/fonts/CrimsonText-BoldItalic.ttf',
-            '/templates/template6/fonts/CrimsonText-Italic.ttf',
-            '/templates/template6/fonts/CrimsonText-Regular.ttf',
-            '/templates/template6/fonts/CrimsonText-Roman.ttf',
-            '/templates/template6/fonts/CrimsonText-SemiBold.ttf',
-            '/templates/template6/fonts/CrimsonText-SemiBoldItalic.ttf',
-            '/templates/template6/fonts/Montserrat-Bold.ttf',
-            '/templates/template6/fonts/Montserrat-Light.otf',
-            '/templates/template6/fonts/Montserrat-Regular.ttf'
+            'template6/fonts/CrimsonText-Bold.ttf',
+            'template6/fonts/CrimsonText-BoldItalic.ttf',
+            'template6/fonts/CrimsonText-Italic.ttf',
+            'template6/fonts/CrimsonText-Regular.ttf',
+            'template6/fonts/CrimsonText-Roman.ttf',
+            'template6/fonts/CrimsonText-SemiBold.ttf',
+            'template6/fonts/CrimsonText-SemiBoldItalic.ttf',
+            'template6/fonts/Montserrat-Bold.ttf',
+            'template6/fonts/Montserrat-Light.otf',
+            'template6/fonts/Montserrat-Regular.ttf'
           ]
         }
       }
@@ -142,13 +142,13 @@ export default function getTemplateData(data: FormValues): TemplateData {
         opts: {
           cmd: 'pdflatex',
           inputs: [
-            '/templates/template7/collection.sty',
-            '/templates/template7/moderncv.cls',
-            '/templates/template7/moderncvcolorblue.sty',
-            '/templates/template7/moderncviconsletters.sty',
-            '/templates/template7/moderncviconsmarvosym.sty',
-            '/templates/template7/moderncvstyleclassic.sty',
-            '/templates/template7/tweaklist.sty'
+            'template7/collection.sty',
+            'template7/moderncv.cls',
+            'template7/moderncvcolorblue.sty',
+            'template7/moderncviconsletters.sty',
+            'template7/moderncviconsmarvosym.sty',
+            'template7/moderncvstyleclassic.sty',
+            'template7/tweaklist.sty'
           ]
         }
       }
@@ -158,7 +158,7 @@ export default function getTemplateData(data: FormValues): TemplateData {
         texDoc: template8(data),
         opts: {
           cmd: 'xelatex',
-          inputs: ['/templates/template8/mcdowellcv.cls']
+          inputs: ['template8/mcdowellcv.cls']
         }
       }
 

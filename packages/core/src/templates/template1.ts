@@ -1,6 +1,6 @@
 import { stripIndent, source } from 'common-tags'
-import { WHITESPACE } from './constants'
-import { FormValues, Generator } from '../../types'
+import { WHITESPACE } from './constants.js'
+import { FormValues, Generator } from '../types.js'
 
 const generator: Generator = {
   profileSection(basics) {
