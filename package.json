@@ -1,0 +1,17 @@
+{
+  "name": "resume-blueprint",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local-first resume blueprint service: JSON Resume in, typeset PDF out.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace @resume-blueprint/core && npm run build --workspace @resume-blueprint/cli",
+    "test": "npm run build && npm run test --workspace @resume-blueprint/core"
+  }
+}
