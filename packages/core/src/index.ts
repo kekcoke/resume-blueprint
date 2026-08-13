@@ -1,0 +1,50 @@
+import getTemplateData from './templates/index.js'
+import { parseBlueprint } from './schema.js'
+import { sanitizeBlueprint } from './sanitize.js'
+import { compileTex, type CompileOptions } from './render/tectonic.js'
+import type { TemplateData } from './types.js'
+
+export {
+  BlueprintSchema,
+  parseBlueprint,
+  formatValidationError,
+  isValidationError,
+  SECTION_NAMES,
+  TEMPLATE_IDS
+} from './schema.js'
+export type { Blueprint, BlueprintInput, SectionName } from './schema.js'
+
+export { escapeLatex, sanitizeUrl, sanitizeBlueprint } from './sanitize.js'
+export { compileTex, assetRoot, TectonicError } from './render/tectonic.js'
+export type { CompileOptions } from './render/tectonic.js'
+export type { FormValues, Generator, LaTeXOpts, TemplateData } from './types.js'
+export { default as getTemplateData } from './templates/index.js'
+
+/**
+ * Validates, sanitizes, and renders a blueprint to LaTeX source.
+ *
+ * This is the seam every caller should use rather than reaching for
+ * `getTemplateData` directly — it is what guarantees the document handed to the
+ * engine has been escaped.
+ *
+ * @param input an unvalidated blueprint, e.g. parsed JSON from an agent.
+ * @throws {z.ZodError} if the blueprint fails validation.
+ */
+export function blueprintToTex(input: unknown): TemplateData {
+  return getTemplateData(sanitizeBlueprint(parseBlueprint(input)))
+}
+
+/**
+ * Validates, sanitizes, and renders a blueprint all the way to PDF bytes.
+ *
+ * @param input an unvalidated blueprint, e.g. parsed JSON from an agent.
+ * @throws {z.ZodError} if the blueprint fails validation.
+ * @throws {TectonicError} if compilation fails, with the engine log attached.
+ */
+export async function renderBlueprint(
+  input: unknown,
+  options: CompileOptions = {}
+): Promise<Buffer> {
+  const { texDoc, opts } = blueprintToTex(input)
+  return compileTex(texDoc, opts, options)
+}
