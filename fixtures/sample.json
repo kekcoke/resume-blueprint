@@ -1,0 +1,75 @@
+{
+  "basics": {
+    "name": "Ada Lovelace",
+    "email": "ada@example.com",
+    "phone": "(555) 010-1843",
+    "website": "https://example.com/ada",
+    "location": {
+      "address": "London, UK"
+    }
+  },
+  "work": [
+    {
+      "company": "Analytical Engine Works",
+      "position": "Principal Engineer",
+      "location": "London, UK",
+      "startDate": "Jan 2019",
+      "endDate": "Present",
+      "summary": "Led the numerical methods group.",
+      "highlights": [
+        "Designed the first published algorithm for a general-purpose computing machine",
+        "Cut batch computation latency by 45% across the note-taking pipeline",
+        "Mentored 6 engineers; 3 promoted within 18 months"
+      ]
+    },
+    {
+      "company": "Royal Society",
+      "position": "Research Fellow",
+      "location": "London, UK",
+      "startDate": "Jun 2015",
+      "endDate": "Dec 2018",
+      "highlights": [
+        "Published 4 papers on symbolic computation",
+        "Built the society's first mechanical tabulation workflow"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "University of London",
+      "area": "Mathematics",
+      "studyType": "BSc",
+      "location": "London, UK",
+      "startDate": "2011",
+      "endDate": "2015",
+      "score": "3.9/4.0"
+    }
+  ],
+  "skills": [
+    {
+      "name": "Languages",
+      "keywords": ["TypeScript", "Python", "Rust"]
+    },
+    {
+      "name": "Infrastructure",
+      "keywords": ["Docker", "Postgres", "Kubernetes"]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Note G",
+      "description": "Bernoulli number generator for the Analytical Engine.",
+      "url": "https://example.com/note-g",
+      "keywords": ["algorithms", "computation"]
+    }
+  ],
+  "awards": [
+    {
+      "title": "Gold Medal for Numerical Analysis",
+      "date": "2020",
+      "awarder": "Royal Society",
+      "summary": "Awarded for contributions to mechanical computation."
+    }
+  ],
+  "selectedTemplate": 1
+}

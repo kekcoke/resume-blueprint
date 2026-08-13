@@ -1,0 +1,85 @@
+\documentclass[10pt]{article}
+    \usepackage[english]{babel}
+    \usepackage[hidelinks]{hyperref}
+    \input{minimal-resume-config}
+    \begin{document}
+    \begin{center}
+% Personal
+% -----------------------------------------------------
+{\fontsize{\sizeone}{\sizeone}\fontspec[Path = fonts/,LetterSpace=15]{Montserrat-Regular} ADA LOVELACE}
+\\
+\vspace{2mm}
+{\fontsize{1em}{1em}\fontspec[Path = fonts/]{Montserrat-Light} ada@example.com -- (555) 010-1843 -- London, UK -- \href{https://example.com/ada}{https://example.com/ada}}
+\end{center}
+% Chapter: Education
+      % ------------------
+
+      \chap{EDUCATION}{
+
+      \school
+    {University of London}
+    {2011 – 2015}
+    {BSc Mathematics}
+    {London, UK}
+    {\begin{newitemize}
+        \item GPA: 3.9/4.0
+      \end{newitemize}
+}
+      }
+% Chapter: Work Experience
+      % ------------------------
+      \chap{EXPERIENCE}{
+
+      \job
+            {Analytical Engine Works}
+            {Jan 2019 – Present}
+            {Principal Engineer}
+            {London, UK}
+            {\begin{newitemize}
+  \item {Designed the first published algorithm for a general-purpose computing machine}
+  \item {Cut batch computation latency by 45\% across the note-taking pipeline}
+  \item {Mentored 6 engineers; 3 promoted within 18 months}
+\end{newitemize}}
+      \job
+            {Royal Society}
+            {Jun 2015 – Dec 2018}
+            {Research Fellow}
+            {London, UK}
+            {\begin{newitemize}
+  \item {Published 4 papers on symbolic computation}
+  \item {Built the society's first mechanical tabulation workflow}
+\end{newitemize}}
+    }
+% Chapter: Skills
+% ------------------------
+
+\chap{SKILLS}{
+\begin{newitemize}
+  \item Languages: TypeScript, Python, Rust
+  \item Infrastructure: Docker, Postgres, Kubernetes
+\end{newitemize}
+}
+% Chapter: Projects
+    % ------------------------
+
+    \chap{PROJECTS}{
+
+      \project
+{Note G}
+{algorithms, computation}
+{\href{https://example.com/note-g}{https://example.com/note-g}}
+{Bernoulli number generator for the Analytical Engine.\\}
+    }
+% Chapter: Awards
+    % ------------------------
+
+    \chap{AWARDS}{
+
+      \award
+{Gold Medal for Numerical Analysis}
+{2020}
+{Awarded for contributions to mechanical computation.}
+{Royal Society}
+    }
+    \ 
+    \end{document}

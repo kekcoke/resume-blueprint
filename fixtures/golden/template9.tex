@@ -1,0 +1,156 @@
+\documentclass[fontsize=11pt]{article}
+    \usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+% expansion=false: microtype's font expansion is a pdfTeX feature and errors
+% out under XeTeX-derived engines such as Tectonic. Protrusion, which does
+% the bulk of the visible optical-margin work, is supported and stays on.
+\usepackage[protrusion=true,expansion=false]{microtype}
+\usepackage[svgnames]{xcolor}  % Colours by their 'svgnames'
+\usepackage[margin=0.75in]{geometry}
+  % 700bp, not 700px: "px" is a pdfTeX-only unit and XeTeX-derived engines
+  % (including Tectonic) reject it. pdfTeX's \pdfpxdimen defaults to 1bp,
+  % so this is the identical length, portably spelled.
+  \textheight=700bp
+\usepackage{url}
+\usepackage{lmodern} % Allow arbitrary font sizes
+\usepackage{textcomp}
+\usepackage[hidelinks]{hyperref}
+
+%% Define a new 'modern' style for the url package that will use a smaller font.
+\makeatletter
+\def\url@modernstyle{
+  \@ifundefined{selectfont}{\def\UrlFont{\sf}}{\def\UrlFont{}}}
+\makeatother
+\urlstyle{modern} %% And use the newly defined style.
+
+\frenchspacing              % Better looking spacings after periods
+\pagestyle{empty}           % No pagenumbers/headers/footers
+
+\renewcommand{\familydefault}{\sfdefault}
+
+%%% Custom sectioning (sectsty package)
+%%% ------------------------------------------------------------
+\usepackage{sectsty}
+
+\sectionfont{                 % Change font of \section command
+  \usefont{OT1}{phv}{b}{n}%   % bch-b-n: CharterBT-Bold font
+  \sectionrule{0pt}{0pt}{-5pt}{3pt}}
+
+%%% Macros
+%%% ------------------------------------------------------------
+\newlength{\spacebox}
+\settowidth{\spacebox}{8888888888}      % Box to align text
+\newcommand{\sepspace}{\vspace*{1em}}   % Vertical space macro
+
+\newcommand{\MyName}[1]{ % Name
+    \Huge \usefont{OT1}{phv}{b}{n} \hfill #1
+    \par \normalsize \normalfont}
+
+\newcommand{\MySlogan}[1]{ % Slogan (optional)
+    \large \usefont{OT1}{phv}{m}{n}\hfill \textit{#1}
+    \par \normalsize \normalfont}
+
+\newcommand{\NewPart}[1]{\section*{\uppercase{#1}}}
+
+\newcommand{\PersonalEntry}[2]{
+    \noindent\hangindent=2em\hangafter=0 % Indentation
+    \parbox{\spacebox}{                  % Box to align text
+    \textit{#1}}                      % Entry name (birth, address, etc.)
+    \hspace{1.5em} #2 \par}              % Entry value
+
+\newcommand{\SkillsEntry}[2]{                % Same as \PersonalEntry
+    \noindent\hangindent=2em\hangafter=0 % Indentation
+    \parbox{\spacebox}{                  % Box to align text
+    \textit{#1}}                    % Entry name (birth, address, etc.)
+    \hspace{1.5em} #2 \par}              % Entry value
+
+\newcommand{\AwardsEntry}[2]{                % Same as \PersonalEntry
+    \noindent\hangindent=2em\hangafter=0 % Indentation
+    \parbox{\spacebox}{                  % Box to align text
+    \textit{#1}}                    % Entry name (birth, address, etc.)
+    \hspace{1.5em} #2 \par}              % Entry value
+
+\newcommand{\EducationEntry}[4]{
+    \noindent \textbf{#1} \hfill      % Study
+    \colorbox{Black}{
+      \parbox{8.5em}{
+      \hfill\color{White}#2}} \par  % Duration
+    \noindent \textit{#3} \par        % School
+    \noindent\hangindent=2em\hangafter=0 \small #4 % Description
+    \normalsize \par}
+
+\newcommand{\WorkEntry}[4]{       % Same as \EducationEntry
+    \noindent \textbf{#1} \hfill      % Jobname
+    \colorbox{Black}{%
+      \parbox{9em}{%
+      \hfill\color{White}#2}} \par   % Duration
+        \noindent \textit{#3} \par        % Company
+    \noindent\hangindent=2em\hangafter=0 \small #4 % Description
+    \normalsize \par}
+
+\newcommand{\ProjectEntry}[4]{         % Similar to \EducationEntry
+    \noindent \textbf{#1} \noindent \textit{#3} \hfill {#2} \par
+    \noindent \small #4 % Description
+    \normalsize \par}
+
+\newcommand{\AwardEntry}[4]{         % Similar to \EducationEntry
+    \noindent \textbf{#1} \noindent \textit{#3} \hfill {#2} \par
+    \noindent \small #4 % Description
+    \normalsize \par}
+    \begin{document}
+    \MyName{Ada Lovelace}
+\bigskip
+{\small \hfill ada@example.com | (555) 010-1843 | London, UK | \href{https://example.com/ada}{https://example.com/ada}}
+%%% Education
+    %%% ------------------------------------------------------------
+    \NewPart{Education}{}
+    \EducationEntry
+{BSc Mathematics}
+{2011 - 2015}
+{University of London, London, UK 3.9/4.0}
+%%% Work experience
+      %%% ------------------------------------------------------------
+
+      \NewPart{Experience}{}
+
+      \WorkEntry
+            {Principal Engineer}
+            {Jan 2019 - Present}
+            {Analytical Engine Works, London, UK}
+            {\begin{itemize} \itemsep -1pt
+  \item Designed the first published algorithm for a general-purpose computing machine
+  \item Cut batch computation latency by 45\% across the note-taking pipeline
+  \item Mentored 6 engineers; 3 promoted within 18 months
+\end{itemize}}
+            \sepspace
+      \WorkEntry
+            {Research Fellow}
+            {Jun 2015 - Dec 2018}
+            {Royal Society, London, UK}
+            {\begin{itemize} \itemsep -1pt
+  \item Published 4 papers on symbolic computation
+  \item Built the society's first mechanical tabulation workflow
+\end{itemize}}
+%%% Skills
+%%% ------------------------------------------------------------
+\NewPart{Skills}{}
+\SkillsEntry{Languages}{TypeScript, Python, Rust}
+\SkillsEntry{Infrastructure}{Docker, Postgres, Kubernetes}
+%%% Projects
+      %%% ------------------------------------------------------------
+      \NewPart{Projects}{}
+
+      \ProjectEntry{Note G}{\href{https://example.com/note-g}{https://example.com/note-g}}
+{algorithms, computation}
+{Bernoulli number generator for the Analytical Engine.}
+%%% Awards
+      %%% ------------------------------------------------------------
+      \NewPart{Awards}{}
+
+      \AwardEntry{Gold Medal for Numerical Analysis}{Royal Society}
+{2020}
+{Awarded for contributions to mechanical computation.}
+    \ 
+    \end{document}
