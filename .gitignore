@@ -4,3 +4,4 @@ dist/
 !fixtures/**/*.pdf
 .DS_Store
 out/
+.env
