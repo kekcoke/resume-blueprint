@@ -1,0 +1,27 @@
+{
+  "name": "@resume-blueprint/http",
+  "version": "0.1.0",
+  "description": "REST adapter for local agents and workflow tools (e.g. n8n) to reach the resume blueprint service over HTTP.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@resume-blueprint/core": "0.1.0",
+    "@resume-blueprint/store": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3"
+  }
+}
