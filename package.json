@@ -11,7 +11,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace @resume-blueprint/core && npm run build --workspace @resume-blueprint/cli",
-    "test": "npm run build && npm run test --workspace @resume-blueprint/core"
+    "build": "npm run build --workspace @resume-blueprint/core && npm run build --workspace @resume-blueprint/store && npm run build --workspace @resume-blueprint/cli",
+    "test": "npm run build && npm run test --workspace @resume-blueprint/core && npm run test --workspace @resume-blueprint/store"
   }
 }
