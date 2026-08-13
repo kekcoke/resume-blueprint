@@ -5,7 +5,18 @@ Built for local agents (Claude Code, Hermes) and workflows (n8n) to create and u
 resume blueprints over time.
 
 **Phase 1 is complete** (core + CLI, 44 tests green). Phase 2 is the store, MCP server,
-and HTTP adapter — see `docs/phase-2-plan.md`.
+and HTTP adapter.
+
+**Two mutually exclusive Phase 2 plans exist. Confirm which one is in play before writing
+any code** — they diverge on the first gate, so starting from the wrong one wastes work.
+
+| Plan | MCP SDK | zod | First gate |
+|---|---|---|---|
+| `docs/phase-2-plan.md` (A) | `@modelcontextprotocol/server` v2 | core migrated to 4.x | Gate 0: zod 4 migration |
+| `docs/phase-2-plan-b.md` (B) | `@modelcontextprotocol/sdk` 1.30.0 | core stays at 3.25.76 | Gate 1: the store |
+
+Gates 1 and 3 are identical in both. Only the MCP wiring and the zod decision differ.
+If the choice has not been stated, ask rather than guessing.
 
 ## Commands
 
@@ -71,7 +82,8 @@ This project was built across sessions, so rationale is deliberately durable:
 - **Source comments** — e.g. why `template9` uses `700bp` not `700px`, why template7's
   vendored moderncv is deliberately unstaged
 - **`README.md`** — setup, security model, and known gaps
-- **`docs/phase-2-plan.md`** — Phase 2 scope, TDD sequences, and validation gates
+- **`docs/phase-2-plan.md`** / **`docs/phase-2-plan-b.md`** — the two Phase 2 plans; each
+  is self-contained, with TDD sequences and validation gates
 
 Prefer these over re-deriving from source. If something looks arbitrary, `git log -S` the
 line before changing it.
