@@ -212,10 +212,16 @@ const generator: Generator = {
       \\usepackage[utf8]{inputenc}
       \\usepackage[T1]{fontenc}
       \\usepackage{lmodern}
-      \\usepackage[protrusion=true,expansion=true]{microtype}
+      % expansion=false: microtype's font expansion is a pdfTeX feature and errors
+      % out under XeTeX-derived engines such as Tectonic. Protrusion, which does
+      % the bulk of the visible optical-margin work, is supported and stays on.
+      \\usepackage[protrusion=true,expansion=false]{microtype}
       \\usepackage[svgnames]{xcolor}  % Colours by their 'svgnames'
       \\usepackage[margin=0.75in]{geometry}
-        \\textheight=700px
+        % 700bp, not 700px: "px" is a pdfTeX-only unit and XeTeX-derived engines
+        % (including Tectonic) reject it. pdfTeX's \\pdfpxdimen defaults to 1bp,
+        % so this is the identical length, portably spelled.
+        \\textheight=700bp
       \\usepackage{url}
       \\usepackage{lmodern} % Allow arbitrary font sizes
       \\usepackage{textcomp}

@@ -141,15 +141,13 @@ export default function getTemplateData(data: FormValues): TemplateData {
         texDoc: template7(data),
         opts: {
           cmd: 'pdflatex',
-          inputs: [
-            'template7/collection.sty',
-            'template7/moderncv.cls',
-            'template7/moderncvcolorblue.sty',
-            'template7/moderncviconsletters.sty',
-            'template7/moderncviconsmarvosym.sty',
-            'template7/moderncvstyleclassic.sty',
-            'template7/tweaklist.sty'
-          ]
+          // The vendored moderncv files are v1.3.0 from 2013 and are deliberately
+          // NOT staged. Staging only part of the package meant LaTeX resolved the
+          // rest from Tectonic's bundle, mixing two versions and failing with
+          // "Command \makecvtitlenamewidth already defined". Letting the bundle
+          // supply moderncv in full keeps it self-consistent. The unstaged copies
+          // are kept under assets/ for reference and license attribution.
+          inputs: ['template7/collection.sty', 'template7/tweaklist.sty']
         }
       }
 
