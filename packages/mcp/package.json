@@ -1,0 +1,32 @@
+{
+  "name": "@resume-blueprint/mcp",
+  "version": "0.1.0",
+  "description": "MCP server for local agents to create, edit, and render resume blueprints.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "resume-blueprint-mcp": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@resume-blueprint/core": "0.1.0",
+    "@resume-blueprint/store": "0.1.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3"
+  }
+}
