@@ -7,11 +7,18 @@ import { git, GitError } from './git.js'
 import { ensureRepo } from './repo.js'
 import { applyMergePatch } from './mergePatch.js'
 import { withLock } from './lock.js'
-import { resolveHome, blueprintPath, blueprintRelPath } from './paths.js'
-import { ConflictError, NotFoundError, InvalidIdError } from './errors.js'
+import { resolveHome, blueprintPath, blueprintRelPath, assertValidRev } from './paths.js'
+import { ConflictError, NotFoundError, AlreadyExistsError, InvalidActorError } from './errors.js'
 import type { BlueprintSummary, Commit } from './types.js'
 
-export { ConflictError, NotFoundError, InvalidIdError } from './errors.js'
+export {
+  ConflictError,
+  NotFoundError,
+  InvalidIdError,
+  InvalidRevError,
+  AlreadyExistsError,
+  InvalidActorError
+} from './errors.js'
 export { GitError } from './git.js'
 export type { BlueprintSummary, Commit } from './types.js'
 
@@ -74,16 +81,69 @@ function checkExpectedRev(id: string, expectedRev: string | undefined, rev: stri
   }
 }
 
+/**
+ * `actor` is interpolated into commit messages that `history()` later parses
+ * back apart using `FIELD_SEP` as a delimiter (see below). A control
+ * character in `actor` — the `FIELD_SEP` byte itself, or a newline that
+ * `git log --format` would emit as a literal line break — could desync that
+ * parsing. Reject up front rather than trying to strip/escape.
+ */
+function assertValidActor(actor: string | undefined): void {
+  if (actor !== undefined && /[\x00-\x1f\x7f]/.test(actor)) {
+    throw new InvalidActorError(
+      `invalid actor "${JSON.stringify(actor)}": must not contain control characters`
+    )
+  }
+}
+
 /** `git add` + `git commit` + `git rev-parse HEAD` for a single blueprint file. */
 async function commitFile(home: string, id: string, message: string): Promise<{ rev: string }> {
-  await git(home, ['add', blueprintRelPath(id)])
+  const rel = blueprintRelPath(id)
+  await git(home, ['add', rel])
+
+  // "nothing to commit" (byte-identical content) is a legitimate no-op, not
+  // an error: detect it before committing and return the current rev rather
+  // than letting git's non-zero exit propagate as a raw GitError.
+  const changed = await hasStagedChanges(home, rel)
+  if (!changed) {
+    const rev = (await git(home, ['rev-parse', 'HEAD'])).trim()
+    return { rev }
+  }
+
   await git(home, ['commit', '-m', message])
   const rev = (await git(home, ['rev-parse', 'HEAD'])).trim()
   return { rev }
 }
 
+/** True if `rel` has staged changes relative to HEAD (or relative to the empty tree, pre-first-commit). */
+async function hasStagedChanges(home: string, rel: string): Promise<boolean> {
+  try {
+    await git(home, ['diff', '--cached', '--quiet', '--', rel])
+    return false // exit 0: no differences
+  } catch (error) {
+    if (error instanceof GitError) return true // exit 1: differences staged
+    throw error
+  }
+}
+
 function commitMessage(op: string, id: string, actor: string | undefined): string {
   return `${op}(${id}) via ${actor ?? 'store'}`
+}
+
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    await stat(path)
+    return true
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw error
+  }
+}
+
+/** Same as `ensureRepo`, but under the repo-wide lock — used by read paths so a
+ * concurrent first-use read and write can't both race `git init`. */
+async function ensureRepoLocked(home: string): Promise<void> {
+  await withLock(home, () => ensureRepo(home))
 }
 
 /** Reads the array a section name addresses. `'profile'` maps to `basics.profiles`. */
@@ -122,6 +182,7 @@ async function mutate(
   opts: MutationOpts,
   transform: (current: unknown) => unknown
 ): Promise<{ rev: string }> {
+  assertValidActor(opts.actor)
   const home = resolveHome()
   return withLock(home, async () => {
     await ensureRepo(home)
@@ -141,7 +202,7 @@ async function mutate(
 
 export async function list(): Promise<BlueprintSummary[]> {
   const home = resolveHome()
-  await ensureRepo(home)
+  await ensureRepoLocked(home)
 
   const dir = join(home, 'blueprints')
   const entries = await readdir(dir).catch(() => [] as string[])
@@ -150,27 +211,36 @@ export async function list(): Promise<BlueprintSummary[]> {
   for (const entry of entries) {
     if (!entry.endsWith('.json')) continue
     const id = entry.slice(0, -'.json'.length)
-    const raw = await readFile(join(dir, entry), 'utf8')
-    const blueprint = parseBlueprint(JSON.parse(raw))
-    const [latest] = await history(id, 1)
-    summaries.push({
-      id,
-      name: blueprint.basics?.name,
-      updatedAt: latest?.date ?? '',
-      rev: latest?.rev ?? ''
-    })
+    // One malformed file shouldn't take down the whole listing.
+    try {
+      const raw = await readFile(join(dir, entry), 'utf8')
+      const blueprint = parseBlueprint(JSON.parse(raw))
+      const [latest] = await history(id, 1)
+      summaries.push({
+        id,
+        name: blueprint.basics?.name,
+        updatedAt: latest?.date ?? '',
+        rev: latest?.rev ?? ''
+      })
+    } catch {
+      continue
+    }
   }
   return summaries
 }
 
 export async function get(id: string): Promise<{ blueprint: Blueprint; rev: string }> {
   const home = resolveHome()
-  await ensureRepo(home)
-  const path = blueprintPath(home, id)
+  // Locked so the (blueprint, rev) pair read back is always consistent — a
+  // mutation can't land between the content read and the rev read.
+  return withLock(home, async () => {
+    await ensureRepo(home)
+    const path = blueprintPath(home, id)
 
-  const raw = await readBlueprint(id, path)
-  const rev = await currentRev(home, id, path)
-  return { blueprint: parseBlueprint(raw), rev }
+    const raw = await readBlueprint(id, path)
+    const rev = await currentRev(home, id, path)
+    return { blueprint: parseBlueprint(raw), rev }
+  })
 }
 
 export async function create(
@@ -178,10 +248,14 @@ export async function create(
   blueprint: unknown = {},
   opts: MutationOpts = {}
 ): Promise<{ rev: string }> {
+  assertValidActor(opts.actor)
   const home = resolveHome()
   return withLock(home, async () => {
     await ensureRepo(home)
     const path = blueprintPath(home, id)
+    if (await fileExists(path)) {
+      throw new AlreadyExistsError(`blueprint "${id}" already exists`)
+    }
     const parsed = parseBlueprint(blueprint)
     await writeFile(path, serialize(parsed), 'utf8')
     return commitFile(home, id, commitMessage('create', id, opts.actor))
@@ -246,46 +320,67 @@ export function sectionRemove(
 }
 
 export async function remove(id: string, opts: MutationOpts = {}): Promise<{ rev: string }> {
+  assertValidActor(opts.actor)
   const home = resolveHome()
   return withLock(home, async () => {
     await ensureRepo(home)
     const path = blueprintPath(home, id)
-    await currentRev(home, id, path) // throws NotFoundError if it doesn't exist
+    const rev = await currentRev(home, id, path) // throws NotFoundError if it doesn't exist
+    checkExpectedRev(id, opts.expectedRev, rev)
     await git(home, ['rm', '--quiet', blueprintRelPath(id)])
     await git(home, ['commit', '-m', commitMessage('remove', id, opts.actor)])
-    const rev = (await git(home, ['rev-parse', 'HEAD'])).trim()
-    return { rev }
+    const newRev = (await git(home, ['rev-parse', 'HEAD'])).trim()
+    return { rev: newRev }
   })
 }
 
+/**
+ * Throws `NotFoundError` if `id` was never created — distinguished from
+ * "exists but has zero commits" (unreachable: `create` always commits) by
+ * whether the path-scoped `git log` produced any output at all. A removed
+ * blueprint still has commits under this path (create + remove), so its
+ * history remains retrievable even though the file no longer exists on disk.
+ */
 export async function history(id: string, limit = 50): Promise<Commit[]> {
   const home = resolveHome()
-  await ensureRepo(home)
+  await ensureRepoLocked(home)
   const rel = blueprintRelPath(id)
 
   let out: string
   try {
     out = await git(home, ['log', `-n${limit}`, `--format=%H${FIELD_SEP}%cI${FIELD_SEP}%s`, '--', rel])
   } catch (error) {
-    if (error instanceof GitError) return []
+    if (error instanceof GitError) {
+      throw new NotFoundError(`blueprint "${id}" does not exist`)
+    }
     throw error
   }
 
-  return out
+  const commits = out
     .split('\n')
     .filter(Boolean)
     .map((line) => {
       const [rev, date, message] = line.split(FIELD_SEP)
       return { rev, date, message }
     })
+
+  if (commits.length === 0) {
+    throw new NotFoundError(`blueprint "${id}" does not exist`)
+  }
+
+  return commits
 }
 
 export async function diff(id: string, revA: string, revB?: string): Promise<string> {
+  assertValidRev(revA)
+  if (revB !== undefined) assertValidRev(revB)
+
   const home = resolveHome()
-  await ensureRepo(home)
+  await ensureRepoLocked(home)
   const path = blueprintPath(home, id)
   const rel = blueprintRelPath(id)
   const targetB = revB ?? (await currentRev(home, id, path))
+  assertValidRev(targetB) // re-validate the default too: belt-and-suspenders
   return git(home, ['diff', revA, targetB, '--', rel])
 }
 
@@ -300,11 +395,16 @@ export async function revert(
   rev: string,
   opts: MutationOpts = {}
 ): Promise<{ rev: string }> {
+  assertValidRev(rev)
+  assertValidActor(opts.actor)
   const home = resolveHome()
   return withLock(home, async () => {
     await ensureRepo(home)
     const path = blueprintPath(home, id)
     const rel = blueprintRelPath(id)
+
+    const current = await currentRev(home, id, path) // throws NotFoundError if it doesn't exist
+    checkExpectedRev(id, opts.expectedRev, current)
 
     let raw: string
     try {

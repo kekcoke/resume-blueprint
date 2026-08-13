@@ -1,11 +1,17 @@
 import { test, describe, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import * as store from '../dist/index.js'
-import { ConflictError } from '../dist/index.js'
+import {
+  ConflictError,
+  NotFoundError,
+  InvalidRevError,
+  AlreadyExistsError,
+  InvalidActorError
+} from '../dist/index.js'
 import { renderBlueprint } from '@resume-blueprint/core'
 
 let dir: string
@@ -173,6 +179,157 @@ describe('idempotency guard (invariant 1)', () => {
     await store.patch('default', { basics: { label: 'Engineer' } })
     ;({ blueprint } = await store.get('default'))
     assert.equal(blueprint.basics?.name, 'R&D Lead', 'still exactly R&D Lead, never R\\&D Lead')
+  })
+})
+
+// Reviewer/security finding #1: revA/revB/rev were forwarded into `git` argv
+// unvalidated. A value like `--output=/tmp/pwned.txt` is parsed by git itself
+// as an option, not a revision, and can make git write to an attacker-chosen
+// path. `diff()`/`revert()` must reject flag-like rev strings before they
+// ever reach `spawn`.
+describe('rev argument injection (finding #1)', () => {
+  test('diff() rejects a flag-like revA and does not invoke git with it', async () => {
+    await store.create('default', { basics: { name: 'Ada' }, selectedTemplate: 1 })
+    const { rev } = await store.get('default')
+
+    const outPath = join('/tmp', `resume-blueprint-pwned-${process.pid}.txt`)
+    await rm(outPath, { force: true })
+
+    await assert.rejects(
+      store.diff('default', `--output=${outPath}`, rev),
+      InvalidRevError
+    )
+
+    await assert.rejects(readFile(outPath), /ENOENT/, 'git must never have written the injected path')
+  })
+
+  test('diff() rejects a flag-like revB', async () => {
+    await store.create('default', { basics: { name: 'Ada' }, selectedTemplate: 1 })
+    const { rev } = await store.get('default')
+    await assert.rejects(store.diff('default', rev, '--output=/tmp/pwned2.txt'), InvalidRevError)
+  })
+
+  test('revert() rejects a flag-like rev', async () => {
+    await store.create('default', { basics: { name: 'Ada' }, selectedTemplate: 1 })
+    await assert.rejects(store.revert('default', '--output=/tmp/pwned3.txt'), InvalidRevError)
+  })
+})
+
+// Finding #2: remove()/revert() accepted `MutationOpts` but never checked
+// `expectedRev`, so a stale caller's mutation would silently succeed instead
+// of conflicting.
+describe('expectedRev on remove/revert (finding #2)', () => {
+  test('remove() with a stale expectedRev throws ConflictError and leaves the file untouched', async () => {
+    const { rev: staleRev } = await store.create('default', {
+      basics: { name: 'Ada' },
+      selectedTemplate: 1
+    })
+    await store.patch('default', { basics: { name: 'Ada Byron' } })
+
+    await assert.rejects(store.remove('default', { expectedRev: staleRev }), ConflictError)
+
+    const { blueprint } = await store.get('default')
+    assert.equal(blueprint.basics?.name, 'Ada Byron', 'blueprint was not removed')
+  })
+
+  test('revert() with a stale expectedRev throws ConflictError and leaves history untouched', async () => {
+    const { rev: rev1 } = await store.create('default', {
+      basics: { name: 'Ada' },
+      selectedTemplate: 1
+    })
+    await store.patch('default', { basics: { name: 'Ada Byron' } })
+    const { rev: staleRev } = await store.get('default') // one behind after the next patch
+    await store.patch('default', { basics: { name: 'Ada Lovelace' } })
+
+    await assert.rejects(store.revert('default', rev1, { expectedRev: staleRev }), ConflictError)
+
+    const commitsAfter = await store.history('default')
+    assert.equal(commitsAfter.length, 3, 'no revert commit was made')
+  })
+})
+
+// Finding #3: a mutation that produces byte-identical content made `git
+// commit` exit non-zero ("nothing to commit"), which propagated as a raw
+// GitError instead of succeeding as a no-op.
+describe('no-op mutations (finding #3)', () => {
+  test('patching a field to its current value twice in a row succeeds both times', async () => {
+    const { rev: createRev } = await store.create('default', {
+      basics: { name: 'Ada' },
+      selectedTemplate: 1
+    })
+
+    const first = await store.patch('default', { basics: { name: 'Ada' } })
+    assert.equal(first.rev, createRev, 'no-op patch does not create a new commit')
+
+    const second = await store.patch('default', { basics: { name: 'Ada' } })
+    assert.equal(second.rev, createRev, 'second no-op patch also succeeds and returns the same rev')
+
+    const commits = await store.history('default')
+    assert.equal(commits.length, 1, 'no-op patches left no trace in history')
+  })
+})
+
+// Finding #4: create() had no existence check, so a second create() for the
+// same id silently overwrote the first blueprint.
+describe('create is not an overwrite (finding #4)', () => {
+  test('creating the same id twice throws AlreadyExistsError and leaves the original untouched', async () => {
+    await store.create('default', { basics: { name: 'Ada' }, selectedTemplate: 1 })
+
+    await assert.rejects(
+      store.create('default', { basics: { name: 'Someone Else' }, selectedTemplate: 2 }),
+      AlreadyExistsError
+    )
+
+    const { blueprint } = await store.get('default')
+    assert.equal(blueprint.basics?.name, 'Ada', 'first blueprint content unchanged')
+    assert.equal(blueprint.selectedTemplate, 1)
+  })
+})
+
+// Finding #5: list() ran an unguarded JSON.parse/parseBlueprint per entry, so
+// one malformed file on disk took down the entire listing.
+describe('list tolerates malformed entries (finding #5)', () => {
+  test('a hand-corrupted blueprint file is skipped, not thrown', async () => {
+    await store.create('good', { basics: { name: 'Ada' }, selectedTemplate: 1 })
+
+    await writeFile(join(dir, 'blueprints', 'bad.json'), '{ not valid json', 'utf8')
+
+    const summaries = await store.list()
+    assert.equal(summaries.length, 1)
+    assert.equal(summaries[0].id, 'good')
+  })
+})
+
+// Finding #6: `actor` was interpolated unvalidated into commit messages that
+// history() later re-splits on FIELD_SEP ('\x1f'). An actor containing that
+// byte (or a newline) could desync history()'s parsing of later commits.
+describe('actor validation (finding #6)', () => {
+  test('an actor containing the field separator byte is rejected', async () => {
+    await store.create('default', { basics: { name: 'Ada' }, selectedTemplate: 1 })
+    await assert.rejects(
+      store.patch('default', { basics: { name: 'Ada Byron' } }, { actor: 'evil\x1factor' }),
+      InvalidActorError
+    )
+  })
+
+  test('an actor containing a newline is rejected', async () => {
+    await store.create('default', { basics: { name: 'Ada' }, selectedTemplate: 1 })
+    await assert.rejects(
+      store.patch('default', { basics: { name: 'Ada Byron' } }, { actor: 'evil\nactor' }),
+      InvalidActorError
+    )
+
+    // and history() parsing is unaffected by the rejected attempt
+    const commits = await store.history('default')
+    assert.equal(commits.length, 1)
+  })
+})
+
+// Finding #7: history() returned [] for a never-created id, inconsistent
+// with get()'s NotFoundError for the same condition.
+describe('history() on a nonexistent id (finding #7)', () => {
+  test('throws NotFoundError, matching get()', async () => {
+    await assert.rejects(store.history('never-created'), NotFoundError)
   })
 })
 
