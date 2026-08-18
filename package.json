@@ -5,7 +5,7 @@
   "description": "Local-first resume blueprint service: JSON Resume in, typeset PDF out.",
   "license": "MIT",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.6.0"
   },
   "workspaces": [
     "packages/*"
