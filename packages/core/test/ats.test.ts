@@ -93,6 +93,24 @@ function squash(text: string): string {
   return normalize(text).replace(/\s+/g, '').toLowerCase()
 }
 
+/**
+ * A line broken at a hyphen is reported two different ways: `pdftotext -layout`
+ * keeps the hyphen, its default mode applies the usual de-hyphenation heuristic
+ * and drops it — which is also what a real parser does. Neither reading is
+ * content loss, and neither is reliably the right one: joining
+ * "Analyt-\nical Engine Works" recovers the employer, joining
+ * "Trunk-\nBased Development" destroys a hyphen that was really there. So both
+ * readings go into the haystack and a string only has to survive into one.
+ */
+function dehyphenate(text: string): string {
+  return text.replace(/-[ \t]*\r?\n[ \t]*/g, '')
+}
+
+/** Every reading of one extraction that a parser might plausibly arrive at. */
+function readings({ layout, raw }: Extraction): string[] {
+  return [layout, raw, dehyphenate(layout), dehyphenate(raw)].map(squash)
+}
+
 /** A rendered URL may legitimately drop its scheme; that is not content loss. */
 function squashUrl(text: string): string {
   return squash(text)
@@ -103,6 +121,8 @@ function squashUrl(text: string): string {
 // ---------------------------------------------------------------------------
 // Walking the blueprint
 // ---------------------------------------------------------------------------
+
+type Extraction = { layout: string; raw: string }
 
 type Leaf = { path: string; value: string; isUrl: boolean }
 
@@ -193,8 +213,6 @@ function classify(leaf: Leaf, haystack: string): Finding | undefined {
 // Rendering, cached — nine Tectonic compiles is the expensive part of this file
 // ---------------------------------------------------------------------------
 
-type Extraction = { layout: string; raw: string }
-
 const extractions = new Map<number, Promise<Extraction>>()
 
 async function extract(templateId: number): Promise<Extraction> {
@@ -232,10 +250,7 @@ function extractionFor(templateId: number): Promise<Extraction> {
 
 async function findingsFor(templateId: number): Promise<Finding[]> {
   const blueprint = JSON.parse(await readFile(resolve(FIXTURES, 'dense.json'), 'utf8'))
-  const { layout, raw } = await extractionFor(templateId)
-
-  // A string only has to survive into ONE extraction mode to count as rendered.
-  const haystack = squash(layout) + '\n' + squash(raw)
+  const haystack = readings(await extractionFor(templateId)).join('\n')
 
   return collectLeaves(parseBlueprint(blueprint), '', '')
     .map((leaf) => classify(leaf, haystack))
@@ -338,12 +353,20 @@ describe('the contact block is contiguous enough for a parser to find', { skip: 
   for (const id of TEMPLATE_IDS) {
     test(`template${id} keeps name, email, and phone together`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
       const blueprint = JSON.parse(await readFile(resolve(FIXTURES, 'dense.json'), 'utf8'))
-      const { raw } = await extractionFor(id)
-      const haystack = squash(raw)
-
-      const fields = ['name', 'email', 'phone'].map((key) => ({
+      const all = readings(await extractionFor(id))
+      const needles = ['name', 'email', 'phone'].map((key) => ({
         key,
-        at: haystack.indexOf(squash(blueprint.basics[key]))
+        needle: squash(blueprint.basics[key])
+      }))
+
+      // Positions only mean anything within a single reading, so measure the
+      // spread in the first one that carries all three fields.
+      const haystack =
+        all.find((text) => needles.every((n) => text.includes(n.needle))) ?? all[0]
+
+      const fields = needles.map(({ key, needle }) => ({
+        key,
+        at: haystack.indexOf(needle)
       }))
 
       const absent = fields.filter((f) => f.at === -1).map((f) => f.key)
