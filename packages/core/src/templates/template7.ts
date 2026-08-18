@@ -1,10 +1,15 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
+import { profileLinks } from './profiles.js'
 import type { FormValues, GeneratorWithSummary } from '../types.js'
 
 const generator: GeneratorWithSummary = {
   profileSection(basics = {}) {
-    const { name, label, email, phone, location = {}, website } = basics
+    const { name, label, email, phone, location = {}, website, profiles } = basics
+
+    // moderncv has a macro per contact kind and no general-purpose slot, so the
+    // profile links go in \extrainfo, which \makecvtitle prints under the rest.
+    const extra = profileLinks(profiles).join(' | ')
 
     return stripIndent`
     % Profile
@@ -14,6 +19,7 @@ const generator: GeneratorWithSummary = {
     ${phone ? `\\phone[mobile]{${phone}}` : ''}
     ${email ? `\\email{${email || ''}}` : ''}
     ${website ? `\\homepage{${website || ''}}` : ''}
+    ${extra ? `\\extrainfo{${extra}}` : ''}
   `
   },
 

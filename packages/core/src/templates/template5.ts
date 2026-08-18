@@ -1,5 +1,6 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
+import { breakableUrl, profileLinks } from './profiles.js'
 import type { FormValues, GeneratorWithSummary } from '../types.js'
 
 const generator: Omit<GeneratorWithSummary, 'resumeHeader'> = {
@@ -8,34 +9,40 @@ const generator: Omit<GeneratorWithSummary, 'resumeHeader'> = {
       return ''
     }
 
-    const { name, email, phone, location = {}, website } = basics
-    const websiteLine = website ? `\\href{${website}}{${website}}` : ''
+    const { name } = basics
 
-    // res.cls typesets each \\address in an \\hbox that does not wrap, so one long
-    // contact run silently loses its tail off the right edge. It accepts exactly
-    // two, laid out left and right, so the run is split across both.
-    const contacts = [email, phone, location.address, websiteLine].filter(Boolean)
-    const half = Math.ceil(contacts.length / 2)
-
+    // Only the name goes in the header. res.cls typesets each \address in an
+    // \hbox that does not wrap and accepts at most two of them, which is not
+    // enough for an email, a phone, a location, a site, and a couple of profile
+    // links — the tail crossed the right margin and vanished. Everything else
+    // moves to summarySection, which renders in the body where text wraps.
     return stripIndent`
       \\name{{\\LARGE ${name || ''}}}
-      \\address{${contacts.slice(0, half).join(' | ')}}
-      ${contacts.length > half ? `\\address{${contacts.slice(half).join(' | ')}}` : ''}
     `
   },
 
-  // res.cls builds its header from \name and \address in the preamble, so the
-  // job title and summary cannot go there — they render at the top of the
-  // resume body instead, which is where a reader looks for them anyway.
+  // Name / title / contacts / summary, in that order: it is the order a reader
+  // and a parser both expect, and it keeps the contact details adjacent to the
+  // name rather than stranded at the bottom of the header.
   summarySection(basics) {
-    const { label, summary } = basics || {}
+    if (!basics) {
+      return ''
+    }
 
-    if (!label && !summary) {
+    const { label, summary, email, phone, location = {}, website, profiles } = basics
+    const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
+
+    const contacts = [email, phone, location.address, websiteLine, ...profileLinks(profiles)]
+      .filter(Boolean)
+      .join(' | ')
+
+    if (!label && !summary && !contacts) {
       return ''
     }
 
     return stripIndent`
       ${label ? `{\\large \\sl ${label}}\\\\[2pt]` : ''}
+      ${contacts ? `${contacts}\\\\[2pt]` : ''}
       ${summary || ''}
       \\vspace{2mm}
     `

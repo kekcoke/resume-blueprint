@@ -1,5 +1,6 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
+import { breakableUrl, profileLinks } from './profiles.js'
 import { FormValues, Generator } from '../types.js'
 
 const generator: Generator = {
@@ -8,9 +9,10 @@ const generator: Generator = {
       return ''
     }
 
-    const { name, label, summary, email, phone, location, website } = basics
+    const { name, label, summary, email, phone, location, website, profiles } =
+      basics
     const address = location?.address || ''
-    const websiteLine = website ? `\\href{${website}}{${website}}` : ''
+    const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
 
     // The job title gets its own line rather than joining the contact run. A
     // parser reads the line under the name as the candidate's title; buried in
@@ -18,7 +20,9 @@ const generator: Generator = {
     const lines = [
       name ? `{\\Huge \\scshape {${name}}}` : '',
       label ? `{\\large \\scshape ${label}}` : '',
-      [address, email, phone, websiteLine].filter(Boolean).join(' $\\cdot$ ')
+      [address, email, phone, websiteLine, ...profileLinks(profiles)]
+        .filter(Boolean)
+        .join(' $\\cdot$ ')
     ].filter(Boolean)
 
     const header = lines.join('\\\\\n  ') + (lines.length > 1 ? '\\\\' : '')

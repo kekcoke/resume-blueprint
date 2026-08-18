@@ -181,6 +181,29 @@ describe('content the original silently dropped now renders', () => {
         `template${id} dropped work[0].summary`
       )
     })
+
+    // basics.profiles went the same way: schema, store, and then nowhere. The
+    // visible text is the address rather than the network name, because a parser
+    // reads the text layer and never the link annotation.
+    test(`template${id} renders basics.profiles`, () => {
+      const { texDoc } = blueprintToTex({ ...sample, selectedTemplate: id })
+
+      assert.ok(
+        texDoc.includes('\\href{https://linkedin.com/in/ada-lovelace}{linkedin.'),
+        `template${id} dropped basics.profiles[0], or rendered it without linking it`
+      )
+    })
+
+    // The second profile's network carries an ampersand, so this doubles as a
+    // check that the label routes through escapeLatex like any other text.
+    test(`template${id} escapes LaTeX specials in a profile label`, () => {
+      const { texDoc } = blueprintToTex({ ...sample, selectedTemplate: id })
+
+      assert.ok(
+        texDoc.includes('Personal \\& Lab Notes'),
+        `template${id} emitted an unescaped & in a profile network name`
+      )
+    })
   }
 })
 

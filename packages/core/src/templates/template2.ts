@@ -1,5 +1,6 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
+import { breakableUrl, profileLinks } from './profiles.js'
 import type { FormValues, Generator } from '../types.js'
 
 const generator: Generator = {
@@ -8,7 +9,8 @@ const generator: Generator = {
       return ''
     }
 
-    const { name, label, summary, email, phone, location = {}, website } = basics
+    const { name, label, summary, email, phone, location = {}, website, profiles } =
+      basics
 
     let nameLine = ''
 
@@ -46,9 +48,12 @@ const generator: Generator = {
       ? `{\\faMapMarker\\ ${location.address}}`
       : ''
     const websiteLine = website
-      ? `{\\faLink\\ \\href{${website}}{${website}}}`
+      ? `{\\faLink\\ \\href{${website}}{${breakableUrl(website)}}}`
       : ''
-    const info = [emailLine, phoneLine, addressLine, websiteLine]
+    const profileLines = profileLinks(profiles).map(
+      (link) => `{\\faLink\\ ${link}}`
+    )
+    const info = [emailLine, phoneLine, addressLine, websiteLine, ...profileLines]
       .filter(Boolean)
       .join(' | ')
 

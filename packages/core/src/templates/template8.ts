@@ -1,5 +1,6 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
+import { breakableUrl, profileLinks } from './profiles.js'
 import type { FormValues, GeneratorWithSummary } from '../types.js'
 
 const generator: GeneratorWithSummary = {
@@ -8,8 +9,8 @@ const generator: GeneratorWithSummary = {
       return ''
     }
 
-    const { name, email, phone = '', location = {}, website } = basics
-    const websiteLine = website ? `\\href{${website}}{${website}}` : ''
+    const { name, email, phone = '', location = {}, website, profiles } = basics
+    const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
 
     let addressLine = ''
     let contactsLine = ''
@@ -20,10 +21,10 @@ const generator: GeneratorWithSummary = {
       addressLine = `\\address{${location.address || phone}}`
     }
 
-    if (email && website) {
-      contactsLine = `\\contacts{${email} \\linebreak ${websiteLine}}`
-    } else if (email || website) {
-      contactsLine = `\\contacts{${email || websiteLine}}`
+    const contacts = [email, websiteLine, ...profileLinks(profiles)].filter(Boolean)
+
+    if (contacts.length) {
+      contactsLine = `\\contacts{${contacts.join(' \\linebreak ')}}`
     }
 
     return `
