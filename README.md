@@ -47,6 +47,55 @@ resume list-templates                                List template IDs
 
 Pass `-` as the path to read the blueprint from stdin. Without `-o`, output goes to stdout.
 
+## Running the protocols
+
+Both adapters read and write the same store, `$RESUME_BLUEPRINT_HOME` (default
+`~/.resume-blueprint`), which is created and `git init`ed on first use.
+
+### MCP (local agents)
+
+`.mcp.json` in this repo registers the server for Claude Code at project scope, so
+opening the project and approving the server is all that's needed. For another client,
+the equivalent entry is:
+
+```json
+{
+  "mcpServers": {
+    "resume-blueprint": {
+      "command": "node",
+      "args": ["packages/mcp/dist/index.js"]
+    }
+  }
+}
+```
+
+Fifteen tools: `resume_list`, `resume_get`, `resume_create`, `resume_patch`,
+`resume_section_append`, `resume_section_update`, `resume_section_remove`,
+`resume_remove`, `resume_validate`, `resume_render`, `resume_tex`, `resume_history`,
+`resume_diff`, `resume_revert`, `resume_templates`.
+
+### HTTP (workflow tools)
+
+```bash
+npm run start:http     # 127.0.0.1:8787
+```
+
+| Route | Purpose |
+|---|---|
+| `POST /render` | Stateless: blueprint in, `application/pdf` out |
+| `GET /blueprints` | List stored blueprints |
+| `POST /blueprints` | Create — `{ id, blueprint }` |
+| `GET /blueprints/:id` | Fetch one, with its rev |
+| `PATCH /blueprints/:id` | Merge-patch — `{ patch, expectedRev? }` |
+| `DELETE /blueprints/:id` | Remove |
+| `POST /blueprints/:id/render` | Render a stored blueprint to `application/pdf` |
+| `GET /healthz` | Liveness, exempt from auth |
+
+`RESUME_BLUEPRINT_PORT` and `RESUME_BLUEPRINT_BIND` override the defaults. Auth is off
+until `RESUME_BLUEPRINT_TOKEN` is set; once set, every route but `/healthz` requires
+`Authorization: Bearer <token>`. Binding anything other than loopback is a deliberate
+opt-in — treat the token as mandatory if you do.
+
 ## Library
 
 ```ts
