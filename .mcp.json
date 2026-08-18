@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "resume-blueprint": {
+      "command": "node",
+      "args": ["packages/mcp/dist/index.js"],
+      "env": {}
+    }
+  }
+}
