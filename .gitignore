@@ -6,3 +6,8 @@ dist/
 out/
 .env
 profile_templates/
+
+# Reviewer feedback on real resumes: carries the candidate's name, phone, email,
+# and profile URLs. Same reason profile_templates/ is ignored (53fbea6).
+external_feedback.md
+*_feedback.md
