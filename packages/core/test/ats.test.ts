@@ -7,7 +7,12 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { renderBlueprint, parseBlueprint, TEMPLATE_IDS } from '../dist/index.js'
+import {
+  renderBlueprint,
+  parseBlueprint,
+  TEMPLATE_IDS,
+  TEMPLATE_PROFILES
+} from '../dist/index.js'
 
 /**
  * Parse-fidelity harness.
@@ -378,6 +383,77 @@ describe('the contact block is contiguous enough for a parser to find', { skip: 
       assert.ok(
         spread <= WINDOW_CHARS,
         `template${id} spread name/email/phone across ${spread} characters (limit ${WINDOW_CHARS}) — a parser will not read them as one contact block`
+      )
+    })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// The catalog has to match what is measured, or it is just a claim
+// ---------------------------------------------------------------------------
+
+/** Everything TeX may introduce on its own without it meaning icon-font glyphs. */
+const TYPOGRAPHIC = new Set([...'–—‘’“”…•·−­ ', ...'ﬀﬁﬂﬃﬄ'])
+
+function isPrivateUse(char: string): boolean {
+  const code = char.codePointAt(0) ?? 0
+  return code >= 0xe000 && code <= 0xf8ff
+}
+
+/**
+ * Characters in the text layer that came from neither the blueprint nor ordinary
+ * typography — which in practice means an icon font.
+ *
+ * template2 labels its contacts with FontAwesome, which extracts as private-use
+ * characters; template7 gets moderncv's icons, which extract as mis-mapped Latin
+ * (U+0232, U+0307). Either way a parser reads a stray token immediately before
+ * the email address.
+ */
+function strayGlyphs(text: string, blueprint: unknown): Set<string> {
+  const source = new Set(JSON.stringify(blueprint).toLowerCase())
+
+  return new Set(
+    [...text].filter((char) => {
+      if (isPrivateUse(char)) return true
+      if ((char.codePointAt(0) ?? 0) <= 127) return false
+      return !source.has(char.toLowerCase()) && !TYPOGRAPHIC.has(char)
+    })
+  )
+}
+
+describe('the template catalog matches what the harness measures', { skip: !PDFTOTEXT && 'pdftotext not on PATH' }, () => {
+  test('every template id has exactly one profile', () => {
+    assert.deepEqual(
+      TEMPLATE_PROFILES.map((profile) => profile.id),
+      [...TEMPLATE_IDS]
+    )
+  })
+
+  for (const profile of TEMPLATE_PROFILES) {
+    test(`template${profile.id} iconLabeledContacts is ${profile.iconLabeledContacts}`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
+      const blueprint = JSON.parse(await readFile(resolve(FIXTURES, 'dense.json'), 'utf8'))
+      const { raw } = await extractionFor(profile.id)
+      const stray = strayGlyphs(raw, parseBlueprint(blueprint))
+
+      assert.equal(
+        stray.size > 0,
+        profile.iconLabeledContacts,
+        profile.iconLabeledContacts
+          ? `template${profile.id} is marked as icon-labeled but its text layer is clean — update TEMPLATE_PROFILES`
+          : `template${profile.id} is marked as icon-free but its text layer carries ${[...stray]
+              .map((c) => `U+${(c.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')}`)
+              .join(' ')} — update TEMPLATE_PROFILES`
+      )
+    })
+
+    // atsGrade is the conjunction of the four gates above and a clean text
+    // layer. The four gates are asserted per template already, so what is left
+    // to check here is that the flag agrees with the icon finding.
+    test(`template${profile.id} atsGrade is ${profile.atsGrade}`, () => {
+      assert.equal(
+        profile.atsGrade,
+        !profile.iconLabeledContacts,
+        `template${profile.id}'s atsGrade disagrees with its own iconLabeledContacts`
       )
     })
   }

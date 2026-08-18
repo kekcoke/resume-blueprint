@@ -9,7 +9,8 @@ import {
   formatValidationError,
   isValidationError,
   renderBlueprint,
-  TectonicError
+  TectonicError,
+  TEMPLATE_PROFILES
 } from '@resume-blueprint/core'
 
 const USAGE = `resume — render and validate resume blueprints
@@ -91,7 +92,14 @@ async function main(argv: string[]): Promise<number> {
   }
 
   if (command === 'list-templates') {
-    for (const id of TEMPLATE_IDS) process.stdout.write(`${id}\n`)
+    // A bare list of numbers gives a caller nothing to choose on. The ATS flag
+    // is measured, not asserted — see packages/core/src/templates/catalog.ts.
+    const width = Math.max(...TEMPLATE_PROFILES.map((t) => t.name.length))
+
+    for (const { id, name, atsGrade } of TEMPLATE_PROFILES) {
+      const note = atsGrade ? 'ATS-grade' : 'icon-labeled contacts'
+      process.stdout.write(`${id}  ${name.padEnd(width)}  ${note}\n`)
+    }
     return 0
   }
 

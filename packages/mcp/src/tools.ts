@@ -8,7 +8,8 @@ import {
   renderBlueprint,
   isValidationError,
   formatValidationError,
-  TEMPLATE_IDS
+  TEMPLATE_IDS,
+  TEMPLATE_PROFILES
 } from '@resume-blueprint/core'
 import { CORE_BUILD } from './buildStamp.js'
 
@@ -438,16 +439,24 @@ export function registerTools(server: McpServer): void {
     'resume_templates',
     {
       title: 'List templates',
-      description: 'Lists the available template ids.',
+      description:
+        'Lists the available templates with the document class each is built on and whether it is ' +
+        'ATS-grade — meaning its rendered PDF survives text extraction intact, which is all an ' +
+        'applicant tracking system ever reads.',
       inputSchema: ResumeTemplatesInput,
       outputSchema: ResumeTemplatesOutput,
       annotations: { readOnlyHint: true }
     },
     async () => {
       try {
+        const text = TEMPLATE_PROFILES.map(
+          ({ id, name, atsGrade }) =>
+            `${id}: ${name}${atsGrade ? '' : ' (icon-labeled contacts; not ATS-grade)'}`
+        ).join('\n')
+
         return {
-          content: [{ type: 'text', text: TEMPLATE_IDS.join(', ') }],
-          structuredContent: { templates: TEMPLATE_IDS }
+          content: [{ type: 'text', text }],
+          structuredContent: { templates: TEMPLATE_PROFILES.map((t) => ({ ...t })) }
         }
       } catch (error) {
         return toToolError(error)

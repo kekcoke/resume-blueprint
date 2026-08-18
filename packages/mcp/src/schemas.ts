@@ -166,5 +166,13 @@ export const ResumeDiffOutput = z.object({
 })
 
 export const ResumeTemplatesOutput = z.object({
-  templates: z.array(z.number())
+  templates: z.array(
+    z.object({
+      id: z.number(),
+      name: z.string(),
+      /** Measured, not asserted — see packages/core/src/templates/catalog.ts. */
+      atsGrade: z.boolean(),
+      iconLabeledContacts: z.boolean()
+    })
+  )
 })

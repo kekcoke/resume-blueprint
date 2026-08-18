@@ -133,6 +133,37 @@ blueprint up incrementally.
 
 `work[].company` is accepted as an alias for `work[].name`.
 
+## Choosing a template
+
+`resume list-templates` (and the `resume_templates` MCP tool) prints this:
+
+| # | Built on | ATS-grade | Note |
+|---|---|---|---|
+| 1 | Classic (article) | yes | |
+| 2 | Awesome CV | no | FontAwesome contact labels |
+| 3 | Compact (article) | yes | |
+| 4 | Deedy | yes | |
+| 5 | res.cls | yes | |
+| 6 | Minimal | yes | |
+| 7 | ModernCV (banking) | no | moderncv icon contact labels |
+| 8 | McDowell | yes | |
+| 9 | Contrast (article) | yes | |
+
+**ATS-grade is measured, not asserted.** An applicant tracking system never sees the
+PDF's layout — it extracts the text layer and parses that. So the test suite renders a
+deliberately dense blueprint through every template, extracts the text back with
+`pdftotext`, and checks that nothing was clipped mid-string, that every critical field
+survived, that the sections come out in the order the blueprint declared, and that name,
+email, and phone stay close enough together to read as one contact block. All nine pass.
+
+Templates 2 and 7 fall short on a fifth check. Both label their contact details with
+icon-font glyphs rather than words, and those glyphs land in the text layer: template 2's
+FontAwesome icons extract as private-use characters (`U+F0E0` and friends), template 7's
+moderncv icons as mis-mapped Latin (`U+0232`, `U+0307`). A parser reads a stray token
+immediately before the email address, and some will take it as part of the value. Both
+still render beautifully — this is a machine-readability cost, not a visual defect. Use
+them when a human is the reader.
+
 ## Architecture
 
 The rule that keeps this extensible: **core knows nothing about MCP, HTTP, or argv.**
@@ -258,9 +289,10 @@ survives into the generated TeX and that nothing executes during a real compile.
 npm test
 ```
 
-Covers the sanitizer, golden `.tex` snapshots for all nine templates, a real compile of
-each with page-count assertions, and the adversarial fixture. After an intentional change
-to template output:
+187 tests. Covers the sanitizer, golden `.tex` snapshots for all nine templates, a real
+compile of each with page-count assertions, the adversarial fixture, and the
+parse-fidelity harness described under [Choosing a template](#choosing-a-template).
+After an intentional change to template output:
 
 ```bash
 npm run test:update-golden --workspace @resume-blueprint/core
