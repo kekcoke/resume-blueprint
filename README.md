@@ -8,8 +8,14 @@ pure, UI-free package that agents and workflows can call.
 
 ## Status
 
-**Phase 1 complete.** The core package and CLI work end to end; all nine templates
-compile. The MCP server, HTTP adapter, and versioned blueprint store are Phase 2.
+**Phase 1 and Phase 2 complete.** Core, CLI, the git-backed blueprint store, the MCP
+server, and the HTTP adapter all work end to end, over an unchanged core:
+
+- `packages/core` — schema, sanitizer, nine templates, Tectonic renderer
+- `packages/cli` — thin argv wrapper over core
+- `packages/store` — versioned, git-backed blueprint persistence
+- `packages/mcp` — stdio MCP server (15 tools) for local agents (Claude Code, Hermes)
+- `packages/http` — REST adapter (8 routes) for workflow tools such as n8n
 
 ## Requirements
 
@@ -41,6 +47,55 @@ resume list-templates                                List template IDs
 
 Pass `-` as the path to read the blueprint from stdin. Without `-o`, output goes to stdout.
 
+## Running the protocols
+
+Both adapters read and write the same store, `$RESUME_BLUEPRINT_HOME` (default
+`~/.resume-blueprint`), which is created and `git init`ed on first use.
+
+### MCP (local agents)
+
+`.mcp.json` in this repo registers the server for Claude Code at project scope, so
+opening the project and approving the server is all that's needed. For another client,
+the equivalent entry is:
+
+```json
+{
+  "mcpServers": {
+    "resume-blueprint": {
+      "command": "node",
+      "args": ["packages/mcp/dist/index.js"]
+    }
+  }
+}
+```
+
+Fifteen tools: `resume_list`, `resume_get`, `resume_create`, `resume_patch`,
+`resume_section_append`, `resume_section_update`, `resume_section_remove`,
+`resume_remove`, `resume_validate`, `resume_render`, `resume_tex`, `resume_history`,
+`resume_diff`, `resume_revert`, `resume_templates`.
+
+### HTTP (workflow tools)
+
+```bash
+npm run start:http     # 127.0.0.1:8787
+```
+
+| Route | Purpose |
+|---|---|
+| `POST /render` | Stateless: blueprint in, `application/pdf` out |
+| `GET /blueprints` | List stored blueprints |
+| `POST /blueprints` | Create — `{ id, blueprint }` |
+| `GET /blueprints/:id` | Fetch one, with its rev |
+| `PATCH /blueprints/:id` | Merge-patch — `{ patch, expectedRev? }` |
+| `DELETE /blueprints/:id` | Remove |
+| `POST /blueprints/:id/render` | Render a stored blueprint to `application/pdf` |
+| `GET /healthz` | Liveness, exempt from auth |
+
+`RESUME_BLUEPRINT_PORT` and `RESUME_BLUEPRINT_BIND` override the defaults. Auth is off
+until `RESUME_BLUEPRINT_TOKEN` is set; once set, every route but `/healthz` requires
+`Authorization: Bearer <token>`. Binding anything other than loopback is a deliberate
+opt-in — treat the token as mandatory if you do.
+
 ## Library
 
 ```ts
@@ -65,14 +120,103 @@ blueprint up incrementally.
 
 ## Architecture
 
-```
-packages/core/    schema, sanitizer, 9 templates, Tectonic renderer — no I/O it was not handed
-packages/cli/     thin argv wrapper over core
-fixtures/         sample + adversarial blueprints, golden .tex snapshots
+The rule that keeps this extensible: **core knows nothing about MCP, HTTP, or argv.**
+`store` persists blueprints and knows nothing about MCP or HTTP either. Every interface —
+CLI, MCP, HTTP — is a thin adapter over the same call path, and only `store`/`core` ever
+touch the filesystem, git, or Tectonic.
+
+```mermaid
+flowchart TB
+    subgraph Callers["Callers"]
+        A1["Claude Code / Hermes"]
+        A2["n8n (HTTP Request node)"]
+        A3["Terminal / scripts"]
+    end
+
+    subgraph Interfaces["Thin adapters"]
+        MCP["packages/mcp<br/>stdio JSON-RPC · 15 tools"]
+        HTTP["packages/http<br/>REST · 8 routes"]
+        CLI["packages/cli<br/>argv"]
+    end
+
+    subgraph Services["Shared services"]
+        STORE["packages/store<br/>versioned persistence"]
+        CORE["packages/core<br/>schema · sanitize · 9 templates · render"]
+    end
+
+    subgraph External["External"]
+        GIT[("$RESUME_BLUEPRINT_HOME<br/>git repo")]
+        TEX[["Tectonic"]]
+    end
+
+    A1 -- stdio --> MCP
+    A2 -- HTTP --> HTTP
+    A3 -- argv --> CLI
+
+    MCP --> STORE
+    MCP --> CORE
+    HTTP --> STORE
+    HTTP --> CORE
+    CLI --> CORE
+
+    STORE --> GIT
+    CORE -- "compile --untrusted" --> TEX
 ```
 
-The rule that keeps this extensible: **core knows nothing about MCP, HTTP, or argv.**
-Every interface is a thin adapter over the same call path.
+`packages/cli` renders a blueprint it's handed directly — it has no store dependency, by
+design; persistence is `store`'s job, not the CLI's. `fixtures/` holds sample + adversarial
+blueprints and golden `.tex` snapshots used across every package's test suite.
+
+## Workflow
+
+An agent's typical session — create a blueprint, edit it over time, render it — shown here
+through MCP; the same shape holds over HTTP or when calling `store`/`core` as a library. The
+sequence is also the load-bearing example for this project's two invariants: **every
+mutation is validated before it's committed**, and **content is stored raw — sanitizing
+happens only on the way to Tectonic, never on the way to disk.**
+
+```mermaid
+sequenceDiagram
+    participant Agent as Local agent
+    participant MCP as mcp server
+    participant Store as store
+    participant Core as core
+    participant Git as git repo
+    participant Tectonic
+
+    Agent->>MCP: resume_create(id, blueprint?)
+    MCP->>Store: create(id, blueprint)
+    Store->>Core: parseBlueprint(blueprint)
+    Core-->>Store: validated Blueprint
+    Store->>Git: write file, commit "create(id) via mcp"
+    Git-->>Store: rev
+    Store-->>MCP: { rev }
+    MCP-->>Agent: rev
+
+    Agent->>MCP: resume_patch(id, mergePatch)
+    MCP->>Store: patch(id, mergePatch)
+    Store->>Core: parseBlueprint(merged)
+    Core-->>Store: validated Blueprint
+    Store->>Git: write file, commit "patch(id) via mcp"
+    Git-->>Store: new rev
+    Store-->>MCP: { rev }
+    MCP-->>Agent: rev
+
+    Agent->>MCP: resume_render(id)
+    MCP->>Store: get(id)
+    Store-->>MCP: { blueprint, rev }
+    MCP->>Core: renderBlueprint(blueprint)
+    Core->>Core: sanitize, then apply template
+    Core->>Tectonic: compile (--untrusted)
+    Tectonic-->>Core: PDF bytes
+    Core-->>MCP: PDF buffer
+    MCP-->>Agent: { path, pageCount, byteSize }
+```
+
+Every `create`/`patch`/`section*`/`revert` call is one git commit — `history`/`diff`/`revert`
+are free, and a bad edit (an agent's or a human's) is always recoverable. `resume_render`
+never returns PDF bytes over MCP: stdout is the JSON-RPC transport, so the response is a
+path plus `{pageCount, byteSize}`, and the agent reads the file itself if it needs to.
 
 ## Security
 

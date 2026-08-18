@@ -1,6 +1,8 @@
 {
   "basics": {
     "name": "Ada Lovelace",
+    "label": "Principal Engineer & Numerical Analyst",
+    "summary": "Engineer with a decade of work on general-purpose computing machines, publishing the first algorithm intended for one and leading the numerical methods group that made it practical.",
     "email": "ada@example.com",
     "phone": "(555) 010-1843",
     "website": "https://example.com/ada",

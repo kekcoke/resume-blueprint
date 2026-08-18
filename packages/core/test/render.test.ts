@@ -120,6 +120,53 @@ describe('content the original silently dropped now renders', () => {
       )
     })
   }
+
+  // Same bug class as work[].company: basics.label and basics.summary are valid,
+  // validated, and stored, but every template's header destructured only
+  // { name, email, phone, location, website }, so both silently vanished.
+  // Only template2 has been fixed so far — it reuses awesome-cv.cls's own
+  // \headerpositionstyle and \headerquotestyle rather than inventing LaTeX.
+  test('template2 renders basics.label and basics.summary', () => {
+    const { texDoc } = blueprintToTex({ ...sample, selectedTemplate: 2 })
+
+    assert.ok(
+      texDoc.includes('\\headerpositionstyle{Principal Engineer \\& Numerical Analyst}'),
+      'template2 dropped basics.label from the header'
+    )
+    assert.ok(
+      texDoc.includes('\\headerquotestyle{'),
+      'template2 dropped basics.summary from the header'
+    )
+    assert.ok(
+      texDoc.includes('first algorithm intended for one'),
+      'template2 dropped the body of basics.summary'
+    )
+  })
+
+  // The label carries an ampersand, so this doubles as a check that header
+  // fields route through escapeLatex like any other text (they are not in
+  // sanitize.ts's URL_KEYS).
+  test('template2 escapes LaTeX specials in basics.label', () => {
+    const { texDoc } = blueprintToTex({ ...sample, selectedTemplate: 2 })
+
+    assert.ok(
+      !/\\headerpositionstyle\{[^}]*[^\\]&/.test(texDoc),
+      'template2 emitted an unescaped & inside \\headerpositionstyle'
+    )
+  })
+
+  // The other eight templates still drop these fields. This is deliberate and
+  // scoped, not an oversight — pinning it here so the day they are fixed, this
+  // test fails and gets updated rather than the gap going unnoticed.
+  for (const id of TEMPLATE_IDS.filter((t) => t !== 2)) {
+    test(`template${id} does not yet render basics.label (known gap)`, () => {
+      const { texDoc } = blueprintToTex({ ...sample, selectedTemplate: id })
+      assert.ok(
+        !texDoc.includes('Numerical Analyst'),
+        `template${id} now renders basics.label — update this test and the README's known gaps`
+      )
+    })
+  }
 })
 
 describe('adversarial input still compiles safely', () => {
