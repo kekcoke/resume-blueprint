@@ -1,0 +1,161 @@
+{
+  "basics": {
+    "name": "Katherine Johnson",
+    "label": "Staff Engineer, Trajectory and Platform Systems",
+    "email": "katherine.johnson@orbital-mechanics.example.net",
+    "phone": "+1 (757) 555 0182",
+    "website": "https://example.net/orbital-notes",
+    "location": {
+      "address": "Hampton, Virginia, United States"
+    }
+  },
+  "work": [
+    {
+      "company": "Orbital Mechanics Group",
+      "position": "Staff Engineer, Trajectory Systems",
+      "location": "Hampton, VA",
+      "startDate": "Feb 2018",
+      "endDate": "Present",
+      "summary": "Owned the trajectory solver and the platform it runs on.",
+      "highlights": [
+        "Verified every launch-window computation against an independent solver",
+        "Cut solver wall-clock time by 62% without loss of precision"
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "name": "Languages",
+      "keywords": [
+        "Go",
+        "Rust",
+        "Python"
+      ]
+    },
+    {
+      "name": "Databases",
+      "keywords": [
+        "Postgres",
+        "Redis",
+        "DuckDB"
+      ]
+    },
+    {
+      "name": "Frontend",
+      "keywords": [
+        "React",
+        "Svelte"
+      ]
+    },
+    {
+      "name": "Testing",
+      "keywords": [
+        "Vitest",
+        "Playwright",
+        "k6"
+      ]
+    },
+    {
+      "name": "Security",
+      "keywords": [
+        "OAuth",
+        "SAML",
+        "Vault"
+      ]
+    },
+    {
+      "name": "Messaging",
+      "keywords": [
+        "Kafka",
+        "NATS",
+        "RabbitMQ"
+      ]
+    },
+    {
+      "name": "Methods",
+      "keywords": [
+        "TDD",
+        "DDD",
+        "Trunk-Based"
+      ]
+    },
+    {
+      "name": "Build Systems",
+      "keywords": [
+        "Bazel",
+        "Nx",
+        "Turborepo"
+      ]
+    },
+    {
+      "name": "Observability Tooling",
+      "keywords": [
+        "Datadog",
+        "Grafana",
+        "Loki"
+      ]
+    },
+    {
+      "name": "Infrastructure Automation",
+      "keywords": [
+        "Terraform",
+        "Pulumi",
+        "Ansible"
+      ]
+    }
+  ],
+  "awards": [
+    {
+      "title": "Distinguished Engineering Award",
+      "date": "2023",
+      "awarder": "Association for Computing Machinery"
+    },
+    {
+      "title": "Platform Reliability Prize",
+      "date": "2022",
+      "awarder": "Usenix Association"
+    },
+    {
+      "title": "Open Source Contributor of the Year",
+      "date": "2021",
+      "awarder": "Linux Foundation"
+    },
+    {
+      "title": "Systems Research Commendation",
+      "date": "2020",
+      "awarder": "Internet Systems Consortium"
+    },
+    {
+      "title": "Best Paper, Distributed Storage Track",
+      "date": "2019",
+      "awarder": "VLDB Endowment"
+    },
+    {
+      "title": "Technical Leadership Citation",
+      "date": "2018",
+      "awarder": "IEEE Computer Society"
+    },
+    {
+      "title": "Innovation in Tooling Award",
+      "date": "2017",
+      "awarder": "Cloud Native Computing Foundation"
+    },
+    {
+      "title": "Early Career Research Grant",
+      "date": "2016",
+      "awarder": "National Science Foundation"
+    }
+  ],
+  "headings": {
+    "work": "Experience",
+    "skills": "Skills",
+    "awards": "Certifications and Awards"
+  },
+  "sections": [
+    "profile",
+    "work",
+    "skills",
+    "awards"
+  ],
+  "selectedTemplate": 1
+}

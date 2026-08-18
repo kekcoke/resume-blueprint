@@ -11,11 +11,16 @@ const generator: GeneratorWithSummary = {
     // profile links go in \extrainfo, which \makecvtitle prints under the rest.
     const extra = profileLinks(profiles).join(' | ')
 
+    // Every contact macro below is guarded on its value. \address was not, and
+    // an empty \address{} makes \makecvtitle end a line that has nothing on
+    // it — "There's no line here to end", a hard LaTeX error for any blueprint
+    // without an address.
+
     return stripIndent`
     % Profile
     \\name{${name || ''}}{}
     ${label ? `\\title{${label}}` : ''}
-    \\address{${location.address || ''}}
+    ${location.address ? `\\address{${location.address}}` : ''}
     ${phone ? `\\phone[mobile]{${phone}}` : ''}
     ${email ? `\\email{${email || ''}}` : ''}
     ${website ? `\\homepage{${website || ''}}` : ''}

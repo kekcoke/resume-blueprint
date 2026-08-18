@@ -1,0 +1,36 @@
+{
+  "basics": {
+    "name": "Alan Turing",
+    "email": "alan.turing@computable-numbers.example.com",
+    "phone": "+44 (0) 161 555 0117"
+  },
+  "work": [
+    {
+      "company": "National Physical Laboratory",
+      "position": "Senior Scientific Officer",
+      "startDate": "1946",
+      "endDate": "1948"
+    }
+  ],
+  "skills": [
+    { "name": "Logic" }
+  ],
+  "education": [
+    { "institution": "King's College, Cambridge" }
+  ],
+  "projects": [
+    { "name": "Automatic Computing Engine" }
+  ],
+  "awards": [
+    { "title": "Order of the British Empire" }
+  ],
+  "headings": {
+    "work": "Experience",
+    "skills": "Skills",
+    "education": "Education",
+    "projects": "Projects",
+    "awards": "Awards"
+  },
+  "sections": ["profile", "work", "skills", "education", "projects", "awards"],
+  "selectedTemplate": 1
+}
