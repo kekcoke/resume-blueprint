@@ -88,7 +88,10 @@ async function main(argv: string[]): Promise<number> {
 
   if (values.help || !command || command === 'help') {
     process.stdout.write(USAGE)
-    return command ? 0 : 1
+    // Asking for help is a request that succeeded; only a bare invocation with
+    // nothing to act on is a usage error. Keying this off `command` alone
+    // conflated the two and made `resume --help` exit 1.
+    return values.help || command === 'help' ? 0 : 1
   }
 
   if (command === 'list-templates') {

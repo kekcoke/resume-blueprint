@@ -5,14 +5,14 @@
   "description": "Local-first resume blueprint service: JSON Resume in, typeset PDF out.",
   "license": "MIT",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.6.0"
   },
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
     "build": "npm run build --workspace @resume-blueprint/core && npm run build --workspace @resume-blueprint/store && npm run build --workspace @resume-blueprint/mcp && npm run build --workspace @resume-blueprint/cli && npm run build --workspace @resume-blueprint/http",
-    "test": "npm run build && npm run test --workspace @resume-blueprint/core && npm run test --workspace @resume-blueprint/store && npm run test --workspace @resume-blueprint/mcp && npm run test --workspace @resume-blueprint/http",
+    "test": "npm run build && npm run test --workspace @resume-blueprint/core && npm run test --workspace @resume-blueprint/store && npm run test --workspace @resume-blueprint/mcp && npm run test --workspace @resume-blueprint/cli && npm run test --workspace @resume-blueprint/http",
     "start:http": "node packages/http/dist/index.js",
     "start:mcp": "node packages/mcp/dist/index.js"
   }

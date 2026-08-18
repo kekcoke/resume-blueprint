@@ -52,6 +52,23 @@ function hasPdftotext(): boolean {
 
 const PDFTOTEXT = hasPdftotext()
 
+/**
+ * Locally, skipping is the right call — see above. In CI it is the worst
+ * possible outcome: every gate below would skip, the run would go green, and it
+ * would have verified none of the parse-fidelity claims this project is built
+ * on. A green tick that means nothing is worse than no CI at all, so under CI
+ * the absence of pdftotext is a hard failure rather than a quiet skip.
+ *
+ * A dedicated test rather than a throw at module load: this names the problem in
+ * the runner output instead of surfacing as an opaque file-level error.
+ */
+test('pdftotext is installed', { skip: !process.env.CI && 'not CI: skipping is allowed locally' }, () => {
+  assert.ok(
+    PDFTOTEXT,
+    'pdftotext is not on PATH, so every parse-fidelity gate in this file would skip and the suite would pass having checked none of them. Install poppler.'
+  )
+})
+
 // ---------------------------------------------------------------------------
 // Text normalization
 //
@@ -421,7 +438,14 @@ function strayGlyphs(text: string, blueprint: unknown): Set<string> {
   )
 }
 
-describe('the template catalog matches what the harness measures', { skip: !PDFTOTEXT && 'pdftotext not on PATH' }, () => {
+/**
+ * These two assertions read TEMPLATE_PROFILES and nothing else — no compile, no
+ * extraction, no binaries. They lived inside the guarded describe below, which
+ * meant a machine without poppler silently stopped checking the catalog's
+ * internal consistency as well as its measured claims. Nothing about them needs
+ * a guard, so they no longer have one.
+ */
+describe('the template catalog is internally consistent', () => {
   test('every template id has exactly one profile', () => {
     assert.deepEqual(
       TEMPLATE_PROFILES.map((profile) => profile.id),
@@ -429,6 +453,21 @@ describe('the template catalog matches what the harness measures', { skip: !PDFT
     )
   })
 
+  for (const profile of TEMPLATE_PROFILES) {
+    // atsGrade is the conjunction of the four gates above and a clean text
+    // layer. The four gates are asserted per template already, so what is left
+    // to check here is that the flag agrees with the icon finding.
+    test(`template${profile.id} atsGrade is ${profile.atsGrade}`, () => {
+      assert.equal(
+        profile.atsGrade,
+        !profile.iconLabeledContacts,
+        `template${profile.id}'s atsGrade disagrees with its own iconLabeledContacts`
+      )
+    })
+  }
+})
+
+describe('the template catalog matches what the harness measures', { skip: !PDFTOTEXT && 'pdftotext not on PATH' }, () => {
   for (const profile of TEMPLATE_PROFILES) {
     test(`template${profile.id} iconLabeledContacts is ${profile.iconLabeledContacts}`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
       const blueprint = JSON.parse(await readFile(resolve(FIXTURES, 'dense.json'), 'utf8'))
@@ -443,17 +482,6 @@ describe('the template catalog matches what the harness measures', { skip: !PDFT
           : `template${profile.id} is marked as icon-free but its text layer carries ${[...stray]
               .map((c) => `U+${(c.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')}`)
               .join(' ')} — update TEMPLATE_PROFILES`
-      )
-    })
-
-    // atsGrade is the conjunction of the four gates above and a clean text
-    // layer. The four gates are asserted per template already, so what is left
-    // to check here is that the flag agrees with the icon finding.
-    test(`template${profile.id} atsGrade is ${profile.atsGrade}`, () => {
-      assert.equal(
-        profile.atsGrade,
-        !profile.iconLabeledContacts,
-        `template${profile.id}'s atsGrade disagrees with its own iconLabeledContacts`
       )
     })
   }

@@ -19,10 +19,12 @@ server, and the HTTP adapter all work end to end, over an unchanged core:
 
 ## Requirements
 
-- Node.js >= 20
+- Node.js >= 22.6 — the test suite runs `.ts` files directly through Node's type
+  stripping, which older releases do not support
 - [Tectonic](https://tectonic-typesetting.github.io/) on `PATH` — `brew install tectonic`
 - `pdftotext` from poppler, for the parse-fidelity tests only — `brew install poppler`.
-  Without it those tests skip; everything else runs.
+  Without it those tests skip locally; in CI a missing `pdftotext` is a failure, because a
+  suite that goes green having verified none of the ATS claims is worse than no suite.
 
 Tectonic is used instead of a full TeX Live install because it is a single ~30MB binary
 that fetches only the packages a document actually needs. The first render of a given

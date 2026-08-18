@@ -11,7 +11,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json && chmod +x dist/index.js"
+    "build": "tsc -p tsconfig.json && chmod +x dist/index.js",
+    "test": "node --test test/*.test.ts"
   },
   "dependencies": {
     "@resume-blueprint/core": "0.1.0"

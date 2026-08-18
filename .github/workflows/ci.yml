@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Nothing here publishes; the default read-only token is enough.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: build and test (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    # Nine Tectonic compiles against a cold package cache is the slow path.
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Not Node 20: the suite runs `.ts` files directly through Node's type
+        # stripping, which is unflagged only from 22.6. A Node 20 job fails on
+        # every test file before reaching an assertion.
+        node: ['22.x', '24.x']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      # pdftotext. Without it the parse-fidelity gates would skip — and under
+      # CI, ats.test.ts turns that skip into a failure on purpose.
+      - name: Install poppler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends poppler-utils
+          pdftotext -v
+
+      # Tectonic downloads TeX packages on the first compile of each document
+      # class. That download, not the binary, is what makes a cold run slow.
+      - name: Cache the Tectonic package bundle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/Tectonic
+            ~/.cache/TectonicProject.Tectonic
+          key: tectonic-${{ runner.os }}-0.17.0-${{ hashFiles('packages/core/src/templates/*.ts', 'packages/core/assets/**') }}
+          restore-keys: |
+            tectonic-${{ runner.os }}-0.17.0-
+
+      # Installed from the project's own release rather than a third-party
+      # action, and pinned: 0.17.0 is the version the golden snapshots and
+      # parse-fidelity expectations in this repo were measured against.
+      - name: Install Tectonic 0.17.0
+        run: |
+          curl -fsSL --retry 3 -o tectonic.tar.gz \
+            'https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.17.0/tectonic-0.17.0-x86_64-unknown-linux-gnu.tar.gz'
+          sudo tar xzf tectonic.tar.gz -C /usr/local/bin tectonic
+          rm tectonic.tar.gz
+          tectonic --version
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # GitHub sets CI=true, which is what arms the pdftotext gate in
+      # packages/core/test/ats.test.ts.
+      - run: npm test
