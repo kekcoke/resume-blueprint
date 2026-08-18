@@ -1,5 +1,6 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
+import { breakableUrl, profileLinks } from './profiles.js'
 import type { FormValues, Generator } from '../types.js'
 
 const generator: Omit<Generator, 'resumeHeader'> = {
@@ -8,10 +9,31 @@ const generator: Omit<Generator, 'resumeHeader'> = {
       return ''
     }
 
-    const { name = '', email, phone, location = {}, website } = basics
-    const websiteLine = website ? `\\href{${website}}{${website}}` : ''
+    const {
+      name = '',
+      label,
+      summary,
+      email,
+      phone,
+      location = {},
+      website,
+      profiles
+    } = basics
+    const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
 
-    const info = [email, phone, location.address, websiteLine].filter(Boolean)
+    const info = [
+      email,
+      phone,
+      location.address,
+      websiteLine,
+      ...profileLinks(profiles)
+    ].filter(Boolean)
+
+    const labelLine = label
+      ? `\\vspace{2mm}\n{\\fontsize{1.1em}{1.1em}\\fontspec[Path = fonts/]{CrimsonText-Italic} ${label}}\\\\`
+      : ''
+
+    const summaryBlock = summary ? `\n\\vspace{2mm}\n${summary}\\par` : ''
 
     return stripIndent`
       \\begin{center}
@@ -20,10 +42,12 @@ const generator: Omit<Generator, 'resumeHeader'> = {
       {\\fontsize{\\sizeone}{\\sizeone}\\fontspec[Path = fonts/,LetterSpace=15]{Montserrat-Regular} ${name.toUpperCase()}}
       ${name && info.length > 1 ? '\\\\' : ''}
       \\vspace{2mm}
+      ${labelLine}
       {\\fontsize{1em}{1em}\\fontspec[Path = fonts/]{Montserrat-Light} ${info.join(
         ' -- '
       )}}
       \\end{center}
+      ${summaryBlock}
     `
   },
 
@@ -97,6 +121,7 @@ const generator: Omit<Generator, 'resumeHeader'> = {
           location = '',
           startDate = '',
           endDate = '',
+          summary = '',
           highlights = []
         } = job
 
@@ -125,7 +150,7 @@ const generator: Omit<Generator, 'resumeHeader'> = {
             {${dateRange}}
             {${position}}
             {${location}}
-            {${dutyLines}}
+            {${summary ? `\\par ${summary}` : ''}${dutyLines}}
         `
       })}
     }

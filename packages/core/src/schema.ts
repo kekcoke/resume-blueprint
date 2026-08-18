@@ -68,10 +68,7 @@ export const WorkSchema = z
     location: text.optional(),
     startDate: text.optional(),
     endDate: text.optional(),
-    /**
-     * Valid JSON Resume, accepted and preserved, but note that none of the nine
-     * templates currently render it. Use `highlights` for content that must appear.
-     */
+    /** Rendered as a paragraph above `highlights` by every template. */
     summary: text.optional(),
     highlights: z.array(text).optional()
   })

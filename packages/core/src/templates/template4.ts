@@ -1,5 +1,6 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
+import { breakableUrl, profileLinks } from './profiles.js'
 import type { FormValues, Generator } from '../types.js'
 
 const generator: Generator = {
@@ -8,7 +9,8 @@ const generator: Generator = {
       return '\\namesection{Your}{Name}{}'
     }
 
-    const { name, email, phone, location = {}, website } = profile
+    const { name, label, summary, email, phone, location = {}, website, profiles } =
+      profile
 
     let nameStart = ''
     let nameEnd = ''
@@ -25,9 +27,18 @@ const generator: Generator = {
       }
     }
 
-    const info = [email, phone, location.address, website]
+    const websiteLine = website ? breakableUrl(website) : ''
+    const info = [email, phone, location.address, websiteLine, ...profileLinks(profiles)]
       .filter(Boolean)
       .join(' | ')
+
+    // \namesection's third argument is a centered group, so a `\\` inside it
+    // puts the job title on its own line above the contact run.
+    const headerInfo = label ? `${label} \\\\ ${info}` : info
+
+    const summaryBlock = summary
+      ? `\n\\vspace{-8pt}\n{\\raggedright ${summary}\\par}\n\\sectionsep`
+      : ''
 
     const sectionHeader = stripIndent`
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -51,7 +62,8 @@ const generator: Generator = {
 
     return stripIndent`
       ${sectionHeader}
-      \\namesection{${nameStart}}{${nameEnd}}{${info}}
+      \\namesection{${nameStart}}{${nameEnd}}{${headerInfo}}
+      ${summaryBlock}
     `
   },
 
@@ -148,6 +160,7 @@ const generator: Generator = {
           location,
           startDate,
           endDate = '',
+          summary,
           highlights
         } = job
 
@@ -189,6 +202,7 @@ const generator: Generator = {
 
         return stripIndent`
           ${line1}
+          ${summary ? `\\par ${summary}` : ''}
           ${highlightLines}
           \\sectionsep
         `
@@ -201,6 +215,7 @@ const generator: Generator = {
       return ''
     }
 
+    // p-columns rather than 'l': see template1's skillsSection.
     return source`
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       %
@@ -209,7 +224,7 @@ const generator: Generator = {
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       \\section{${heading || 'Skills'}}
       \\raggedright
-      \\begin{tabular}{ l l }
+      \\begin{tabular}{@{}p{7em}@{\\hspace{1em}}p{\\dimexpr\\linewidth-8em\\relax}@{}}
       ${skills.map((skill) => {
         const { name = '', keywords = [] } = skill
         return `\\descript{${name}} & {\\location{${keywords.join(', ')}}} \\\\`

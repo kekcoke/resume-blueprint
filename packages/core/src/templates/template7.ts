@@ -1,19 +1,42 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
-import type { FormValues, Generator } from '../types.js'
+import { profileLinks } from './profiles.js'
+import type { FormValues, GeneratorWithSummary } from '../types.js'
 
-const generator: Generator = {
+const generator: GeneratorWithSummary = {
   profileSection(basics = {}) {
-    const { name, email, phone, location = {}, website } = basics
+    const { name, label, email, phone, location = {}, website, profiles } = basics
+
+    // moderncv has a macro per contact kind and no general-purpose slot, so the
+    // profile links go in \extrainfo, which \makecvtitle prints under the rest.
+    const extra = profileLinks(profiles).join(' | ')
 
     return stripIndent`
     % Profile
     \\name{${name || ''}}{}
+    ${label ? `\\title{${label}}` : ''}
     \\address{${location.address || ''}}
     ${phone ? `\\phone[mobile]{${phone}}` : ''}
     ${email ? `\\email{${email || ''}}` : ''}
     ${website ? `\\homepage{${website || ''}}` : ''}
+    ${extra ? `\\extrainfo{${extra}}` : ''}
   `
+  },
+
+  // \title is moderncv's own slot for a job title and \makecvtitle prints it
+  // under the name, so `label` needs nothing here. The summary is a paragraph
+  // and has to follow \makecvtitle in the body.
+  summarySection(basics) {
+    const { summary } = basics || {}
+
+    if (!summary) {
+      return ''
+    }
+
+    return stripIndent`
+      ${summary}
+      \\medskip
+    `
   },
 
   educationSection(education, heading) {
@@ -79,12 +102,15 @@ const generator: Generator = {
           location,
           startDate,
           endDate = '',
+          summary,
           highlights
         } = job
 
         let dateRange = ''
         let highlightLines = ''
 
+        // \endgraf rather than \par: moderncv's \cventry is a \newcommand*, and a
+        // \par token during its argument scan aborts the compile.
         if (startDate && endDate) {
           dateRange = `${startDate} -- ${endDate}`
         } else if (startDate) {
@@ -108,7 +134,7 @@ const generator: Generator = {
             {${name || ''}}
             {${location || ''}}
             {}
-            {${highlightLines}}
+            {${summary ? `${summary}\\endgraf` : ''}${highlightLines}}
         `
       })}
     `
@@ -209,7 +235,7 @@ const generator: Generator = {
       \\documentclass[letterpaper]{moderncv}        % possible options include font size ('10pt', '11pt' and '12pt'), paper size ('a4paper', 'letterpaper', 'a5paper', 'legalpaper', 'executivepaper' and 'landscape') and font family ('sans' and 'roman')
       \\usepackage{textcomp}
       % moderncv themes
-      \\moderncvstyle{classic}                             % style options are 'casual' (default), 'classic', 'oldstyle' and 'banking'
+      \\moderncvstyle{banking}                             % style options are 'casual' (default), 'classic', 'oldstyle' and 'banking'
       \\moderncvcolor{blue}                               % color options 'blue' (default), 'orange', 'green', 'red', 'purple', 'grey' and 'black'
       %\\renewcommand{\\familydefault}{\\sfdefault}         % to set the default font; use '\\sfdefault' for the default sans serif font, '\\rmdefault' for the default roman one, or any tex font name
       %\\nopagenumbers{}                                  % uncomment to suppress automatic page numbering for CVs longer than one page
@@ -234,6 +260,7 @@ function template7(values: FormValues) {
     ${generator.profileSection(values.basics)}
     \\begin{document}
     ${values.basics ? '\\makecvtitle' : ''}
+    ${generator.summarySection(values.basics)}
     ${values.sections
       .map((section) => {
         switch (section) {

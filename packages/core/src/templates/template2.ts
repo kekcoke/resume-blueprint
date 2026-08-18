@@ -1,5 +1,6 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
+import { breakableUrl, profileLinks } from './profiles.js'
 import type { FormValues, Generator } from '../types.js'
 
 const generator: Generator = {
@@ -8,7 +9,8 @@ const generator: Generator = {
       return ''
     }
 
-    const { name, label, summary, email, phone, location = {}, website } = basics
+    const { name, label, summary, email, phone, location = {}, website, profiles } =
+      basics
 
     let nameLine = ''
 
@@ -46,9 +48,12 @@ const generator: Generator = {
       ? `{\\faMapMarker\\ ${location.address}}`
       : ''
     const websiteLine = website
-      ? `{\\faLink\\ \\href{${website}}{${website}}}`
+      ? `{\\faLink\\ \\href{${website}}{${breakableUrl(website)}}}`
       : ''
-    const info = [emailLine, phoneLine, addressLine, websiteLine]
+    const profileLines = profileLinks(profiles).map(
+      (link) => `{\\faLink\\ ${link}}`
+    )
+    const info = [emailLine, phoneLine, addressLine, websiteLine, ...profileLines]
       .filter(Boolean)
       .join(' | ')
 
@@ -133,7 +138,8 @@ const generator: Generator = {
       \\cvsection{${heading || 'Experience'}}
       \\begin{cventries}
       ${work.map((job) => {
-        const { name, position, location, startDate, endDate, highlights } = job
+        const { name, position, location, startDate, endDate, summary, highlights } =
+          job
 
         let dateRange
         let dutyLines
@@ -154,13 +160,21 @@ const generator: Generator = {
             `
         }
 
+        // \endgraf, not \par: awesome-cv defines \cventry with \newcommand*, so a
+        // literal \par token while its arguments are being scanned aborts with
+        // "Paragraph ended before \cventry was complete". \endgraf is \let to \par
+        // and ends the paragraph just the same without tripping that check.
+        //
+        // The \vspace{4mm} cancels the \vspace{-4mm} that opens the cvitems
+        // environment. Without it the bullet list is pulled up over the summary
+        // and the two overprint each other.
         return stripIndent`
           \\cventry
             {${position || ''}}
             {${name || ''}}
             {${location || ''}}
             {${dateRange || ''}}
-            {${dutyLines}}
+            {${summary ? `${summary}\\endgraf\\vspace{4mm}` : ''}${dutyLines}}
         `
       })}
       \\end{cventries}
@@ -172,12 +186,17 @@ const generator: Generator = {
       return ''
     }
 
+    // Only the value column becomes a p-column here. See template1's
+    // skillsSection for why 'l' loses content; the label column is short enough
+    // that it never overflows, and making it a p-column too drops the label onto
+    // its own line, because awesome-cv sets \\skill two points smaller than the
+    // label and the two cells then take different first baselines.
     return source`
       \\cvsection{${heading || 'Skills'}}
       \\begin{cventries}
       \\cventry
       {}
-      {\\def\\arraystretch{1.15}{\\begin{tabular}{ l l }
+      {\\def\\arraystretch{1.15}{\\begin{tabular}{@{}l@{\\hspace{1em}}p{\\dimexpr\\textwidth-9em\\relax}@{}}
       ${skills.map((skill) => {
         const { name, keywords = [] } = skill
         const nameLine = name ? `${name}: ` : ''

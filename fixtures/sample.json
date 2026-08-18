@@ -8,7 +8,11 @@
     "website": "https://example.com/ada",
     "location": {
       "address": "London, UK"
-    }
+    },
+    "profiles": [
+      { "network": "LinkedIn", "username": "ada-lovelace", "url": "https://linkedin.com/in/ada-lovelace" },
+      { "network": "Personal & Lab Notes", "username": "ada", "url": "https://example.com/notes" }
+    ]
   },
   "work": [
     {

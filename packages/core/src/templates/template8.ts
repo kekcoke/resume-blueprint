@@ -1,15 +1,16 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
-import type { FormValues, Generator } from '../types.js'
+import { breakableUrl, profileLinks } from './profiles.js'
+import type { FormValues, GeneratorWithSummary } from '../types.js'
 
-const generator: Generator = {
+const generator: GeneratorWithSummary = {
   profileSection(basics) {
     if (!basics) {
       return ''
     }
 
-    const { name, email, phone = '', location = {}, website } = basics
-    const websiteLine = website ? `\\href{${website}}{${website}}` : ''
+    const { name, email, phone = '', location = {}, website, profiles } = basics
+    const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
 
     let addressLine = ''
     let contactsLine = ''
@@ -20,10 +21,10 @@ const generator: Generator = {
       addressLine = `\\address{${location.address || phone}}`
     }
 
-    if (email && website) {
-      contactsLine = `\\contacts{${email} \\linebreak ${websiteLine}}`
-    } else if (email || website) {
-      contactsLine = `\\contacts{${email || websiteLine}}`
+    const contacts = [email, websiteLine, ...profileLinks(profiles)].filter(Boolean)
+
+    if (contacts.length) {
+      contactsLine = `\\contacts{${contacts.join(' \\linebreak ')}}`
     }
 
     return `
@@ -31,6 +32,23 @@ const generator: Generator = {
       \\name{${name || ''}}
       ${addressLine}
       ${contactsLine}
+    `
+  },
+
+  // mcdowellcv's header is built from \name, \address, and \contacts in the
+  // preamble and has no slot for a job title, so both render as the first block
+  // of the body, directly under \makeheader.
+  summarySection(basics) {
+    const { label, summary } = basics || {}
+
+    if (!label && !summary) {
+      return ''
+    }
+
+    return `
+      ${label ? `{\\large \\textit{${label}}}\\par\\vspace{4pt}` : ''}
+      ${summary || ''}
+      \\vspace{6pt}
     `
   },
 
@@ -102,6 +120,7 @@ const generator: Generator = {
           location,
           startDate,
           endDate = '',
+          summary,
           highlights
         } = job
 
@@ -129,6 +148,7 @@ const generator: Generator = {
           dateRange || ''
         }}
             ${location || ''}
+            ${summary ? `\\par ${summary}` : ''}
             ${highlightLines || ''}
           \\end{cvsubsection}
         `
@@ -279,6 +299,7 @@ function template8(values: FormValues) {
     \\begin{document}
       % Print the header
       \\makeheader
+      ${generator.summarySection(values.basics)}
       ${values.sections
         .map((section) => {
           switch (section) {

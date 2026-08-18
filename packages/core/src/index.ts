@@ -19,6 +19,8 @@ export { compileTex, assetRoot, TectonicError } from './render/tectonic.js'
 export type { CompileOptions } from './render/tectonic.js'
 export type { FormValues, Generator, LaTeXOpts, TemplateData } from './types.js'
 export { default as getTemplateData } from './templates/index.js'
+export { TEMPLATE_PROFILES, ATS_TEMPLATE_IDS } from './templates/catalog.js'
+export type { TemplateProfile } from './templates/catalog.js'
 
 /**
  * Validates, sanitizes, and renders a blueprint to LaTeX source.

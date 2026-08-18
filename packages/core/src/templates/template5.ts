@@ -1,23 +1,50 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
-import type { FormValues, Generator } from '../types.js'
+import { breakableUrl, profileLinks } from './profiles.js'
+import type { FormValues, GeneratorWithSummary } from '../types.js'
 
-const generator: Omit<Generator, 'resumeHeader'> = {
+const generator: Omit<GeneratorWithSummary, 'resumeHeader'> = {
   profileSection(basics) {
     if (!basics) {
       return ''
     }
 
-    const { name, email, phone, location = {}, website } = basics
-    const websiteLine = website ? `\\href{${website}}{${website}}` : ''
+    const { name } = basics
 
-    const info = [email, phone, location.address, websiteLine]
+    // Only the name goes in the header. res.cls typesets each \address in an
+    // \hbox that does not wrap and accepts at most two of them, which is not
+    // enough for an email, a phone, a location, a site, and a couple of profile
+    // links — the tail crossed the right margin and vanished. Everything else
+    // moves to summarySection, which renders in the body where text wraps.
+    return stripIndent`
+      \\name{{\\LARGE ${name || ''}}}
+    `
+  },
+
+  // Name / title / contacts / summary, in that order: it is the order a reader
+  // and a parser both expect, and it keeps the contact details adjacent to the
+  // name rather than stranded at the bottom of the header.
+  summarySection(basics) {
+    if (!basics) {
+      return ''
+    }
+
+    const { label, summary, email, phone, location = {}, website, profiles } = basics
+    const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
+
+    const contacts = [email, phone, location.address, websiteLine, ...profileLinks(profiles)]
       .filter(Boolean)
       .join(' | ')
 
+    if (!label && !summary && !contacts) {
+      return ''
+    }
+
     return stripIndent`
-      \\name{{\\LARGE ${name || ''}}}
-      \\address{${info}}
+      ${label ? `{\\large \\sl ${label}}\\\\[2pt]` : ''}
+      ${contacts ? `${contacts}\\\\[2pt]` : ''}
+      ${summary || ''}
+      \\vspace{2mm}
     `
   },
 
@@ -107,6 +134,7 @@ const generator: Omit<Generator, 'resumeHeader'> = {
           location,
           startDate,
           endDate = '',
+          summary,
           highlights
         } = job
 
@@ -141,6 +169,10 @@ const generator: Omit<Generator, 'resumeHeader'> = {
           jobLine += `${location}\\\\`
         }
 
+        if (summary) {
+          jobLine += `${summary}\\\\`
+        }
+
         if (highlights) {
           jobLine += source`
             \\begin{itemize} \\itemsep 3pt
@@ -159,9 +191,10 @@ const generator: Omit<Generator, 'resumeHeader'> = {
       return ''
     }
 
+    // p-columns rather than 'l': see template1's skillsSection.
     return source`
       \\section{${heading || 'SKILLS'}}
-      \\begin{tabular}{@{}ll}
+      \\begin{tabular}{@{}p{7em}@{\\hspace{1em}}p{\\dimexpr\\linewidth-8em\\relax}@{}}
       ${skills.map((skill) => {
         const { name, keywords = [] } = skill
         return `\\textbf{${name || ''}}: & ${keywords.join(', ') || ''}\\\\`
@@ -243,6 +276,7 @@ function template5(values: FormValues) {
       ${generator.profileSection(values.basics)}
       \\begin{resume}
         \\vspace{-5mm}
+        ${generator.summarySection(values.basics)}
         ${values.sections
           .map((section) => {
             switch (section) {

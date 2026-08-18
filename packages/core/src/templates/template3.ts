@@ -1,5 +1,6 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
+import { breakableUrl, profileLinks } from './profiles.js'
 import type { FormValues, Generator } from '../types.js'
 
 const generator: Generator = {
@@ -8,17 +9,31 @@ const generator: Generator = {
       return ''
     }
 
-    const { name, email, phone, location = {}, website } = basics
-    const websiteLine = website ? `\\href{${website}}{${website}}` : ''
+    const { name, label, summary, email, phone, location = {}, website, profiles } =
+      basics
+    const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
 
-    const info = [email, phone, location.address, websiteLine]
+    const info = [email, phone, location.address, websiteLine, ...profileLinks(profiles)]
       .filter(Boolean)
       .join(' | ')
 
+    // Both sit below the header rule rather than inside the tabular: its cells
+    // are single-line, so a job title or a paragraph put in one would run off
+    // the right edge instead of wrapping.
+    const labelLine = label ? `\\noindent{\\large \\textit{${label}}}\\par` : ''
+    const summaryBlock = summary ? `\n${summary}\\par\\vspace{4pt}` : ''
+
+    // The original crammed the name and the whole contact run into one
+    // \\begin{tabular*}{7in}{l...r}. \\textwidth is set to exactly 7in in this
+    // template's preamble, so there was zero slack, and neither an `l` nor an `r`
+    // cell wraps — a long contact line ran off the page and a long name collided
+    // with it. Stacking them lets both wrap, and puts the name on a line of its
+    // own where a parser expects to find it.
     return stripIndent`
-      \\begin{tabular*}{7in}{l@{\\extracolsep{\\fill}}r}
-      \\textbf{\\Large ${name}} & \\textit{${info}}
-      \\end{tabular*}
+      \\noindent{\\Large \\textbf{${name || ''}}}\\par
+      ${labelLine}
+      \\noindent{\\textit{${info}}}\\par
+      ${summaryBlock}
     `
   },
 
@@ -97,7 +112,8 @@ const generator: Generator = {
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       \\begin{itemize}[leftmargin=*]
       ${work.map((job) => {
-        const { name, position, location, startDate, endDate, highlights } = job
+        const { name, position, location, startDate, endDate, summary, highlights } =
+          job
 
         let dateRange
         let dutyLines
@@ -118,6 +134,8 @@ const generator: Generator = {
             `
         }
 
+        const summaryLine = summary ? `\\par ${summary}` : ''
+
         return stripIndent`
           \\item[]
             \\job
@@ -125,6 +143,7 @@ const generator: Generator = {
               {${location || ''}}
               {${position || ''}}
               {${dateRange || ''}}
+              ${summaryLine}
               ${dutyLines}
         `
       })}
