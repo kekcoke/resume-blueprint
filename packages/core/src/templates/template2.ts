@@ -133,7 +133,8 @@ const generator: Generator = {
       \\cvsection{${heading || 'Experience'}}
       \\begin{cventries}
       ${work.map((job) => {
-        const { name, position, location, startDate, endDate, highlights } = job
+        const { name, position, location, startDate, endDate, summary, highlights } =
+          job
 
         let dateRange
         let dutyLines
@@ -154,13 +155,17 @@ const generator: Generator = {
             `
         }
 
+        // \endgraf, not \par: awesome-cv defines \cventry with \newcommand*, so a
+        // literal \par token while its arguments are being scanned aborts with
+        // "Paragraph ended before \cventry was complete". \endgraf is \let to \par
+        // and ends the paragraph just the same without tripping that check.
         return stripIndent`
           \\cventry
             {${position || ''}}
             {${name || ''}}
             {${location || ''}}
             {${dateRange || ''}}
-            {${dutyLines}}
+            {${summary ? `${summary}\\endgraf` : ''}${dutyLines}}
         `
       })}
       \\end{cventries}

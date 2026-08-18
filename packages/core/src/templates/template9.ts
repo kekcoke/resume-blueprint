@@ -8,17 +8,24 @@ const generator: Generator = {
       return ''
     }
 
-    const { name, email, phone, location = {}, website } = basics
+    const { name, label, summary, email, phone, location = {}, website } = basics
     const websiteLine = website ? `\\href{${website}}{${website}}` : ''
 
     const info = [email, phone, location.address, websiteLine]
       .filter(Boolean)
       .join(' | ')
 
+    // \MySlogan is defined in this template's own preamble for exactly this and
+    // has gone unused since the extraction.
+    const labelLine = label ? `\\MySlogan{${label}}` : ''
+    const summaryBlock = summary ? `\n\\smallskip\n{\\small ${summary}\\par}` : ''
+
     return stripIndent`
       \\MyName{${name || ''}}
+      ${labelLine}
       \\bigskip
       {\\small \\hfill ${info || ''}}
+      ${summaryBlock}
     `
   },
 
@@ -104,6 +111,7 @@ const generator: Generator = {
           location,
           startDate,
           endDate = '',
+          summary,
           highlights
         } = job
 
@@ -132,7 +140,7 @@ const generator: Generator = {
             {${position || ''}}
             {${dateRange || ''}}
             {${nameLine}}
-            {${dutyLines}}
+            {${summary ? `${summary}\\par` : ''}${dutyLines}}
             ${i < lastJobIndex ? '\\sepspace' : ''}
         `
       })}

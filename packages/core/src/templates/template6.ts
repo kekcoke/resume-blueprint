@@ -8,10 +8,16 @@ const generator: Omit<Generator, 'resumeHeader'> = {
       return ''
     }
 
-    const { name = '', email, phone, location = {}, website } = basics
+    const { name = '', label, summary, email, phone, location = {}, website } = basics
     const websiteLine = website ? `\\href{${website}}{${website}}` : ''
 
     const info = [email, phone, location.address, websiteLine].filter(Boolean)
+
+    const labelLine = label
+      ? `\\vspace{2mm}\n{\\fontsize{1.1em}{1.1em}\\fontspec[Path = fonts/]{CrimsonText-Italic} ${label}}\\\\`
+      : ''
+
+    const summaryBlock = summary ? `\n\\vspace{2mm}\n${summary}\\par` : ''
 
     return stripIndent`
       \\begin{center}
@@ -20,10 +26,12 @@ const generator: Omit<Generator, 'resumeHeader'> = {
       {\\fontsize{\\sizeone}{\\sizeone}\\fontspec[Path = fonts/,LetterSpace=15]{Montserrat-Regular} ${name.toUpperCase()}}
       ${name && info.length > 1 ? '\\\\' : ''}
       \\vspace{2mm}
+      ${labelLine}
       {\\fontsize{1em}{1em}\\fontspec[Path = fonts/]{Montserrat-Light} ${info.join(
         ' -- '
       )}}
       \\end{center}
+      ${summaryBlock}
     `
   },
 
@@ -97,6 +105,7 @@ const generator: Omit<Generator, 'resumeHeader'> = {
           location = '',
           startDate = '',
           endDate = '',
+          summary = '',
           highlights = []
         } = job
 
@@ -125,7 +134,7 @@ const generator: Omit<Generator, 'resumeHeader'> = {
             {${dateRange}}
             {${position}}
             {${location}}
-            {${dutyLines}}
+            {${summary ? `\\par ${summary}` : ''}${dutyLines}}
         `
       })}
     }

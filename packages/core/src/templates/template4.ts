@@ -8,7 +8,7 @@ const generator: Generator = {
       return '\\namesection{Your}{Name}{}'
     }
 
-    const { name, email, phone, location = {}, website } = profile
+    const { name, label, summary, email, phone, location = {}, website } = profile
 
     let nameStart = ''
     let nameEnd = ''
@@ -28,6 +28,14 @@ const generator: Generator = {
     const info = [email, phone, location.address, website]
       .filter(Boolean)
       .join(' | ')
+
+    // \namesection's third argument is a centered group, so a `\\` inside it
+    // puts the job title on its own line above the contact run.
+    const headerInfo = label ? `${label} \\\\ ${info}` : info
+
+    const summaryBlock = summary
+      ? `\n\\vspace{-8pt}\n{\\raggedright ${summary}\\par}\n\\sectionsep`
+      : ''
 
     const sectionHeader = stripIndent`
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -51,7 +59,8 @@ const generator: Generator = {
 
     return stripIndent`
       ${sectionHeader}
-      \\namesection{${nameStart}}{${nameEnd}}{${info}}
+      \\namesection{${nameStart}}{${nameEnd}}{${headerInfo}}
+      ${summaryBlock}
     `
   },
 
@@ -148,6 +157,7 @@ const generator: Generator = {
           location,
           startDate,
           endDate = '',
+          summary,
           highlights
         } = job
 
@@ -189,6 +199,7 @@ const generator: Generator = {
 
         return stripIndent`
           ${line1}
+          ${summary ? `\\par ${summary}` : ''}
           ${highlightLines}
           \\sectionsep
         `

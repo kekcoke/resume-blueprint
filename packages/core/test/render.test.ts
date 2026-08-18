@@ -155,15 +155,30 @@ describe('content the original silently dropped now renders', () => {
     )
   })
 
-  // The other eight templates still drop these fields. This is deliberate and
-  // scoped, not an oversight — pinning it here so the day they are fixed, this
-  // test fails and gets updated rather than the gap going unnoticed.
-  for (const id of TEMPLATE_IDS.filter((t) => t !== 2)) {
-    test(`template${id} does not yet render basics.label (known gap)`, () => {
+  // This started life as the inverse: a pin asserting the other eight templates
+  // still dropped these fields, so the gap would fail loudly rather than drift.
+  // It did exactly that, and the assertion is now the positive one.
+  for (const id of TEMPLATE_IDS) {
+    test(`template${id} renders basics.label and basics.summary`, () => {
       const { texDoc } = blueprintToTex({ ...sample, selectedTemplate: id })
+
       assert.ok(
-        !texDoc.includes('Numerical Analyst'),
-        `template${id} now renders basics.label — update this test and the README's known gaps`
+        texDoc.includes('Numerical Analyst'),
+        `template${id} dropped basics.label`
+      )
+      assert.ok(
+        texDoc.includes('first algorithm intended for one'),
+        `template${id} dropped basics.summary`
+      )
+    })
+
+    // work[].summary was valid JSON Resume that no template rendered at all.
+    test(`template${id} renders work[].summary`, () => {
+      const { texDoc } = blueprintToTex({ ...sample, selectedTemplate: id })
+
+      assert.ok(
+        texDoc.includes('Led the numerical methods group'),
+        `template${id} dropped work[0].summary`
       )
     })
   }

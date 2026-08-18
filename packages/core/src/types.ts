@@ -26,6 +26,14 @@ export type FormValues = Blueprint
 export type Generator = {
   resumeHeader: () => string
   profileSection: (basics?: Basics) => string
+  /**
+   * `basics.label` and `basics.summary` belong to the profile, but templates 5,
+   * 7, and 8 emit their headers from the preamble through class-level macros
+   * (`\name{}`, `\address{}`, `\contacts{}`), where a prose paragraph cannot
+   * go. Those three implement this instead, and their body calls it directly
+   * below the header. Every other template renders both inside `profileSection`.
+   */
+  summarySection?: (basics?: Basics) => string
   educationSection: (education?: Array<Education>, heading?: string) => string
   workSection: (work?: Array<Work>, heading?: string) => string
   skillsSection: (skills?: Array<Skill>, heading?: string) => string
@@ -50,6 +58,16 @@ export type LaTeXOpts = {
   inputs?: string[]
   /** Font files, staged into a `fonts/` subdirectory of the compile directory. */
   fonts?: string[]
+}
+
+/**
+ * A template whose header is emitted from the preamble through class-level
+ * macros, so `basics.label` and `basics.summary` have to render in the body.
+ * Templates 5, 7, and 8 are the three; declaring it makes `summarySection`
+ * required for them while it stays optional for everyone else.
+ */
+export type GeneratorWithSummary = Generator & {
+  summarySection: (basics?: Basics) => string
 }
 
 export type TemplateData = {

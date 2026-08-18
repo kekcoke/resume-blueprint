@@ -1,19 +1,36 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
-import type { FormValues, Generator } from '../types.js'
+import type { FormValues, GeneratorWithSummary } from '../types.js'
 
-const generator: Generator = {
+const generator: GeneratorWithSummary = {
   profileSection(basics = {}) {
-    const { name, email, phone, location = {}, website } = basics
+    const { name, label, email, phone, location = {}, website } = basics
 
     return stripIndent`
     % Profile
     \\name{${name || ''}}{}
+    ${label ? `\\title{${label}}` : ''}
     \\address{${location.address || ''}}
     ${phone ? `\\phone[mobile]{${phone}}` : ''}
     ${email ? `\\email{${email || ''}}` : ''}
     ${website ? `\\homepage{${website || ''}}` : ''}
   `
+  },
+
+  // \title is moderncv's own slot for a job title and \makecvtitle prints it
+  // under the name, so `label` needs nothing here. The summary is a paragraph
+  // and has to follow \makecvtitle in the body.
+  summarySection(basics) {
+    const { summary } = basics || {}
+
+    if (!summary) {
+      return ''
+    }
+
+    return stripIndent`
+      ${summary}
+      \\medskip
+    `
   },
 
   educationSection(education, heading) {
@@ -79,12 +96,15 @@ const generator: Generator = {
           location,
           startDate,
           endDate = '',
+          summary,
           highlights
         } = job
 
         let dateRange = ''
         let highlightLines = ''
 
+        // \endgraf rather than \par: moderncv's \cventry is a \newcommand*, and a
+        // \par token during its argument scan aborts the compile.
         if (startDate && endDate) {
           dateRange = `${startDate} -- ${endDate}`
         } else if (startDate) {
@@ -108,7 +128,7 @@ const generator: Generator = {
             {${name || ''}}
             {${location || ''}}
             {}
-            {${highlightLines}}
+            {${summary ? `${summary}\\endgraf` : ''}${highlightLines}}
         `
       })}
     `
@@ -234,6 +254,7 @@ function template7(values: FormValues) {
     ${generator.profileSection(values.basics)}
     \\begin{document}
     ${values.basics ? '\\makecvtitle' : ''}
+    ${generator.summarySection(values.basics)}
     ${values.sections
       .map((section) => {
         switch (section) {

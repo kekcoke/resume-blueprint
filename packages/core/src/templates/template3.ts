@@ -8,17 +8,25 @@ const generator: Generator = {
       return ''
     }
 
-    const { name, email, phone, location = {}, website } = basics
+    const { name, label, summary, email, phone, location = {}, website } = basics
     const websiteLine = website ? `\\href{${website}}{${website}}` : ''
 
     const info = [email, phone, location.address, websiteLine]
       .filter(Boolean)
       .join(' | ')
 
+    // Both sit below the header rule rather than inside the tabular: its cells
+    // are single-line, so a job title or a paragraph put in one would run off
+    // the right edge instead of wrapping.
+    const labelLine = label ? `\n{\\large \\textit{${label}}}\\par\\vspace{2pt}` : ''
+    const summaryBlock = summary ? `\n${summary}\\par\\vspace{4pt}` : ''
+
     return stripIndent`
       \\begin{tabular*}{7in}{l@{\\extracolsep{\\fill}}r}
       \\textbf{\\Large ${name}} & \\textit{${info}}
       \\end{tabular*}
+      ${labelLine}
+      ${summaryBlock}
     `
   },
 
@@ -97,7 +105,8 @@ const generator: Generator = {
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       \\begin{itemize}[leftmargin=*]
       ${work.map((job) => {
-        const { name, position, location, startDate, endDate, highlights } = job
+        const { name, position, location, startDate, endDate, summary, highlights } =
+          job
 
         let dateRange
         let dutyLines
@@ -118,6 +127,8 @@ const generator: Generator = {
             `
         }
 
+        const summaryLine = summary ? `\\par ${summary}` : ''
+
         return stripIndent`
           \\item[]
             \\job
@@ -125,6 +136,7 @@ const generator: Generator = {
               {${location || ''}}
               {${position || ''}}
               {${dateRange || ''}}
+              ${summaryLine}
               ${dutyLines}
         `
       })}

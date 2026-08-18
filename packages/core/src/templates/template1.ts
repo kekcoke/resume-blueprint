@@ -8,27 +8,36 @@ const generator: Generator = {
       return ''
     }
 
-    const { name, email, phone, location, website } = basics
+    const { name, label, summary, email, phone, location, website } = basics
     const address = location?.address || ''
     const websiteLine = website ? `\\href{${website}}{${website}}` : ''
 
-    let line1 = name ? `{\\Huge \\scshape {${name}}}` : ''
-    let line2 = [address, email, phone, websiteLine]
-      .filter(Boolean)
-      .join(' $\\cdot$ ')
+    // The job title gets its own line rather than joining the contact run. A
+    // parser reads the line under the name as the candidate's title; buried in
+    // a `$\cdot$`-separated list it reads as one more contact detail.
+    const lines = [
+      name ? `{\\Huge \\scshape {${name}}}` : '',
+      label ? `{\\large \\scshape ${label}}` : '',
+      [address, email, phone, websiteLine].filter(Boolean).join(' $\\cdot$ ')
+    ].filter(Boolean)
 
-    if (line1 && line2) {
-      line1 += '\\\\'
-      line2 += '\\\\'
-    }
+    const header = lines.join('\\\\\n  ') + (lines.length > 1 ? '\\\\' : '')
+
+    const summaryBlock = summary
+      ? stripIndent`
+          \\vspace{-2mm}
+          ${summary}
+          \\vspace{2mm}
+        `
+      : ''
 
     return stripIndent`
       %==== Profile ====%
       \\vspace*{-10pt}
       \\begin{center}
-        ${line1}
-        ${line2}
+        ${header}
       \\end{center}
+      ${summaryBlock}
     `
   },
 
@@ -107,10 +116,12 @@ const generator: Generator = {
       \\vspace{1mm}
 
       ${work.map((job) => {
-        const { name, position, location, startDate, endDate, highlights } = job
+        const { name, position, location, startDate, endDate, summary, highlights } =
+          job
 
         let line1 = ''
         let line2 = ''
+        let summaryLine = ''
         let highlightLines = ''
 
         if (name) {
@@ -136,6 +147,10 @@ const generator: Generator = {
         if (line1) line1 += '\\\\'
         if (line2) line2 += '\\\\'
 
+        if (summary) {
+          summaryLine = `${summary}\\\\`
+        }
+
         if (highlights) {
           highlightLines = source`
               \\vspace{-1mm}
@@ -148,6 +163,7 @@ const generator: Generator = {
         return stripIndent`
           ${line1}
           ${line2}
+          ${summaryLine}
           ${highlightLines}
         `
       })}

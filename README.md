@@ -269,8 +269,11 @@ Fixed while porting, all present in the upstream `v2` branch:
   meant LaTeX resolved the rest from Tectonic's bundle and hit a version clash. The
   bundle now supplies moderncv in full.
 
-Known gap: `work[].summary` is valid JSON Resume and is accepted and preserved, but none
-of the nine templates render it. Use `highlights` for content that must appear.
+Also fixed on the same branch as the parse-fidelity harness, and the same bug class as
+`work[].company`: every template's header destructured only
+`{ name, email, phone, location, website }`, so `basics.label` and `basics.summary` were
+validated, stored, and silently dropped. `work[].summary` was accepted and rendered by no
+template at all. All three now render everywhere.
 
 ## Credits
 

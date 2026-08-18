@@ -1,8 +1,8 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
-import type { FormValues, Generator } from '../types.js'
+import type { FormValues, GeneratorWithSummary } from '../types.js'
 
-const generator: Omit<Generator, 'resumeHeader'> = {
+const generator: Omit<GeneratorWithSummary, 'resumeHeader'> = {
   profileSection(basics) {
     if (!basics) {
       return ''
@@ -18,6 +18,23 @@ const generator: Omit<Generator, 'resumeHeader'> = {
     return stripIndent`
       \\name{{\\LARGE ${name || ''}}}
       \\address{${info}}
+    `
+  },
+
+  // res.cls builds its header from \name and \address in the preamble, so the
+  // job title and summary cannot go there — they render at the top of the
+  // resume body instead, which is where a reader looks for them anyway.
+  summarySection(basics) {
+    const { label, summary } = basics || {}
+
+    if (!label && !summary) {
+      return ''
+    }
+
+    return stripIndent`
+      ${label ? `{\\large \\sl ${label}}\\\\[2pt]` : ''}
+      ${summary || ''}
+      \\vspace{2mm}
     `
   },
 
@@ -107,6 +124,7 @@ const generator: Omit<Generator, 'resumeHeader'> = {
           location,
           startDate,
           endDate = '',
+          summary,
           highlights
         } = job
 
@@ -139,6 +157,10 @@ const generator: Omit<Generator, 'resumeHeader'> = {
 
         if (location) {
           jobLine += `${location}\\\\`
+        }
+
+        if (summary) {
+          jobLine += `${summary}\\\\`
         }
 
         if (highlights) {
@@ -243,6 +265,7 @@ function template5(values: FormValues) {
       ${generator.profileSection(values.basics)}
       \\begin{resume}
         \\vspace{-5mm}
+        ${generator.summarySection(values.basics)}
         ${values.sections
           .map((section) => {
             switch (section) {
