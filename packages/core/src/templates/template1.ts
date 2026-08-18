@@ -175,9 +175,12 @@ const generator: Generator = {
       return ''
     }
 
+    // Both columns are p-columns so they wrap. An 'l' column typesets its cell on
+    // one unbreakable line, which for a real skill list means the tail runs off
+    // the right edge of the page and is simply gone — no warning, no error.
     return source`
       \\header{${heading || 'Skills'}}
-      \\begin{tabular}{ l l }
+      \\begin{tabular}{@{}p{7em}@{\\hspace{1em}}p{\\dimexpr\\linewidth-8em\\relax}@{}}
       ${skills.map((skill) => {
         const { name = 'Misc', keywords = [] } = skill
         return `${name}: & ${keywords.join(', ')} \\\\`

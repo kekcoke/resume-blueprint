@@ -11,13 +11,16 @@ const generator: Omit<GeneratorWithSummary, 'resumeHeader'> = {
     const { name, email, phone, location = {}, website } = basics
     const websiteLine = website ? `\\href{${website}}{${website}}` : ''
 
-    const info = [email, phone, location.address, websiteLine]
-      .filter(Boolean)
-      .join(' | ')
+    // res.cls typesets each \\address in an \\hbox that does not wrap, so one long
+    // contact run silently loses its tail off the right edge. It accepts exactly
+    // two, laid out left and right, so the run is split across both.
+    const contacts = [email, phone, location.address, websiteLine].filter(Boolean)
+    const half = Math.ceil(contacts.length / 2)
 
     return stripIndent`
       \\name{{\\LARGE ${name || ''}}}
-      \\address{${info}}
+      \\address{${contacts.slice(0, half).join(' | ')}}
+      ${contacts.length > half ? `\\address{${contacts.slice(half).join(' | ')}}` : ''}
     `
   },
 
@@ -181,9 +184,10 @@ const generator: Omit<GeneratorWithSummary, 'resumeHeader'> = {
       return ''
     }
 
+    // p-columns rather than 'l': see template1's skillsSection.
     return source`
       \\section{${heading || 'SKILLS'}}
-      \\begin{tabular}{@{}ll}
+      \\begin{tabular}{@{}p{7em}@{\\hspace{1em}}p{\\dimexpr\\linewidth-8em\\relax}@{}}
       ${skills.map((skill) => {
         const { name, keywords = [] } = skill
         return `\\textbf{${name || ''}}: & ${keywords.join(', ') || ''}\\\\`

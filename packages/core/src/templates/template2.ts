@@ -159,13 +159,17 @@ const generator: Generator = {
         // literal \par token while its arguments are being scanned aborts with
         // "Paragraph ended before \cventry was complete". \endgraf is \let to \par
         // and ends the paragraph just the same without tripping that check.
+        //
+        // The \vspace{4mm} cancels the \vspace{-4mm} that opens the cvitems
+        // environment. Without it the bullet list is pulled up over the summary
+        // and the two overprint each other.
         return stripIndent`
           \\cventry
             {${position || ''}}
             {${name || ''}}
             {${location || ''}}
             {${dateRange || ''}}
-            {${summary ? `${summary}\\endgraf` : ''}${dutyLines}}
+            {${summary ? `${summary}\\endgraf\\vspace{4mm}` : ''}${dutyLines}}
         `
       })}
       \\end{cventries}
@@ -177,12 +181,17 @@ const generator: Generator = {
       return ''
     }
 
+    // Only the value column becomes a p-column here. See template1's
+    // skillsSection for why 'l' loses content; the label column is short enough
+    // that it never overflows, and making it a p-column too drops the label onto
+    // its own line, because awesome-cv sets \\skill two points smaller than the
+    // label and the two cells then take different first baselines.
     return source`
       \\cvsection{${heading || 'Skills'}}
       \\begin{cventries}
       \\cventry
       {}
-      {\\def\\arraystretch{1.15}{\\begin{tabular}{ l l }
+      {\\def\\arraystretch{1.15}{\\begin{tabular}{@{}l@{\\hspace{1em}}p{\\dimexpr\\textwidth-9em\\relax}@{}}
       ${skills.map((skill) => {
         const { name, keywords = [] } = skill
         const nameLine = name ? `${name}: ` : ''
