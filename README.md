@@ -76,6 +76,19 @@ Fifteen tools: `resume_list`, `resume_get`, `resume_create`, `resume_patch`,
 `resume_remove`, `resume_validate`, `resume_render`, `resume_tex`, `resume_history`,
 `resume_diff`, `resume_revert`, `resume_templates`.
 
+**Dev loop: rebuild, then restart the server.** A running server holds
+`@resume-blueprint/core` in module memory, so after `npm run build` it keeps rendering
+the templates it loaded at startup until the client restarts it. Nothing can reload an
+ESM graph in place, so the staleness is made visible instead: the server prints its core
+build to stderr on start, and every `resume_render` result carries the same stamp.
+
+```
+[resume-blueprint-mcp] ready (core built 2026-08-18T03:30:45.795Z)
+```
+
+If a template change appears not to have worked, compare that timestamp against
+`packages/core/dist/index.js` before looking anywhere else.
+
 ### HTTP (workflow tools)
 
 ```bash

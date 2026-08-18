@@ -142,7 +142,9 @@ export const ResumeValidateOutput = z.object({
 export const ResumeRenderOutput = z.object({
   path: z.string(),
   pageCount: z.number().int().nonnegative(),
-  byteSize: z.number().int().nonnegative()
+  byteSize: z.number().int().nonnegative(),
+  /** Which core build produced this PDF. See buildStamp.ts. */
+  coreBuild: z.string()
 })
 
 export const ResumeTexOutput = z.object({

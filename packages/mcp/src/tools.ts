@@ -10,6 +10,7 @@ import {
   formatValidationError,
   TEMPLATE_IDS
 } from '@resume-blueprint/core'
+import { CORE_BUILD } from './buildStamp.js'
 
 import {
   ResumeListInput,
@@ -329,9 +330,12 @@ export function registerTools(server: McpServer): void {
 
         return {
           content: [
-            { type: 'text', text: `${pageCount} page${pageCount === 1 ? '' : 's'}, ${kb}KB, at ${path}` }
+            {
+              type: 'text',
+              text: `${pageCount} page${pageCount === 1 ? '' : 's'}, ${kb}KB, at ${path} (${CORE_BUILD})`
+            }
           ],
-          structuredContent: { path, pageCount, byteSize }
+          structuredContent: { path, pageCount, byteSize, coreBuild: CORE_BUILD }
         }
       } catch (error) {
         return toToolError(error)

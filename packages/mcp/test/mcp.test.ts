@@ -160,12 +160,30 @@ describe('resume_render', () => {
     // spaces; a human-readable one-liner never looks like that.
     assert.ok(!/[A-Za-z0-9+/]{200,}={0,2}/.test(text), 'response text looks like a base64 blob')
 
-    const structured = rendered.structuredContent as { path: string; pageCount: number; byteSize: number }
+    const structured = rendered.structuredContent as {
+      path: string
+      pageCount: number
+      byteSize: number
+      coreBuild: string
+    }
     assert.ok(existsSync(structured.path), `expected a file at ${structured.path}`)
     assert.ok(structured.pageCount >= 1)
 
     const stats = await stat(structured.path)
     assert.equal(structured.byteSize, stats.size)
+
+    // A long-running server serves whatever core it loaded at startup, so every
+    // render says which build produced it. Without this, a template fix looks
+    // like it did not work until someone thinks to restart the client.
+    assert.match(
+      structured.coreBuild,
+      /^core built \d{4}-/,
+      `expected a core build stamp, got ${JSON.stringify(structured.coreBuild)}`
+    )
+    assert.ok(
+      text.includes(structured.coreBuild),
+      'the human-readable render line should carry the build stamp too'
+    )
   })
 })
 
