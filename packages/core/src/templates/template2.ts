@@ -8,7 +8,7 @@ const generator: Generator = {
       return ''
     }
 
-    const { name, email, phone, location = {}, website } = basics
+    const { name, label, summary, email, phone, location = {}, website } = basics
 
     let nameLine = ''
 
@@ -26,6 +26,19 @@ const generator: Generator = {
 
       nameLine = `\\headerfirstnamestyle{${nameStart}} \\headerlastnamestyle{${nameEnd}} \\\\`
     }
+
+    // awesome-cv.cls defines both of these for exactly this purpose: the stock
+    // \makecvheader drives them from \position{} and \quote{}. This template
+    // hand-rolls the header rather than calling \makecvheader, so it reaches for
+    // the same style macros directly. The 6.0mm before the quote is the class's
+    // own spacing (awesome-cv.cls \makecvheader), kept so the hand-rolled header
+    // matches what the class was designed around.
+    const positionLine = label ? `\\headerpositionstyle{${label}} \\\\` : ''
+    // Leads with \\ so the quote starts its own line rather than running on from
+    // the contact line, which is a single paragraph in horizontal mode.
+    const quoteLine = summary
+      ? `\\\\ \\vspace{6.0mm} \\headerquotestyle{${summary}}`
+      : ''
 
     const emailLine = email ? `{\\faEnvelope\\ ${email}}` : ''
     const phoneLine = phone ? `{\\faMobile\\ ${phone}}` : ''
@@ -45,8 +58,10 @@ const generator: Generator = {
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       \\begin{center}
       ${nameLine}
+      ${positionLine}
       \\vspace{2mm}
       ${info}
+      ${quoteLine}
       \\end{center}
     `
   },
