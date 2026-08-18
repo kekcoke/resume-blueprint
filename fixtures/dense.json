@@ -1,0 +1,133 @@
+{
+  "basics": {
+    "name": "Ada Lovelace",
+    "label": "Principal Engineer & Numerical Analyst, Distributed Computation Platforms",
+    "summary": "Engineer with a decade of work on general-purpose computing machines, publishing the first algorithm intended for one and leading the numerical methods group that made it practical across three continents and eleven institutions.",
+    "email": "ada.lovelace@analytical-engine-works.example.com",
+    "phone": "+44 (0) 20 7946 0958",
+    "website": "https://example.com/bernoulli-machine-notes",
+    "location": {
+      "address": "Marylebone, London, United Kingdom"
+    },
+    "profiles": [
+      {
+        "network": "LinkedIn",
+        "username": "ada-lovelace-numerical-analyst-1815",
+        "url": "https://linkedin.com/in/ada-lovelace-numerical-analyst-1815"
+      },
+      {
+        "network": "GitHub",
+        "username": "countess-of-lovelace",
+        "url": "https://github.com/countess-of-lovelace"
+      }
+    ]
+  },
+  "work": [
+    {
+      "company": "Analytical Engine Works",
+      "position": "Principal Engineer, Numerical Methods & Platform Reliability",
+      "location": "Marylebone, London, United Kingdom",
+      "startDate": "Jan 2019",
+      "endDate": "Present",
+      "summary": "Led the numerical methods group through the transition from mechanical tabulation to a fully punched-card pipeline, owning both the algorithm library and the reliability of the engines that ran it.",
+      "highlights": [
+        "Designed the first published algorithm for a general-purpose computing machine",
+        "Cut batch computation latency by 45% across the note-taking pipeline",
+        "Mentored 6 engineers; 3 promoted within 18 months"
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "name": "Languages",
+      "keywords": [
+        "TypeScript",
+        "Python",
+        "Rust",
+        "Go",
+        "C#",
+        "Ruby",
+        "SQL",
+        "Bash",
+        "OCaml",
+        "Haskell",
+        "Elixir",
+        "Scala"
+      ]
+    },
+    {
+      "name": "Infrastructure",
+      "keywords": [
+        "Docker",
+        "Postgres",
+        "Kubernetes",
+        "Terraform",
+        "Helm",
+        "Ansible",
+        "Redis",
+        "Snowflake",
+        "RabbitMQ",
+        "Blob Storage",
+        "Datadog",
+        "Prometheus"
+      ]
+    },
+    {
+      "name": "Methodologies",
+      "keywords": [
+        "Domain-Driven Design",
+        "Test-Driven Development",
+        "Event Sourcing",
+        "Continuous Delivery",
+        "Trunk-Based Development",
+        "GitHub Copilot"
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "University of London",
+      "area": "Mathematics",
+      "studyType": "BSc",
+      "location": "London, UK",
+      "startDate": "2011",
+      "endDate": "2015",
+      "score": "3.9/4.0"
+    }
+  ],
+  "projects": [
+    {
+      "name": "Note G",
+      "description": "Bernoulli number generator for the Analytical Engine.",
+      "url": "https://example.com/note-g",
+      "keywords": [
+        "algorithms",
+        "computation"
+      ]
+    }
+  ],
+  "awards": [
+    {
+      "title": "Gold Medal for Numerical Analysis",
+      "date": "2020",
+      "awarder": "Royal Society",
+      "summary": "Awarded for contributions to mechanical computation."
+    }
+  ],
+  "headings": {
+    "work": "Experience",
+    "skills": "Skills",
+    "education": "Education",
+    "projects": "Projects",
+    "awards": "Awards"
+  },
+  "sections": [
+    "profile",
+    "work",
+    "skills",
+    "education",
+    "projects",
+    "awards"
+  ],
+  "selectedTemplate": 1
+}

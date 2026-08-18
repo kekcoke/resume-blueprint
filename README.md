@@ -21,6 +21,8 @@ server, and the HTTP adapter all work end to end, over an unchanged core:
 
 - Node.js >= 20
 - [Tectonic](https://tectonic-typesetting.github.io/) on `PATH` — `brew install tectonic`
+- `pdftotext` from poppler, for the parse-fidelity tests only — `brew install poppler`.
+  Without it those tests skip; everything else runs.
 
 Tectonic is used instead of a full TeX Live install because it is a single ~30MB binary
 that fetches only the packages a document actually needs. The first render of a given
