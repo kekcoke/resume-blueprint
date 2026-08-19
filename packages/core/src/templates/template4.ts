@@ -1,7 +1,7 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
-import type { FormValues, Generator } from '../types.js'
+import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
   profileSection(profile) {
@@ -363,12 +363,39 @@ const generator: Generator = {
   }
 }
 
-function template4(values: FormValues) {
+function template4(values: FormValues, config: ResolvedDocumentConfig) {
   const { headings = {} } = values
 
+  // resumeHeader() is pure `%` comments here — nothing about relocating it
+  // is a LaTeX hazard on its own — but the config-driven lines below it
+  // (\usepackage, \linespread, \hypersetup) are not comments, and those are
+  // real code that must follow \documentclass. Moving the whole call is
+  // what keeps this preamble in one readable block instead of splitting
+  // "header" across two positions; see C4/Step 3 in the F3 plan for why
+  // this template's golden output is expected to move either way.
+  //
+  // Always-on, not gated: TEMPLATE_DEFAULTS[4].margin ('1.05in') is C4's
+  // fix for a margin the F2 harness measured under the 0.5in floor.
+  // deedy-resume-openfont.cls turns out to load `geometry` itself (confirmed
+  // by compiling this template: a second `\usepackage[margin=...]{geometry}`
+  // is a hard "Option clash" error under Tectonic) — so this reconfigures
+  // through `\geometry{...}` instead, which is safe regardless of whether
+  // the class already loaded the package, plus a bare `\usepackage{geometry}`
+  // first for the case where it did not.
+  const extraLines = [
+    '\\usepackage{geometry}',
+    `\\geometry{margin=${config.margin}}`,
+    config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
+    config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+  ]
+    .filter(Boolean)
+    .join('\n')
+
   return stripIndent`
-    ${generator.resumeHeader()}
     \\documentclass[]{deedy-resume-openfont}
+    ${extraLines}
+
+    ${generator.resumeHeader(config)}
 
     \\begin{document}
     ${values.sections

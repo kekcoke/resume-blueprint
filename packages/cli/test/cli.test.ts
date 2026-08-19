@@ -241,3 +241,41 @@ describe('tex', () => {
     assert.match(stderr, new RegExp(`--template must be one of ${TEMPLATE_IDS.join(', ')}`))
   })
 })
+
+describe('document flags', () => {
+  test('--font-size merges into document and reaches the TeX source', async () => {
+    const { code, stdout } = await cli('tex', SAMPLE, '-t', '3', '--font-size', '12')
+
+    assert.equal(code, 0)
+    assert.match(stdout, /\\documentclass\[12pt\]\{article\}/)
+  })
+
+  test('--line-spacing merges into document and reaches the TeX source', async () => {
+    const { code, stdout } = await cli('tex', SAMPLE, '-t', '1', '--line-spacing', '1.1')
+
+    assert.equal(code, 0)
+    assert.match(stdout, /\\linespread\{1\.1\}\\selectfont/)
+  })
+
+  test('--margin below the 0.5in floor is clamped, not rejected', async () => {
+    const { code, stdout } = await cli('tex', SAMPLE, '-t', '1', '--margin', '0.1in')
+
+    assert.equal(code, 0)
+    assert.match(stdout, /left=0\.5in,right=0\.5in,bottom=0\.5in,top=0\.5in/)
+  })
+
+  test('an out-of-enum --font-size fails with a formatted validation error, not a crash', async () => {
+    const { code, stderr } = await cli('tex', SAMPLE, '-t', '1', '--font-size', '99')
+
+    assert.equal(code, 1)
+    assert.match(stderr, /invalid blueprint/)
+    assert.match(stderr, /document\.fontSize/)
+  })
+
+  test('a non-numeric --font-size is rejected before any work happens', async () => {
+    const { code, stderr } = await cli('tex', SAMPLE, '-t', '1', '--font-size', 'banana')
+
+    assert.equal(code, 1)
+    assert.match(stderr, /--font-size must be a number/)
+  })
+})

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { SECTION_NAMES, TEMPLATE_IDS } from '@resume-blueprint/core'
+import { DocumentConfigSchema, SECTION_NAMES, TEMPLATE_IDS } from '@resume-blueprint/core'
 
 export const SectionEnum = z.enum(SECTION_NAMES)
 
@@ -67,12 +67,16 @@ const MAX_RENDER_TIMEOUT_MS = 300_000
 export const ResumeRenderInput = z.object({
   id: z.string(),
   template: TemplateId.optional(),
+  /** Merged over the stored blueprint's own `document`, field by field — see
+   * `tools.ts`'s `withOverrides` — not a wholesale replacement. */
+  document: DocumentConfigSchema.optional(),
   timeoutMs: z.number().int().positive().max(MAX_RENDER_TIMEOUT_MS).optional()
 })
 
 export const ResumeTexInput = z.object({
   id: z.string(),
-  template: TemplateId.optional()
+  template: TemplateId.optional(),
+  document: DocumentConfigSchema.optional()
 })
 
 // Capped for the same reason as timeoutMs above: an unbounded `limit` lets a
@@ -165,6 +169,21 @@ export const ResumeDiffOutput = z.object({
   diff: z.string()
 })
 
+/** A template's fully-resolved `document` defaults, as `resolveDocumentConfig`
+ * returns them with an empty override — see packages/core/src/templates/documentConfig.ts. */
+const ResolvedDocumentOutput = z.object({
+  fontFamily: z.string(),
+  fontSize: z.number(),
+  paper: z.string(),
+  margin: z.string(),
+  lineSpacing: z.number(),
+  sectionSpacing: z.number(),
+  bulletSpacing: z.number(),
+  accentColor: z.string().optional(),
+  contactLayout: z.string(),
+  linkStyle: z.string()
+})
+
 export const ResumeTemplatesOutput = z.object({
   templates: z.array(
     z.object({
@@ -172,7 +191,19 @@ export const ResumeTemplatesOutput = z.object({
       name: z.string(),
       /** Measured, not asserted — see packages/core/src/templates/catalog.ts. */
       atsGrade: z.boolean(),
-      iconLabeledContacts: z.boolean()
+      iconLabeledContacts: z.boolean(),
+      clearsMarginFloor: z.boolean(),
+      cohesiveSkillRows: z.boolean(),
+      cohesiveRecords: z.boolean(),
+      orphanBullets: z.boolean(),
+      document: z.object({
+        /** This template's resolved `document` values with nothing overridden. */
+        defaults: ResolvedDocumentOutput,
+        /** Which `document` fields actually change this template's output —
+         * an agent can check here before spending a render on an override
+         * that would silently do nothing. */
+        honours: z.array(z.string())
+      })
     })
   )
 })

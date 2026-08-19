@@ -102,6 +102,23 @@ describe('POST /render', () => {
     const buf = Buffer.from(await res.arrayBuffer())
     assert.equal(buf.subarray(0, 5).toString(), '%PDF-')
   })
+
+  // F3's `document` block needs no route change — it rides in the blueprint
+  // body like every other field and is resolved by the same
+  // renderBlueprint() call every other route already uses.
+  test('a document block in the body renders without a route change', async () => {
+    harness = await startServer({ RESUME_BLUEPRINT_HOME: dir, RESUME_BLUEPRINT_PORT: '0' })
+    const sample = await readFixture('sample.json')
+
+    const res = await fetch(`${harness.baseUrl}/render`, {
+      method: 'POST',
+      body: JSON.stringify({ ...sample, document: { fontSize: 12, margin: '1in' } })
+    })
+
+    assert.equal(res.status, 200)
+    const buf = Buffer.from(await res.arrayBuffer())
+    assert.equal(buf.subarray(0, 5).toString(), '%PDF-')
+  })
 })
 
 describe('CRUD + delete round-trip', () => {

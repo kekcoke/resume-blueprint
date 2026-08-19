@@ -7,8 +7,10 @@ import type {
   Skill,
   Work
 } from './schema.js'
+import type { ResolvedDocumentConfig } from './templates/documentConfig.js'
 
 export type { Award, Basics, Education, Project, Skill, Work }
+export type { ResolvedDocumentConfig }
 
 /**
  * The nine template generators were written against a type named `FormValues`,
@@ -24,7 +26,18 @@ export type FormValues = Blueprint
  * implementing this and registering it in `templates/index.ts`.
  */
 export type Generator = {
-  resumeHeader: () => string
+  /**
+   * Required, not optional, on every template — an optional parameter would
+   * let a future template silently ignore `document`, the same bug class
+   * that once lost `basics.label` and `work[].summary`. Not every template
+   * uses `config` inside this method's own body: several (templates 4 and 8)
+   * emit config-driven preamble lines from their outer `templateN()`
+   * function instead, at the point after `\documentclass` where a
+   * `\usepackage` line is actually legal — `resumeHeader` on those runs
+   * before the class. The signature still takes `config` on all nine so a
+   * caller can never forget to resolve and pass it.
+   */
+  resumeHeader: (config: ResolvedDocumentConfig) => string
   profileSection: (basics?: Basics) => string
   /**
    * `basics.label` and `basics.summary` belong to the profile, but templates 5,

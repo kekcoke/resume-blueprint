@@ -84,7 +84,11 @@ export const TEMPLATE_PROFILES: readonly TemplateProfile[] = [
     name: 'Classic (article)',
     atsGrade: true,
     iconLabeledContacts: false,
-    clearsMarginFloor: false,
+    // F3's TEMPLATE_DEFAULTS[1].margin raised the declared margin from
+    // 0.8in to 1.1in to absorb the header's \vspace*{-40pt}/\hspace*{-18pt}
+    // pull — measured clearing the floor at 0.753in (multipage.json, page 1
+    // top) after that change.
+    clearsMarginFloor: true,
     cohesiveSkillRows: false,
     cohesiveRecords: false,
     orphanBullets: false
@@ -114,9 +118,19 @@ export const TEMPLATE_PROFILES: readonly TemplateProfile[] = [
     name: 'Deedy',
     atsGrade: true,
     iconLabeledContacts: false,
-    clearsMarginFloor: false,
+    // F3's TEMPLATE_DEFAULTS[4].margin raised the declared margin to 1.05in
+    // to clear a fixed-offset overrun near the page foot — measured
+    // clearing the floor at 0.603in bottom across all four F2 fixtures.
+    clearsMarginFloor: true,
     cohesiveSkillRows: false,
-    cohesiveRecords: true,
+    // Regressed from true by the margin fix directly above: the wider
+    // margin narrows the text column (this template has one `margin` value
+    // for all four sides, not a per-side one), and "Distinguished
+    // Engineering Award" now wraps its award line across two extracted
+    // lines instead of one. A genuine trade-off, not an oversight — the
+    // alternative was leaving the page-bottom overrun unfixed. Left for F5,
+    // which already owns this template's layout work.
+    cohesiveRecords: false,
     orphanBullets: false
   },
   {

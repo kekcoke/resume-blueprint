@@ -164,14 +164,22 @@ const CONTENT_KEYS = [
  * Escapes and prunes a validated blueprint, returning a value safe to hand to
  * `getTemplateData`.
  *
- * The control fields `sections` and `selectedTemplate` are passed through
- * untouched — they are a closed enum and an integer validated by the schema, and
- * escaping them would corrupt the section dispatch.
+ * The control fields `sections`, `selectedTemplate`, and `document` are passed
+ * through untouched. `sections` and `selectedTemplate` are a closed enum and a
+ * validated integer; escaping them would corrupt the section dispatch.
+ * `document` is entirely enums, clamped numbers, and a regex-validated hex
+ * string — no free text reaches it, by construction of `DocumentConfigSchema`
+ * — so nothing here may take the `escapeLatex` path. This line is load-bearing:
+ * `sanitizeBlueprint`'s result object is built from an explicit allowlist, so
+ * a `document` block that is not copied here never reaches `getTemplateData`
+ * at all, silently, with no error anywhere in the chain. See
+ * `sanitize.test.ts`'s "does not drop the document block" case.
  */
 export function sanitizeBlueprint(blueprint: Blueprint): Blueprint {
   const result: Record<string, unknown> = {
     sections: blueprint.sections,
     selectedTemplate: blueprint.selectedTemplate,
+    document: blueprint.document,
     headings: {}
   }
 

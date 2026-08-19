@@ -1,7 +1,8 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
-import type { FormValues, Generator } from '../types.js'
+import { accentColorToTeX } from './documentConfig.js'
+import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
   profileSection(basics) {
@@ -216,7 +217,32 @@ const generator: Generator = {
     `
   },
 
-  resumeHeader() {
+  resumeHeader(config) {
+    // TEMPLATE_DEFAULTS[9] is {paper: 'letter', margin: '0.75in'}, matching
+    // this line's current literal exactly — a direct replacement rather
+    // than an additive one, since both fields resolve to what's already
+    // hardcoded unless the caller overrides.
+    const paperOption = config.paper === 'a4' ? 'a4paper,' : ''
+    const geometryLine = `\\usepackage[${paperOption}margin=${config.margin}]{geometry}`
+
+    const extraLines = [
+      config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
+      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+    // Applied only to the section-heading rule, not the EducationEntry/
+    // WorkEntry duration boxes below (\colorbox{Black}) — those are
+    // multi-use macro bodies where a conditional swap would mean carrying
+    // two full copies of each macro just to vary one color reference, out
+    // of proportion with what F3 threading needs to prove. Prefixed inline
+    // on the \usefont line rather than given its own line, so an unset
+    // accentColor reproduces that line byte-for-byte.
+    const sectionColor = config.accentColor
+      ? `\\color[HTML]{${accentColorToTeX(config.accentColor)}}`
+      : ''
+
     return stripIndent`
       \\usepackage[english]{babel}
       \\usepackage[utf8]{inputenc}
@@ -227,7 +253,7 @@ const generator: Generator = {
       % the bulk of the visible optical-margin work, is supported and stays on.
       \\usepackage[protrusion=true,expansion=false]{microtype}
       \\usepackage[svgnames]{xcolor}  % Colours by their 'svgnames'
-      \\usepackage[margin=0.75in]{geometry}
+      ${geometryLine}
         % 700bp, not 700px: "px" is a pdfTeX-only unit and XeTeX-derived engines
         % (including Tectonic) reject it. pdfTeX's \\pdfpxdimen defaults to 1bp,
         % so this is the identical length, portably spelled.
@@ -254,7 +280,7 @@ const generator: Generator = {
       \\usepackage{sectsty}
 
       \\sectionfont{                 % Change font of \\section command
-        \\usefont{OT1}{phv}{b}{n}%   % bch-b-n: CharterBT-Bold font
+        ${sectionColor}\\usefont{OT1}{phv}{b}{n}%   % bch-b-n: CharterBT-Bold font
         \\sectionrule{0pt}{0pt}{-5pt}{3pt}}
 
       %%% Macros
@@ -318,16 +344,28 @@ const generator: Generator = {
           \\noindent \\textbf{#1} \\noindent \\textit{#3} \\hfill {#2} \\par
           \\noindent \\small #4 % Description
           \\normalsize \\par}
+      ${extraLines}
     `
   }
 }
 
-function template9(values: FormValues) {
+function template9(values: FormValues, config: ResolvedDocumentConfig) {
   const { headings = {} } = values
 
+  // TEMPLATE_DEFAULTS[9].fontSize is 10, not 11: this line's current
+  // 'fontsize=11pt' is a KOMA-Script option plain `article` silently
+  // ignores (dead code — see documentConfig.ts), rendering at 10pt today
+  // regardless of what it says. Reproducing that exact literal when
+  // fontSize is unset keeps `document` omitted byte-identical; an explicit
+  // override emits correct '<n>pt' syntax instead and actually takes
+  // effect, fixing the bug only when someone opts in.
+  const paperOption = config.paper === 'a4' ? 'a4paper,' : ''
+  const sizeOption = config.fontSize === 10 ? 'fontsize=11pt' : `${config.fontSize}pt`
+  const classLine = `\\documentclass[${paperOption}${sizeOption}]{article}`
+
   return stripIndent`
-    \\documentclass[fontsize=11pt]{article}
-    ${generator.resumeHeader()}
+    ${classLine}
+    ${generator.resumeHeader(config)}
     \\begin{document}
     ${values.sections
       .map((section) => {
