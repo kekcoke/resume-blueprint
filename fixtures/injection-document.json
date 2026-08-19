@@ -1,0 +1,13 @@
+{
+  "_comment": "Adversarial fixture for the `document` config surface (F3). Every field here is enum, clamped-number, or regex-validated-string shaped, so none of it may take the escapeLatex path — it must be rejected by BlueprintSchema outright, or, where a field never made the schema in the first place, must simply have no effect. See packages/core/test/sanitize.test.ts.",
+  "basics": {
+    "name": "Ada Lovelace"
+  },
+  "selectedTemplate": 1,
+  "document": {
+    "accentColor": "}\\input{/etc/passwd}%",
+    "margin": "0.75in}\\input{/etc/passwd}%",
+    "fontFamily": "\\write18{id}",
+    "linkStyle": "\\input{/etc/passwd}"
+  }
+}

@@ -223,9 +223,12 @@ const URL_KEYS = new Set(['url', 'website'])
 
 /**
  * `sections` holds enum names that are routing instructions, not content, and
- * `headings` is checked separately by the reading-order test.
+ * `headings` is checked separately by the reading-order test. `document` is
+ * config — enums, clamped numbers, a validated hex string — not prose; without
+ * this, collectLeaves would hunt the PDF text layer for values like '#4A90D9'
+ * or '0.75in' and report every one as clipped or missing (see F3's C8).
  */
-const SKIPPED_ROOT_KEYS = new Set(['sections', 'headings', 'selectedTemplate'])
+const SKIPPED_ROOT_KEYS = new Set(['sections', 'headings', 'selectedTemplate', 'document'])
 
 function collectLeaves(value: unknown, path: string, key: string): Leaf[] {
   if (typeof value === 'string') {
