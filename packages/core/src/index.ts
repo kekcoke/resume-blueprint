@@ -6,21 +6,34 @@ import type { TemplateData } from './types.js'
 
 export {
   BlueprintSchema,
+  DocumentConfigSchema,
   parseBlueprint,
   formatValidationError,
   isValidationError,
   SECTION_NAMES,
   TEMPLATE_IDS
 } from './schema.js'
-export type { Blueprint, BlueprintInput, SectionName } from './schema.js'
+export type { Blueprint, BlueprintInput, DocumentConfig, SectionName } from './schema.js'
 
 export { escapeLatex, sanitizeUrl, sanitizeBlueprint } from './sanitize.js'
 export { compileTex, assetRoot, TectonicError } from './render/tectonic.js'
 export type { CompileOptions } from './render/tectonic.js'
-export type { FormValues, Generator, LaTeXOpts, TemplateData } from './types.js'
+export type {
+  FormValues,
+  Generator,
+  LaTeXOpts,
+  ResolvedDocumentConfig,
+  TemplateData
+} from './types.js'
 export { default as getTemplateData } from './templates/index.js'
 export { TEMPLATE_PROFILES, ATS_TEMPLATE_IDS } from './templates/catalog.js'
 export type { TemplateProfile } from './templates/catalog.js'
+export {
+  GLOBAL_DEFAULTS as DOCUMENT_GLOBAL_DEFAULTS,
+  TEMPLATE_DEFAULTS as DOCUMENT_TEMPLATE_DEFAULTS,
+  HONOURED_DOCUMENT_FIELDS,
+  resolveDocumentConfig
+} from './templates/documentConfig.js'
 
 /**
  * Validates, sanitizes, and renders a blueprint to LaTeX source.

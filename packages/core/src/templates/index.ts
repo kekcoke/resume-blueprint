@@ -18,6 +18,7 @@ import {
   TEMPLATE8,
   TEMPLATE9
 } from './constants.js'
+import { resolveDocumentConfig } from './documentConfig.js'
 import { FormValues, TemplateData } from '../types.js'
 
 /**
@@ -29,10 +30,16 @@ import { FormValues, TemplateData } from '../types.js'
  * @return The generated LaTeX document as well as its additional opts.
  */
 export default function getTemplateData(data: FormValues): TemplateData {
+  // Resolved once per render, against this template's own defaults, and
+  // threaded into every templateN call below — including the `default:`
+  // fallback, so an unregistered `selectedTemplate` still gets a config
+  // resolved against template 1's defaults rather than an empty object.
+  const config = resolveDocumentConfig(data.selectedTemplate, data.document)
+
   switch (data.selectedTemplate) {
     case TEMPLATE1:
       return {
-        texDoc: template1(data),
+        texDoc: template1(data, config),
         opts: {
           cmd: 'pdflatex'
         }
@@ -40,7 +47,7 @@ export default function getTemplateData(data: FormValues): TemplateData {
 
     case TEMPLATE2:
       return {
-        texDoc: template2(data),
+        texDoc: template2(data, config),
         opts: {
           cmd: 'xelatex',
           inputs: [
@@ -73,7 +80,7 @@ export default function getTemplateData(data: FormValues): TemplateData {
 
     case TEMPLATE3:
       return {
-        texDoc: template3(data),
+        texDoc: template3(data, config),
         opts: {
           cmd: 'pdflatex'
         }
@@ -81,7 +88,7 @@ export default function getTemplateData(data: FormValues): TemplateData {
 
     case TEMPLATE4:
       return {
-        texDoc: template4(data),
+        texDoc: template4(data, config),
         opts: {
           cmd: 'xelatex',
           inputs: ['template4/deedy-resume-openfont.cls'],
@@ -101,7 +108,7 @@ export default function getTemplateData(data: FormValues): TemplateData {
 
     case TEMPLATE5:
       return {
-        texDoc: template5(data),
+        texDoc: template5(data, config),
         opts: {
           cmd: 'xelatex',
           inputs: [
@@ -113,7 +120,7 @@ export default function getTemplateData(data: FormValues): TemplateData {
 
     case TEMPLATE6:
       return {
-        texDoc: template6(data),
+        texDoc: template6(data, config),
         opts: {
           cmd: 'xelatex',
           inputs: [
@@ -138,7 +145,7 @@ export default function getTemplateData(data: FormValues): TemplateData {
 
     case TEMPLATE7:
       return {
-        texDoc: template7(data),
+        texDoc: template7(data, config),
         opts: {
           cmd: 'pdflatex',
           // The vendored moderncv files are v1.3.0 from 2013 and are deliberately
@@ -153,7 +160,7 @@ export default function getTemplateData(data: FormValues): TemplateData {
 
     case TEMPLATE8:
       return {
-        texDoc: template8(data),
+        texDoc: template8(data, config),
         opts: {
           cmd: 'xelatex',
           inputs: ['template8/mcdowellcv.cls']
@@ -162,7 +169,7 @@ export default function getTemplateData(data: FormValues): TemplateData {
 
     case TEMPLATE9:
       return {
-        texDoc: template9(data),
+        texDoc: template9(data, config),
         opts: {
           cmd: 'pdflatex'
         }
@@ -170,7 +177,7 @@ export default function getTemplateData(data: FormValues): TemplateData {
 
     default:
       return {
-        texDoc: template1(data),
+        texDoc: template1(data, config),
         opts: {
           cmd: 'pdflatex'
         }

@@ -1,7 +1,8 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { profileLinks } from './profiles.js'
-import type { FormValues, GeneratorWithSummary } from '../types.js'
+import { accentColorToTeX, GLOBAL_DEFAULTS } from './documentConfig.js'
+import type { FormValues, GeneratorWithSummary, ResolvedDocumentConfig } from '../types.js'
 
 const generator: GeneratorWithSummary = {
   profileSection(basics = {}) {
@@ -227,7 +228,49 @@ const generator: GeneratorWithSummary = {
     `
   },
 
-  resumeHeader() {
+  resumeHeader(config) {
+    // TEMPLATE_DEFAULTS[7] is {paper: 'letter', fontSize: 10}, matching this
+    // class line's current literal '[letterpaper]' (moderncv follows the
+    // standard LaTeX size-option convention, whose default absent an option
+    // is 10pt — see documentConfig.ts).
+    const paperOption = config.paper === 'a4' ? 'a4paper' : 'letterpaper'
+    const sizeOption = config.fontSize === 10 ? '' : `,${config.fontSize}pt`
+    const classLine = `\\documentclass[${paperOption}${sizeOption}]{moderncv}        % possible options include font size ('10pt', '11pt' and '12pt'), paper size ('a4paper', 'letterpaper', 'a5paper', 'legalpaper', 'executivepaper' and 'landscape') and font family ('sans' and 'roman')`
+
+    // scale=0.75 is moderncv's own proportional margin, not a length. There
+    // is no raw `document` input available inside this method (Generator's
+    // resumeHeader takes only the resolved config — see types.ts), and
+    // loading `geometry` a second time with different options is a hard
+    // LaTeX "Option clash" error, so this can't be additive the way other
+    // templates' margin overrides are. Comparing against GLOBAL_DEFAULTS.margin
+    // is the next best gate: it only misses the one case where a caller
+    // explicitly asks for exactly 0.75in, which scale=0.75 already
+    // approximates closely enough to not be worth the type-signature change.
+    const geometryLine =
+      config.margin === GLOBAL_DEFAULTS.margin
+        ? '\\usepackage[scale=0.75]{geometry}'
+        : `\\usepackage[margin=${config.margin}]{geometry}`
+
+    // Defining "blue" before \moderncvcolor{blue} selects it is what makes
+    // the override take: moderncv builds its internal palette by reading
+    // the named color \moderncvcolor is given, not by patching after.
+    // Joined with \moderncvstyle via filter(Boolean) below rather than
+    // interpolated on its own line, so an unset accentColor contributes no
+    // line at all, not a blank one.
+    const styleBlock = [
+      '\\moderncvstyle{banking}                             % style options are \'casual\' (default), \'classic\', \'oldstyle\' and \'banking\'',
+      config.accentColor ? `\\definecolor{blue}{HTML}{${accentColorToTeX(config.accentColor)}}` : ''
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+    const extraLines = [
+      config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
+      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+    ]
+      .filter(Boolean)
+      .join('\n')
+
     return stripIndent`
       %% start of file 'template.tex'.
       %% Copyright 2006-2013 Xavier Danaux (xdanaux@gmail.com).
@@ -237,10 +280,10 @@ const generator: GeneratorWithSummary = {
       % available at http://www.latex-project.org/lppl/.
 
 
-      \\documentclass[letterpaper]{moderncv}        % possible options include font size ('10pt', '11pt' and '12pt'), paper size ('a4paper', 'letterpaper', 'a5paper', 'legalpaper', 'executivepaper' and 'landscape') and font family ('sans' and 'roman')
+      ${classLine}
       \\usepackage{textcomp}
       % moderncv themes
-      \\moderncvstyle{banking}                             % style options are 'casual' (default), 'classic', 'oldstyle' and 'banking'
+      ${styleBlock}
       \\moderncvcolor{blue}                               % color options 'blue' (default), 'orange', 'green', 'red', 'purple', 'grey' and 'black'
       %\\renewcommand{\\familydefault}{\\sfdefault}         % to set the default font; use '\\sfdefault' for the default sans serif font, '\\rmdefault' for the default roman one, or any tex font name
       %\\nopagenumbers{}                                  % uncomment to suppress automatic page numbering for CVs longer than one page
@@ -250,18 +293,19 @@ const generator: GeneratorWithSummary = {
       %\\usepackage{CJKutf8}                              % if you need to use CJK to typeset your resume in Chinese, Japanese or Korean
 
       % adjust the page margins
-      \\usepackage[scale=0.75]{geometry}
+      ${geometryLine}
       %\\setlength{\\hintscolumnwidth}{3cm}                % if you want to change the width of the column with the dates
       %\\setlength{\\makecvtitlenamewidth}{10cm}           % for the 'classic' style, if you want to force the width allocated to your name and avoid line breaks. be careful though, the length is normally calculated to avoid any overlap with your personal info; use this at your own typographical risks...
+      ${extraLines}
     `
   }
 }
 
-function template7(values: FormValues) {
+function template7(values: FormValues, config: ResolvedDocumentConfig) {
   const { headings = {} } = values
 
   return stripIndent`
-    ${generator.resumeHeader()}
+    ${generator.resumeHeader(config)}
     ${generator.profileSection(values.basics)}
     \\begin{document}
     ${values.basics ? '\\makecvtitle' : ''}

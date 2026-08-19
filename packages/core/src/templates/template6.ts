@@ -1,9 +1,9 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
-import type { FormValues, Generator } from '../types.js'
+import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
-const generator: Omit<Generator, 'resumeHeader'> = {
+const generator: Generator = {
   profileSection(basics) {
     if (!basics) {
       return ''
@@ -251,17 +251,54 @@ const generator: Omit<Generator, 'resumeHeader'> = {
         })}
       }
     `
+  },
+
+  // Page margin is unknown-native — set inside \input{minimal-resume-config}
+  // — so it's wired additively in the outer `template6()` function, gated
+  // on the raw `document` input rather than compared here.
+  resumeHeader(config) {
+    return [
+      config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
+      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+    ]
+      .filter(Boolean)
+      .join('\n')
   }
 }
 
-function template6(values: FormValues) {
+function template6(values: FormValues, config: ResolvedDocumentConfig) {
   const { headings = {} } = values
 
+  // TEMPLATE_DEFAULTS[6] is {paper: 'letter', fontSize: 10}, matching this
+  // class line's current literal '[10pt]' (no page-size option today means
+  // letterpaper, article's own default).
+  const paperOption = config.paper === 'a4' ? 'a4paper,' : ''
+  const sizeOption = config.fontSize === 10 ? '10pt' : `${config.fontSize}pt`
+  const classLine = `\\documentclass[${paperOption}${sizeOption}]{article}`
+
+  // `\usepackage{geometry}` (no options) plus `\geometry{...}` rather than a
+  // second options-bearing `\usepackage[...]{geometry}` — minimal-resume-config
+  // (vendored, not read per CLAUDE.md) may already load geometry; see
+  // template4's comment for the confirmed "Option clash" this avoids.
+  const geometryLines =
+    values.document.margin !== undefined
+      ? ['\\usepackage{geometry}', `\\geometry{margin=${config.margin}}`]
+      : []
+  // Combined with \input{minimal-resume-config} via filter(Boolean): the
+  // original has no blank line before \begin{document}.
+  const preambleTail = [
+    '\\input{minimal-resume-config}',
+    ...geometryLines,
+    generator.resumeHeader(config)
+  ]
+    .filter(Boolean)
+    .join('\n')
+
   return stripIndent`
-    \\documentclass[10pt]{article}
+    ${classLine}
     \\usepackage[english]{babel}
     \\usepackage[hidelinks]{hyperref}
-    \\input{minimal-resume-config}
+    ${preambleTail}
     \\begin{document}
     ${values.sections
       .map((section) => {

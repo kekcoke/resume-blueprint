@@ -1,7 +1,7 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
-import { FormValues, Generator } from '../types.js'
+import { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
   profileSection(basics) {
@@ -337,11 +337,41 @@ const generator: Generator = {
   }
 }
 
-function template1(values: FormValues) {
+function template1(values: FormValues, config: ResolvedDocumentConfig) {
   const { headings } = values
 
+  // TEMPLATE_DEFAULTS[1] is {paper: 'a4', fontSize: 10}, matching this class
+  // line's original hardcoded '[a4paper]' (10pt is `article`'s size when no
+  // option names one). Comparing against those exact constants — not just
+  // checking "was document.paper set" — is what keeps the option list at
+  // '[a4paper]' rather than growing a redundant '10pt' when the document
+  // block is entirely default.
+  const paperOption = config.paper === 'a4' ? 'a4paper' : 'letterpaper'
+  const sizeOption = config.fontSize === 10 ? '' : `,${config.fontSize}pt`
+  const classLine = `\\documentclass[${paperOption}${sizeOption}]{article}`
+
+  // Margin is the one line in this template C4 permits to change even with
+  // `document` omitted: TEMPLATE_DEFAULTS[1].margin is '1.1in', not this
+  // template's old literal 0.8in — the F2 harness recorded 0.8in as breaching
+  // the 0.5in floor once the header's \vspace*{-40pt}/\hspace*{-18pt} pull is
+  // accounted for, and 1.1in is chosen to absorb that pull with room to spare.
+  const geometryLine = `\\usepackage[left=${config.margin},right=${config.margin},bottom=${config.margin},top=${config.margin}]{geometry}`
+
+  const extraLines = [
+    // GLOBAL_DEFAULTS.lineSpacing is 1.0, which is LaTeX's own un-overridden
+    // spacing — omitting \linespread entirely at that value is what keeps
+    // this additive rather than replacing a line that never existed.
+    config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
+    // Additive rather than replacing '[hidelinks]{hyperref}' below: layering
+    // \hypersetup after hyperref is already loaded needs no knowledge of
+    // exactly how that line reads, and never fires when linkStyle is 'hidden'.
+    config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+  ]
+    .filter(Boolean)
+    .join('\n')
+
   return stripIndent`
-    \\documentclass[a4paper]{article}
+    ${classLine}
     \\usepackage{fullpage}
     \\usepackage{amsmath}
     \\usepackage{amssymb}
@@ -351,10 +381,9 @@ function template1(values: FormValues) {
     \\textheight=10in
     \\pagestyle{empty}
     \\raggedright
-    \\usepackage[left=0.8in,right=0.8in,bottom=0.8in,top=0.8in]{geometry}
-    \\usepackage[hidelinks]{hyperref}
-
-    ${generator.resumeHeader()}
+    ${geometryLine}
+    ${['\\usepackage[hidelinks]{hyperref}', extraLines].filter(Boolean).join('\n')}
+    ${generator.resumeHeader(config)}
 
     \\begin{document}
     \\vspace*{-40pt}

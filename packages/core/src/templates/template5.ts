@@ -1,9 +1,9 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
-import type { FormValues, GeneratorWithSummary } from '../types.js'
+import type { FormValues, GeneratorWithSummary, ResolvedDocumentConfig } from '../types.js'
 
-const generator: Omit<GeneratorWithSummary, 'resumeHeader'> = {
+const generator: GeneratorWithSummary = {
   profileSection(basics) {
     if (!basics) {
       return ''
@@ -259,11 +259,50 @@ const generator: Omit<GeneratorWithSummary, 'resumeHeader'> = {
         `
       })}
     `
+  },
+
+  // res.cls's `[line,margin]` class options are semantic flags (margin
+  // notes for dates/locations), not lengths — nothing here touches them.
+  // Page margin and paper size are unknown-native (res.cls owns its own
+  // layout) and are wired additively in the outer `template5()` function
+  // instead, where the raw `document` input is available to gate on.
+  resumeHeader(config) {
+    return [
+      config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
+      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+    ]
+      .filter(Boolean)
+      .join('\n')
   }
 }
 
-function template5(values: FormValues) {
+function template5(values: FormValues, config: ResolvedDocumentConfig) {
   const { headings = {} } = values
+
+  // Additive-only, and gated on the raw sparse `document` input rather than
+  // the resolved `config`: res.cls's own default margin/paper are unknown,
+  // so only an explicit caller override should ever add a line here.
+  // `\usepackage{geometry}` (no options) plus `\geometry{...}` rather than a
+  // second options-bearing `\usepackage[...]{geometry}` — see template4's
+  // comment: a vendored class that already loads geometry internally turns
+  // the latter into a hard "Option clash" error.
+  const geometryOptions = [
+    values.document.paper !== undefined ? (config.paper === 'a4' ? 'a4paper' : 'letterpaper') : '',
+    values.document.margin !== undefined ? `margin=${config.margin}` : ''
+  ].filter(Boolean)
+  const geometryLines = geometryOptions.length
+    ? ['\\usepackage{geometry}', `\\geometry{${geometryOptions.join(',')}}`]
+    : []
+  // Combined with the fixed hyperref line via filter(Boolean), not appended
+  // on its own line: the original has no blank line before \begin{document},
+  // and an empty addition on its own line would insert one.
+  const preambleTail = [
+    '\\usepackage[hidelinks]{hyperref}',
+    ...geometryLines,
+    generator.resumeHeader(config)
+  ]
+    .filter(Boolean)
+    .join('\n')
 
   return stripIndent`
     \\documentclass[line,margin]{res}
@@ -271,7 +310,7 @@ function template5(values: FormValues) {
     \\usepackage{textcomp}
     \\usepackage[utf8]{inputenc}
     \\usepackage[T1]{fontenc}
-    \\usepackage[hidelinks]{hyperref}
+    ${preambleTail}
     \\begin{document}
       ${generator.profileSection(values.basics)}
       \\begin{resume}

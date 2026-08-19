@@ -1,7 +1,8 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
-import type { FormValues, Generator } from '../types.js'
+import { accentColorToTeX } from './documentConfig.js'
+import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
   profileSection(basics) {
@@ -264,7 +265,18 @@ const generator: Generator = {
     `
   },
 
-  resumeHeader() {
+  resumeHeader(config) {
+    const accentLine = config.accentColor
+      ? `\\definecolor{awesome}{HTML}{${accentColorToTeX(config.accentColor)}}`
+      : '\\colorlet{awesome}{awesome-red}'
+
+    const extraLines = [
+      config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
+      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+    ]
+      .filter(Boolean)
+      .join('\n')
+
     return stripIndent`
     %!TEX TS-program = xelatex
     %!TEX encoding = UTF-8 Unicode
@@ -299,7 +311,7 @@ const generator: Generator = {
     %                 awesome-nephritis, awesome-concrete, awesome-darknight
     %% Color for highlight
     % Define your custom color if you don't like awesome colors
-    \\colorlet{awesome}{awesome-red}
+    ${accentLine}
     %\\definecolor{awesome}{HTML}{CA63A8}
     %% Colors for text
     %\\definecolor{darktext}{HTML}{414141}
@@ -309,15 +321,42 @@ const generator: Generator = {
 
     %%% Override a separator for social informations in header(default: ' | ')
     %\\headersocialsep[\\quad\\textbar\\quad]
+    ${extraLines}
   `
   }
 }
 
-function template2(values: FormValues) {
+function template2(values: FormValues, config: ResolvedDocumentConfig) {
   const { headings = {} } = values
 
+  // awesome-cv.cls owns its own page geometry (no TEMPLATE_DEFAULTS entry —
+  // see documentConfig.ts), so margin and paper are only ever added, never
+  // used to replace a line, and only when `document` actually set one:
+  // gating on `values.document` (the sparse pre-resolution input) rather
+  // than on `config` (always resolved, via GLOBAL_DEFAULTS, to *something*)
+  // is what keeps this silent when the caller sent nothing.
+  //
+  // `\usepackage{geometry}` (no options) plus `\geometry{...}` to
+  // reconfigure, not a second `\usepackage[...]{geometry}` — template4
+  // confirmed by compiling it that a vendored class loading geometry
+  // internally turns a second options-bearing load into a hard "Option
+  // clash" error. A bare re-`\usepackage` never clashes, and `\geometry{}`
+  // wins regardless of whether the class already loaded the package.
+  const geometryOptions = [
+    values.document.paper !== undefined ? (config.paper === 'a4' ? 'a4paper' : 'letterpaper') : '',
+    values.document.margin !== undefined ? `margin=${config.margin}` : ''
+  ].filter(Boolean)
+  const geometryLines = geometryOptions.length
+    ? ['\\usepackage{geometry}', `\\geometry{${geometryOptions.join(',')}}`]
+    : []
+  // Combined into one interpolation with resumeHeader's output, not appended
+  // on its own line: resumeHeader() is immediately followed by
+  // \begin{document} in the original with no blank line between them, and an
+  // empty addition on its own line would insert one.
+  const preamble = [generator.resumeHeader(config), ...geometryLines].filter(Boolean).join('\n')
+
   return stripIndent`
-    ${generator.resumeHeader()}
+    ${preamble}
     \\begin{document}
     ${values.sections
       .map((section) => {

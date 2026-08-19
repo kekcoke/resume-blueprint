@@ -1,7 +1,8 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
-import type { FormValues, Generator } from '../types.js'
+import { accentColorToTeX } from './documentConfig.js'
+import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
   profileSection(basics) {
@@ -229,7 +230,30 @@ const generator: Generator = {
     `
   },
 
-  resumeHeader() {
+  resumeHeader(config) {
+    // TEMPLATE_DEFAULTS[3] is {paper: 'letter', fontSize: 11}, matching this
+    // class line's current literal '[11pt]' (no page-size option today means
+    // letterpaper, article's own default). Comparing against those exact
+    // constants keeps the option list unchanged unless a value actually
+    // differs from what's already hardcoded.
+    const paperOption = config.paper === 'a4' ? 'a4paper,' : ''
+    const sizeOption = config.fontSize === 11 ? '11pt' : `${config.fontSize}pt`
+    const classLine = `\\documentclass[${paperOption}${sizeOption}]{article}`
+
+    // Only the inner, more prominent bar color (shadecolorB) stands in for
+    // "accent" here — the outer border (shadecolor) is structural framing,
+    // not a theme color, and stays gray.
+    const shadecolorBLine = config.accentColor
+      ? `\\definecolor{shadecolorB}{HTML}{${accentColorToTeX(config.accentColor)}}  % Inner background color of title bars`
+      : '\\definecolor{shadecolorB}{gray}{0.93}  % Inner background color of title bars'
+
+    const extraLines = [
+      config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
+      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+    ]
+      .filter(Boolean)
+      .join('\n')
+
     return stripIndent`
       % (c) 2002 Matthew Boedicker <mboedick@mboedick.org> (original author) http://mboedick.org
       % (c) 2003-2007 David J. Grant <davidgrant-at-gmail.com> http://www.davidgrant.ca
@@ -239,7 +263,7 @@ const generator: Generator = {
       %
       %This work is licensed under the Creative Commons Attribution-Noncommercial-Share Alike 2.5 License. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-sa/2.5/ or send a letter to Creative Commons, 543 Howard Street, 5th Floor, San Francisco, California, 94105, USA.
 
-      \\documentclass[11pt]{article}
+      ${classLine}
       \\newlength{\\outerbordwidth}
       \\pagestyle{empty}
       \\raggedbottom
@@ -259,7 +283,7 @@ const generator: Generator = {
 
       \\setlength{\\outerbordwidth}{3pt}  % Width of border outside of title bars
       \\definecolor{shadecolor}{gray}{0.75}  % Outer background color of title bars (0 = black, 1 = white)
-      \\definecolor{shadecolorB}{gray}{0.93}  % Inner background color of title bars
+      ${shadecolorBLine}
 
 
       %-----------------------------------------------------------
@@ -314,15 +338,28 @@ const generator: Generator = {
         \\textbf{#1} #2 \\hfill \\textit{#3} #4 \\vspace{1.5mm}
       }
       %-----------------------------------------------------------
+      ${extraLines}
     `
   }
 }
 
-function template3(values: FormValues) {
+function template3(values: FormValues, config: ResolvedDocumentConfig) {
   const { headings = {} } = values
 
+  // This template lays out margins by hand (\setlength on \textwidth,
+  // \oddsidemargin, etc. — see resumeHeader) rather than via `geometry`, and
+  // there is no single scalar in that layout to compare a resolved margin
+  // against. geometry, loaded only when the caller explicitly asked for a
+  // margin, recalculates and wins over the manual \setlength calls above it
+  // — though the shaded section-header bar's own hardcoded 6.762in width
+  // (resheading, above) does not follow along, a known cosmetic limit of
+  // overriding margin on this template.
+  const geometryLine =
+    values.document.margin !== undefined ? `\\usepackage[margin=${config.margin}]{geometry}` : ''
+  const preamble = [generator.resumeHeader(config), geometryLine].filter(Boolean).join('\n')
+
   return stripIndent`
-    ${generator.resumeHeader()}
+    ${preamble}
     \\begin{document}
     ${values.sections
       .map((section) => {

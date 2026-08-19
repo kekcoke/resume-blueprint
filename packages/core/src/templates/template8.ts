@@ -1,7 +1,7 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
-import type { FormValues, GeneratorWithSummary } from '../types.js'
+import type { FormValues, GeneratorWithSummary, ResolvedDocumentConfig } from '../types.js'
 
 const generator: GeneratorWithSummary = {
   profileSection(basics) {
@@ -282,13 +282,44 @@ const generator: GeneratorWithSummary = {
   }
 }
 
-function template8(values: FormValues) {
+function template8(values: FormValues, config: ResolvedDocumentConfig) {
   const { headings = {} } = values
 
+  // mcdowellcv.cls owns its own geometry; additive-only and gated on the
+  // raw `document` input, same reasoning as templates 2 and 5.
+  // `\usepackage{geometry}` (no options) plus `\geometry{...}` rather than a
+  // second options-bearing `\usepackage[...]{geometry}` — see template4's
+  // comment for the confirmed "Option clash" this avoids.
+  const geometryOptions = [
+    values.document.paper !== undefined ? (config.paper === 'a4' ? 'a4paper' : 'letterpaper') : '',
+    values.document.margin !== undefined ? `margin=${config.margin}` : ''
+  ].filter(Boolean)
+  const geometryLines = geometryOptions.length
+    ? ['\\usepackage{geometry}', `\\geometry{${geometryOptions.join(',')}}`]
+    : []
+  const extraLines = [
+    ...geometryLines,
+    config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
+    config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  // resumeHeader() (the MIT license comment) moves below \documentclass —
+  // see C4/Step 3 in the F3 plan for why this template's golden output is
+  // expected to move regardless, and template4's identical relocation.
+  const classBlock = [
+    "% The font could be set to Windows-specific Calibri by using the 'calibri' option",
+    '\\documentclass[]{mcdowellcv}',
+    extraLines
+  ]
+    .filter(Boolean)
+    .join('\n')
+
   return stripIndent`
-    ${generator.resumeHeader()}
-    % The font could be set to Windows-specific Calibri by using the 'calibri' option
-    \\documentclass[]{mcdowellcv}
+    ${classBlock}
+
+    ${generator.resumeHeader(config)}
 
     % For mathematical symbols
     \\usepackage{amsmath}
