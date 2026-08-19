@@ -9,7 +9,10 @@ import {
   isValidationError,
   formatValidationError,
   TEMPLATE_IDS,
-  TEMPLATE_PROFILES
+  TEMPLATE_PROFILES,
+  HONOURED_DOCUMENT_FIELDS,
+  resolveDocumentConfig,
+  type DocumentConfig
 } from '@resume-blueprint/core'
 import { CORE_BUILD } from './buildStamp.js'
 
@@ -68,6 +71,30 @@ function resolveHome(): string {
 
 function revText(rev: string): string {
   return rev.slice(0, 7)
+}
+
+/**
+ * Applies `resume_render`/`resume_tex`'s optional `template` and `document`
+ * overrides on top of a stored blueprint.
+ *
+ * `document` is merged field by field, not replaced wholesale — the
+ * shallow-spread pattern `template` already used would let an agent sending
+ * `{ fontSize: 12 }` silently wipe every other `document` value the
+ * blueprint had set, which is not what "override the font size" means.
+ */
+function withOverrides(
+  blueprint: Record<string, unknown>,
+  template: number | undefined,
+  document: DocumentConfig | undefined
+): unknown {
+  if (template === undefined && document === undefined) return blueprint
+
+  const result = { ...blueprint }
+  if (template !== undefined) result.selectedTemplate = template
+  if (document !== undefined) {
+    result.document = { ...(blueprint.document as object | undefined), ...document }
+  }
+  return result
 }
 
 export function registerTools(server: McpServer): void {
@@ -300,11 +327,11 @@ export function registerTools(server: McpServer): void {
       // Writes a file — a real side effect, unlike resume_tex.
       annotations: { readOnlyHint: false }
     },
-    async ({ id, template, timeoutMs }) => {
+    async ({ id, template, document, timeoutMs }) => {
       try {
         const { blueprint, rev } = await store.get(id)
         const effectiveTemplate = template ?? blueprint.selectedTemplate
-        const input = template === undefined ? blueprint : { ...blueprint, selectedTemplate: template }
+        const input = withOverrides(blueprint as Record<string, unknown>, template, document)
 
         const pdf = await renderBlueprint(input, { timeoutMs })
 
@@ -353,10 +380,10 @@ export function registerTools(server: McpServer): void {
       outputSchema: ResumeTexOutput,
       annotations: { readOnlyHint: true }
     },
-    async ({ id, template }) => {
+    async ({ id, template, document }) => {
       try {
         const { blueprint } = await store.get(id)
-        const input = template === undefined ? blueprint : { ...blueprint, selectedTemplate: template }
+        const input = withOverrides(blueprint as Record<string, unknown>, template, document)
         const { texDoc } = blueprintToTex(input)
         return {
           content: [{ type: 'text', text: texDoc }],
@@ -454,9 +481,21 @@ export function registerTools(server: McpServer): void {
             `${id}: ${name}${atsGrade ? '' : ' (icon-labeled contacts; not ATS-grade)'}`
         ).join('\n')
 
+        // Resolved with no override, so `defaults` is exactly what this
+        // template renders with `document` omitted — the discovery surface
+        // F3 adds so an agent can see what's honoured before spending a
+        // render on an override that would silently do nothing.
+        const templates = TEMPLATE_PROFILES.map((profile) => ({
+          ...profile,
+          document: {
+            defaults: resolveDocumentConfig(profile.id),
+            honours: [...HONOURED_DOCUMENT_FIELDS[profile.id]]
+          }
+        }))
+
         return {
           content: [{ type: 'text', text }],
-          structuredContent: { templates: TEMPLATE_PROFILES.map((t) => ({ ...t })) }
+          structuredContent: { templates }
         }
       } catch (error) {
         return toToolError(error)

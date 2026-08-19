@@ -129,6 +129,57 @@ describe('create -> patch -> get -> remove round-trip', () => {
   })
 })
 
+describe('document override', () => {
+  test('resume_tex merges the document override rather than replacing it', async () => {
+    const create = await client.callTool({
+      name: 'resume_create',
+      arguments: {
+        id: 'doc-override',
+        blueprint: {
+          basics: { name: 'Ada Lovelace' },
+          selectedTemplate: 3,
+          document: { accentColor: '#4A90D9' }
+        }
+      }
+    })
+    assert.equal(create.isError, undefined)
+
+    // Overriding only fontSize must not wipe the stored accentColor — a
+    // plain object spread would, since resume_tex's `document` argument
+    // replaces nothing on its own; it's `withOverrides` in tools.ts that
+    // merges field by field.
+    const tex = await client.callTool({
+      name: 'resume_tex',
+      arguments: { id: 'doc-override', document: { fontSize: 12 } }
+    })
+    assert.equal(tex.isError, undefined)
+
+    const structured = tex.structuredContent as { texDoc: string }
+    assert.ok(structured.texDoc.includes('12pt'), 'the fontSize override should reach the TeX source')
+    assert.ok(
+      structured.texDoc.includes('4A90D9'),
+      'the stored accentColor should survive an unrelated document override'
+    )
+  })
+
+  test('resume_templates reports resolved document defaults and honoured fields', async () => {
+    const result = await client.callTool({ name: 'resume_templates', arguments: {} })
+    assert.equal(result.isError, undefined)
+
+    const structured = result.structuredContent as {
+      templates: Array<{
+        id: number
+        document: { defaults: Record<string, unknown>; honours: string[] }
+      }>
+    }
+    const template1 = structured.templates.find((t) => t.id === 1)
+    assert.ok(template1, 'expected template 1 in the list')
+    assert.ok(template1.document.honours.includes('margin'))
+    assert.ok(!template1.document.honours.includes('accentColor'))
+    assert.equal(typeof template1.document.defaults.margin, 'string')
+  })
+})
+
 describe('invalid tool args', () => {
   test('resume_get with no id produces a structured error, not a crash', async () => {
     const result = await client.callTool({ name: 'resume_get', arguments: {} })
