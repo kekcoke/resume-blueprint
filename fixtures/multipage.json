@@ -1,0 +1,188 @@
+{
+  "basics": {
+    "name": "Grace Hopper",
+    "label": "Distinguished Engineer, Compiler Systems & Naval Computation",
+    "summary": "Compiler engineer and systems architect with twenty years across naval computation, commercial data processing, and standards work. Built the first practical English-language compiler, chaired the committee that turned it into a portable business language, and spent the following decade proving out machine-independent programming across eleven installations, four vendors, and three generations of hardware that shared almost nothing but arithmetic.",
+    "email": "grace.hopper@compiler-systems.example.org",
+    "phone": "+1 (202) 555 0143",
+    "website": "https://example.org/machine-independent-programming",
+    "location": {
+      "address": "Arlington, Virginia, United States"
+    },
+    "profiles": [
+      {
+        "network": "LinkedIn",
+        "username": "grace-hopper-compiler-systems",
+        "url": "https://linkedin.com/in/grace-hopper-compiler-systems"
+      }
+    ]
+  },
+  "work": [
+    {
+      "company": "Naval Computation Command",
+      "position": "Distinguished Engineer, Compiler Systems",
+      "location": "Arlington, VA",
+      "startDate": "Mar 2021",
+      "endDate": "Present",
+      "summary": "Owned the compiler toolchain and its conformance suite across four hardware generations.",
+      "highlights": [
+        "Shipped a machine-independent code generator retargeted to four architectures",
+        "Cut full-suite conformance runtime from 14 hours to 38 minutes",
+        "Chaired the cross-vendor standards working group through two revisions",
+        "Grew the toolchain team from 4 to 17 without lowering the review bar"
+      ]
+    },
+    {
+      "company": "Remington Rand Univac Division",
+      "position": "Principal Engineer, Data Processing Languages",
+      "location": "Philadelphia, PA",
+      "startDate": "Jun 2018",
+      "endDate": "Feb 2021",
+      "summary": "Led the group that turned an internal English-language compiler into a supported product.",
+      "highlights": [
+        "Designed the intermediate representation still in use across the product line",
+        "Reduced customer-reported miscompiles by 71% over six quarters",
+        "Wrote the portability guide adopted by eleven customer installations"
+      ]
+    },
+    {
+      "company": "Eckert-Mauchly Computer Corporation",
+      "position": "Senior Systems Programmer",
+      "location": "Philadelphia, PA",
+      "startDate": "Aug 2015",
+      "endDate": "May 2018",
+      "summary": "Built the linking loader and the symbolic debugger for the commercial line.",
+      "highlights": [
+        "Implemented the first symbolic subroutine library with automatic relocation",
+        "Halved link times by interning symbol names at assembly time",
+        "Introduced regression baselines that caught three shipping-blocker defects"
+      ]
+    },
+    {
+      "company": "Harvard Computation Laboratory",
+      "position": "Research Programmer, Sequence Control",
+      "location": "Cambridge, MA",
+      "startDate": "Sep 2013",
+      "endDate": "Jul 2015",
+      "summary": "Programmed sequence-controlled calculators for ballistics and numerical analysis.",
+      "highlights": [
+        "Authored the operating manual used by every subsequent operator cohort",
+        "Traced and documented the first recorded hardware-induced computation fault",
+        "Standardized tape formats across three concurrent research programs"
+      ]
+    },
+    {
+      "company": "Vassar Mathematics Department",
+      "position": "Lecturer in Mathematics",
+      "location": "Poughkeepsie, NY",
+      "startDate": "Sep 2010",
+      "endDate": "Aug 2013",
+      "summary": "Taught numerical methods and built the department's first computing curriculum.",
+      "highlights": [
+        "Designed a numerical-methods sequence still taught fifteen years later",
+        "Supervised 22 undergraduate theses in applied mathematics",
+        "Secured the department's first mechanical calculator budget line"
+      ]
+    },
+    {
+      "company": "Bureau of Ordnance Computation Project",
+      "position": "Computation Officer",
+      "location": "Cambridge, MA",
+      "startDate": "Jan 2009",
+      "endDate": "Aug 2010",
+      "summary": "Ran the computation queue for ballistics tables under wartime deadlines.",
+      "highlights": [
+        "Scheduled and verified 400+ table computations with zero published errata",
+        "Cross-trained six operators to eliminate the single-operator bottleneck",
+        "Built the checksum procedure adopted by two partner laboratories"
+      ]
+    },
+    {
+      "company": "Barnard Applied Mathematics Group",
+      "position": "Research Assistant",
+      "location": "New York, NY",
+      "startDate": "Sep 2007",
+      "endDate": "Dec 2008",
+      "summary": "Computed and verified interpolation tables for the applied mathematics faculty.",
+      "highlights": [
+        "Produced the interpolation tables cited in four subsequent publications",
+        "Devised a differencing check that caught transcription errors before publication",
+        "Maintained the group's reference library of numerical procedures"
+      ]
+    },
+    {
+      "company": "Yale Graduate School of Mathematics",
+      "position": "Teaching Fellow",
+      "location": "New Haven, CT",
+      "startDate": "Sep 2005",
+      "endDate": "Aug 2007",
+      "summary": "Taught undergraduate algebra while completing doctoral work in mathematics.",
+      "highlights": [
+        "Led six sections of undergraduate algebra across four semesters",
+        "Wrote the problem sets retained by the department for a decade",
+        "Completed doctoral research on irreducibility criteria"
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "name": "Languages",
+      "keywords": ["COBOL", "FORTRAN", "Assembly", "C", "Ada"]
+    },
+    {
+      "name": "Systems",
+      "keywords": ["Compilers", "Linkers", "Loaders", "Debuggers"]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Yale University",
+      "area": "Mathematics",
+      "studyType": "PhD",
+      "location": "New Haven, CT",
+      "startDate": "2005",
+      "endDate": "2009",
+      "score": "4.0/4.0"
+    },
+    {
+      "institution": "Vassar College",
+      "area": "Mathematics and Physics",
+      "studyType": "BA",
+      "location": "Poughkeepsie, NY",
+      "startDate": "2001",
+      "endDate": "2005",
+      "score": "3.8/4.0"
+    }
+  ],
+  "projects": [
+    {
+      "name": "A-0 System",
+      "description": "The first compiler: a linking loader driven by a symbolic call table.",
+      "url": "https://example.org/a-zero-system",
+      "keywords": ["compilers", "linking"]
+    },
+    {
+      "name": "FLOW-MATIC",
+      "description": "An English-language data processing compiler for commercial workloads.",
+      "url": "https://example.org/flow-matic",
+      "keywords": ["languages", "data processing"]
+    }
+  ],
+  "awards": [
+    {
+      "title": "National Medal of Technology",
+      "date": "2019",
+      "awarder": "Office of Science and Technology",
+      "summary": "For lifetime contributions to machine-independent programming."
+    }
+  ],
+  "headings": {
+    "work": "Experience",
+    "skills": "Skills",
+    "education": "Education",
+    "projects": "Projects",
+    "awards": "Awards"
+  },
+  "sections": ["profile", "work", "skills", "education", "projects", "awards"],
+  "selectedTemplate": 1
+}

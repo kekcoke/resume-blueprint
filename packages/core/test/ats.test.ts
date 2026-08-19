@@ -23,10 +23,16 @@ import {
  * was that bug; so were `basics.label`, `basics.summary`, `basics.profiles`, and
  * the skill lists that run off the right edge of the page.
  *
- * This file renders a deliberately dense blueprint, extracts the text back out
- * with pdftotext, and asserts the round trip. That is also how an ATS reads a
- * resume — it never sees the LaTeX, only the extracted text layer — so the same
- * harness doubles as the parse-fidelity gate that assigns each template its tier.
+ * This file renders blueprints, extracts the text back out with pdftotext, and
+ * asserts the round trip. That is also how an ATS reads a resume — it never sees
+ * the LaTeX, only the extracted text layer — so the same harness doubles as the
+ * parse-fidelity gate that assigns each template its tier.
+ *
+ * Four fixtures, not one. A single dense resume cannot exhibit a page-break
+ * clip, a merged skill column, a split award record, or an orphaned bullet, so
+ * for as long as this file measured only `dense.json` it was blind to every
+ * defect the external review actually reported. Each fixture below exists to
+ * make one of those visible.
  */
 
 const execFileAsync = promisify(execFile)
@@ -37,37 +43,64 @@ const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '.
 const COMPILE_TIMEOUT_MS = 180_000
 
 /**
- * pdftotext ships with poppler (`brew install poppler`). It is a test-only
- * dependency: skipping is better than failing a suite on a machine that renders
- * PDFs perfectly well but cannot read them back.
+ * A gate that loops fixtures inside one test compiles up to four documents
+ * before its first assertion, so it gets the whole budget rather than a quarter
+ * of it.
  */
-function hasPdftotext(): boolean {
+const SUITE_TIMEOUT_MS = COMPILE_TIMEOUT_MS * 4
+
+/**
+ * The fixtures every gate below runs against.
+ *
+ *  - `dense`     one entry per section, every field populated, long values.
+ *                Catches clipping and dropped fields.
+ *  - `multipage` eight jobs and a 450-character summary. Catches content lost
+ *                at a page break, and is the only fixture that exercises page 2
+ *                geometry.
+ *  - `grid`      ten skill categories of two to four short keywords, and eight
+ *                short award records of exactly name/issuer/date. Reproduces
+ *                the two column defects the external review reported.
+ *  - `sparse`    near-empty. Entries that carry a name and nothing else, which
+ *                is what produces a bullet with no text after it.
+ */
+const FIXTURE_NAMES = ['dense', 'multipage', 'grid', 'sparse'] as const
+
+type FixtureName = (typeof FIXTURE_NAMES)[number]
+
+/**
+ * pdftotext and pdfinfo both ship with poppler (`brew install poppler`). They
+ * are test-only dependencies: skipping is better than failing a suite on a
+ * machine that renders PDFs perfectly well but cannot read them back.
+ */
+function hasBinary(name: string): boolean {
   try {
-    execFileSync('pdftotext', ['-v'], { stdio: 'ignore' })
+    execFileSync(name, ['-v'], { stdio: 'ignore' })
     return true
   } catch {
     return false
   }
 }
 
-const PDFTOTEXT = hasPdftotext()
+const POPPLER = hasBinary('pdftotext') && hasBinary('pdfinfo')
 
 /**
  * Locally, skipping is the right call — see above. In CI it is the worst
  * possible outcome: every gate below would skip, the run would go green, and it
  * would have verified none of the parse-fidelity claims this project is built
  * on. A green tick that means nothing is worse than no CI at all, so under CI
- * the absence of pdftotext is a hard failure rather than a quiet skip.
+ * the absence of poppler is a hard failure rather than a quiet skip.
  *
  * A dedicated test rather than a throw at module load: this names the problem in
  * the runner output instead of surfacing as an opaque file-level error.
  */
-test('pdftotext is installed', { skip: !process.env.CI && 'not CI: skipping is allowed locally' }, () => {
+test('poppler is installed', { skip: !process.env.CI && 'not CI: skipping is allowed locally' }, () => {
   assert.ok(
-    PDFTOTEXT,
-    'pdftotext is not on PATH, so every parse-fidelity gate in this file would skip and the suite would pass having checked none of them. Install poppler.'
+    POPPLER,
+    'pdftotext and pdfinfo are not both on PATH, so every parse-fidelity gate in this file would skip and the suite would pass having checked none of them. Install poppler.'
   )
 })
+
+const NO_POPPLER = !POPPLER && 'poppler not on PATH'
 
 // ---------------------------------------------------------------------------
 // Text normalization
@@ -90,7 +123,7 @@ const SUBSTITUTIONS: Array<[RegExp, string]> = [
   [/–/g, '--'],
   [/…/g, '...'],
   [/­/g, ''],
-  [/ /g, ' ']
+  [/ /g, ' ']
 ]
 
 function normalize(text: string): string {
@@ -121,16 +154,43 @@ function squash(text: string): string {
  * and drops it — which is also what a real parser does. Neither reading is
  * content loss, and neither is reliably the right one: joining
  * "Analyt-\nical Engine Works" recovers the employer, joining
- * "Trunk-\nBased Development" destroys a hyphen that was really there. So both
- * readings go into the haystack and a string only has to survive into one.
+ * "Trunk-\nBased Development" destroys a hyphen that was really there. So the
+ * de-hyphenated form of every mode goes into the haystack alongside the mode
+ * itself, and a string only has to survive into one of them.
  */
 function dehyphenate(text: string): string {
   return text.replace(/-[ \t]*\r?\n[ \t]*/g, '')
 }
 
 /** Every reading of one extraction that a parser might plausibly arrive at. */
-function readings({ layout, raw }: Extraction): string[] {
-  return [layout, raw, dehyphenate(layout), dehyphenate(raw)].map(squash)
+function readings({ layout, raw, stream }: Extraction): string[] {
+  const modes = [layout, raw, stream]
+  return [...modes, ...modes.map(dehyphenate)].map(squash)
+}
+
+/**
+ * The same text squashed one line at a time, so a gate can ask *which* line
+ * something landed on. `readings` throws line structure away deliberately, but
+ * the skill-row and award-record gates below are entirely about it.
+ */
+function squashedLines(text: string): string[] {
+  return normalize(text)
+    .split('\n')
+    .map((line) => line.replace(/\s+/g, '').toLowerCase())
+    .filter(Boolean)
+}
+
+/**
+ * Line-structured readings of the two parser-shaped modes.
+ *
+ * `-layout` is excluded on purpose. It reconstructs the visual arrangement,
+ * which is the human's view: a two-column tabular reads back as one tidy line
+ * because pdftotext pads the gap with spaces, so every column defect below
+ * would measure as clean. The default mode and `-raw` are the parser's views,
+ * and are where a column break shows up as a line break.
+ */
+function lineReadings({ raw, stream }: Extraction): string[][] {
+  return [raw, stream, dehyphenate(raw), dehyphenate(stream)].map(squashedLines)
 }
 
 /** A rendered URL may legitimately drop its scheme; that is not content loss. */
@@ -144,7 +204,18 @@ function squashUrl(text: string): string {
 // Walking the blueprint
 // ---------------------------------------------------------------------------
 
-type Extraction = { layout: string; raw: string }
+type Extraction = {
+  /** `-layout`: the visual arrangement, i.e. what a human sees. */
+  layout: string
+  /** Default mode: pdftotext's reading-order heuristic, de-hyphenating as it goes. */
+  raw: string
+  /** `-raw`: strings in content-stream order, no reflow and no de-hyphenation. */
+  stream: string
+  /** `-bbox`: per-word geometry as XHTML. */
+  bbox: string
+  /** pdfinfo: page count and page size. */
+  info: string
+}
 
 type Leaf = { path: string; value: string; isUrl: boolean }
 
@@ -232,47 +303,84 @@ function classify(leaf: Leaf, haystack: string): Finding | undefined {
 }
 
 // ---------------------------------------------------------------------------
-// Rendering, cached — nine Tectonic compiles is the expensive part of this file
+// Rendering, cached
+//
+// Thirty-six Tectonic compiles is the expensive part of this file, so the cache
+// is keyed by fixture AND template. Keying it by template alone — which is what
+// it did when there was only one fixture — would silently hand every gate the
+// dense reading and quietly stop measuring the other three.
 // ---------------------------------------------------------------------------
 
-const extractions = new Map<number, Promise<Extraction>>()
+const fixtures = new Map<FixtureName, Promise<Record<string, unknown>>>()
 
-async function extract(templateId: number): Promise<Extraction> {
-  const blueprint = JSON.parse(await readFile(resolve(FIXTURES, 'dense.json'), 'utf8'))
+function fixtureFor(name: FixtureName): Promise<Record<string, unknown>> {
+  let pending = fixtures.get(name)
+  if (!pending) {
+    pending = readFile(resolve(FIXTURES, `${name}.json`), 'utf8').then(
+      (text) => JSON.parse(text) as Record<string, unknown>
+    )
+    fixtures.set(name, pending)
+  }
+  return pending
+}
+
+const extractions = new Map<string, Promise<Extraction>>()
+
+async function extract(fixture: FixtureName, templateId: number): Promise<Extraction> {
+  const blueprint = await fixtureFor(fixture)
   const pdf = await renderBlueprint({ ...blueprint, selectedTemplate: templateId })
 
   const dir = await mkdtemp(join(tmpdir(), 'rb-ats-'))
-  const pdfPath = join(dir, `template${templateId}.pdf`)
+  const pdfPath = join(dir, `${fixture}-template${templateId}.pdf`)
 
   try {
     await writeFile(pdfPath, pdf)
 
-    // -layout preserves the visual arrangement; the default mode is closer to
-    // how a naive parser walks the content stream. A template that reads well
-    // one way and scrambles the other is exactly what the order test is for.
-    const [layout, raw] = await Promise.all([
-      execFileAsync('pdftotext', ['-layout', pdfPath, '-'], { maxBuffer: 8 << 20 }),
-      execFileAsync('pdftotext', [pdfPath, '-'], { maxBuffer: 8 << 20 })
+    // Three text modes, because parsers disagree and each one loses something
+    // the others keep. -layout preserves the visual arrangement but interleaves
+    // parallel columns, so a label that wraps inside a narrow column comes back
+    // cut in half by the column beside it. The default mode reflows into
+    // reading order but applies pdftotext's de-hyphenation heuristic, which
+    // silently eats a hyphen that was really part of an email address or a URL.
+    // -raw does neither: strings in content-stream order, exactly as written. A
+    // field only has to survive into one of them.
+    //
+    // -bbox adds per-word geometry, and pdfinfo the page size that geometry is
+    // measured against. One compile, five reads, cached together.
+    const opts = { maxBuffer: 8 << 20 } as const
+    const [layout, raw, stream, bbox, info] = await Promise.all([
+      execFileAsync('pdftotext', ['-layout', pdfPath, '-'], opts),
+      execFileAsync('pdftotext', [pdfPath, '-'], opts),
+      execFileAsync('pdftotext', ['-raw', pdfPath, '-'], opts),
+      execFileAsync('pdftotext', ['-bbox', pdfPath, '-'], opts),
+      execFileAsync('pdfinfo', [pdfPath], opts)
     ])
 
-    return { layout: layout.stdout, raw: raw.stdout }
+    return {
+      layout: layout.stdout,
+      raw: raw.stdout,
+      stream: stream.stdout,
+      bbox: bbox.stdout,
+      info: info.stdout
+    }
   } finally {
     await rm(dir, { recursive: true, force: true })
   }
 }
 
-function extractionFor(templateId: number): Promise<Extraction> {
-  let pending = extractions.get(templateId)
+function extractionFor(fixture: FixtureName, templateId: number): Promise<Extraction> {
+  const key = `${fixture}:${templateId}`
+  let pending = extractions.get(key)
   if (!pending) {
-    pending = extract(templateId)
-    extractions.set(templateId, pending)
+    pending = extract(fixture, templateId)
+    extractions.set(key, pending)
   }
   return pending
 }
 
-async function findingsFor(templateId: number): Promise<Finding[]> {
-  const blueprint = JSON.parse(await readFile(resolve(FIXTURES, 'dense.json'), 'utf8'))
-  const haystack = readings(await extractionFor(templateId)).join('\n')
+async function findingsFor(fixture: FixtureName, templateId: number): Promise<Finding[]> {
+  const blueprint = await fixtureFor(fixture)
+  const haystack = readings(await extractionFor(fixture, templateId)).join('\n')
 
   return collectLeaves(parseBlueprint(blueprint), '', '')
     .map((leaf) => classify(leaf, haystack))
@@ -286,7 +394,7 @@ function describeFindings(findings: Finding[]): string {
 }
 
 // ---------------------------------------------------------------------------
-// The gates
+// The original four gates, now over every fixture
 // ---------------------------------------------------------------------------
 
 /**
@@ -309,97 +417,514 @@ function isCritical(path: string): boolean {
   return CRITICAL.some((pattern) => pattern.test(path))
 }
 
-describe('no template clips content off the page', { skip: !PDFTOTEXT && 'pdftotext not on PATH' }, () => {
-  for (const id of TEMPLATE_IDS) {
-    test(`template${id} wraps long content instead of truncating it`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
-      const clipped = (await findingsFor(id)).filter((f) => f.kind === 'clipped')
+describe('no template clips content off the page', { skip: NO_POPPLER }, () => {
+  for (const fixture of FIXTURE_NAMES) {
+    for (const id of TEMPLATE_IDS) {
+      test(`template${id} wraps long content instead of truncating it (${fixture})`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
+        const clipped = (await findingsFor(fixture, id)).filter((f) => f.kind === 'clipped')
 
-      assert.deepEqual(
-        clipped,
-        [],
-        `template${id} truncated ${clipped.length} field(s) mid-string:\n${describeFindings(clipped)}`
-      )
-    })
+        assert.deepEqual(
+          clipped,
+          [],
+          `template${id} truncated ${clipped.length} field(s) mid-string on ${fixture}.json:\n${describeFindings(clipped)}`
+        )
+      })
+    }
   }
 })
 
-describe('critical resume fields survive into the PDF', { skip: !PDFTOTEXT && 'pdftotext not on PATH' }, () => {
-  for (const id of TEMPLATE_IDS) {
-    test(`template${id} renders every critical field`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
-      const lost = (await findingsFor(id)).filter((f) => isCritical(f.path))
+describe('critical resume fields survive into the PDF', { skip: NO_POPPLER }, () => {
+  for (const fixture of FIXTURE_NAMES) {
+    for (const id of TEMPLATE_IDS) {
+      test(`template${id} renders every critical field (${fixture})`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
+        const lost = (await findingsFor(fixture, id)).filter((f) => isCritical(f.path))
 
-      assert.deepEqual(
-        lost,
-        [],
-        `template${id} lost ${lost.length} critical field(s):\n${describeFindings(lost)}`
-      )
-    })
+        assert.deepEqual(
+          lost,
+          [],
+          `template${id} lost ${lost.length} critical field(s) on ${fixture}.json:\n${describeFindings(lost)}`
+        )
+      })
+    }
   }
 })
 
-describe('extracted text preserves the blueprint reading order', { skip: !PDFTOTEXT && 'pdftotext not on PATH' }, () => {
-  for (const id of TEMPLATE_IDS) {
-    test(`template${id} emits sections in the declared order`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
-      const blueprint = JSON.parse(await readFile(resolve(FIXTURES, 'dense.json'), 'utf8'))
-      const { raw } = await extractionFor(id)
-      const haystack = squash(raw)
+describe('extracted text preserves the blueprint reading order', { skip: NO_POPPLER }, () => {
+  for (const fixture of FIXTURE_NAMES) {
+    for (const id of TEMPLATE_IDS) {
+      test(`template${id} emits sections in the declared order (${fixture})`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
+        const blueprint = await fixtureFor(fixture)
+        const extraction = await extractionFor(fixture, id)
 
-      const expected: string[] = blueprint.sections
-        .filter((section: string) => section !== 'profile')
-        .map((section: string) => squash(String(blueprint.headings[section])))
+        const headings = (blueprint.headings ?? {}) as Record<string, string>
 
-      const positions = expected.map((heading) => ({
-        heading,
-        at: haystack.indexOf(heading)
-      }))
+        // A fixture only declares headings for the sections it populates. Asking
+        // for the rest would have the gate hunting the text layer for the string
+        // "undefined".
+        const expected: string[] = (blueprint.sections as string[])
+          .filter((section) => section !== 'profile' && headings[section])
+          .map((section) => squash(headings[section]))
 
-      const absent = positions.filter((p) => p.at === -1).map((p) => p.heading)
-      assert.deepEqual(absent, [], `template${id} omitted section heading(s): ${absent.join(', ')}`)
+        // Positions are only comparable inside a single reading, so each of the
+        // two parser-shaped modes is scored whole and the section order has to
+        // hold in one of them. Both are readings a real parser arrives at, and
+        // a heading that wraps inside a narrow label column survives only one:
+        // the default mode interleaves the column beside it, `-raw` does not.
+        const scored = [extraction.raw, extraction.stream].map((mode) => {
+          const haystack = squash(mode)
+          const positions = expected.map((heading) => ({ heading, at: haystack.indexOf(heading) }))
+          const absent = positions.filter((p) => p.at === -1).map((p) => p.heading)
+          const order = positions.map((p) => p.heading)
+          const sorted = [...positions].sort((a, b) => a.at - b.at).map((p) => p.heading)
 
-      const order = positions.map((p) => p.heading)
-      const sorted = [...positions].sort((a, b) => a.at - b.at).map((p) => p.heading)
+          return { absent, order, sorted, ok: absent.length === 0 && sorted.join() === order.join() }
+        })
 
-      assert.deepEqual(
-        sorted,
-        order,
-        `template${id} extracts sections as [${sorted.join(', ')}] but the blueprint declared [${order.join(', ')}] — a parser reads them in the wrong order`
-      )
-    })
+        if (scored.some((reading) => reading.ok)) return
+
+        const worst = scored[0]
+
+        assert.deepEqual(
+          worst.absent,
+          [],
+          `template${id} omitted section heading(s) on ${fixture}.json: ${worst.absent.join(', ')}`
+        )
+
+        assert.deepEqual(
+          worst.sorted,
+          worst.order,
+          `template${id} extracts sections on ${fixture}.json as [${worst.sorted.join(', ')}] but the blueprint declared [${worst.order.join(', ')}] — a parser reads them in the wrong order`
+        )
+      })
+    }
   }
 })
 
-describe('the contact block is contiguous enough for a parser to find', { skip: !PDFTOTEXT && 'pdftotext not on PATH' }, () => {
+describe('the contact block is contiguous enough for a parser to find', { skip: NO_POPPLER }, () => {
   /** Roughly a header's worth of text. Beyond this the fields are not one block. */
   const WINDOW_CHARS = 400
 
-  for (const id of TEMPLATE_IDS) {
-    test(`template${id} keeps name, email, and phone together`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
-      const blueprint = JSON.parse(await readFile(resolve(FIXTURES, 'dense.json'), 'utf8'))
-      const all = readings(await extractionFor(id))
-      const needles = ['name', 'email', 'phone'].map((key) => ({
-        key,
-        needle: squash(blueprint.basics[key])
-      }))
+  for (const fixture of FIXTURE_NAMES) {
+    for (const id of TEMPLATE_IDS) {
+      test(`template${id} keeps name, email, and phone together (${fixture})`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
+        const blueprint = await fixtureFor(fixture)
+        const basics = (blueprint.basics ?? {}) as Record<string, string>
+        const all = readings(await extractionFor(fixture, id))
 
-      // Positions only mean anything within a single reading, so measure the
-      // spread in the first one that carries all three fields.
-      const haystack =
-        all.find((text) => needles.every((n) => text.includes(n.needle))) ?? all[0]
+        // Only fields the fixture actually carries. `sparse.json` deliberately
+        // has no website or address; a gate that failed on their absence would
+        // be measuring the fixture, not the template.
+        const needles = ['name', 'email', 'phone']
+          .filter((key) => basics[key])
+          .map((key) => ({ key, needle: squash(basics[key]) }))
 
-      const fields = needles.map(({ key, needle }) => ({
-        key,
-        at: haystack.indexOf(needle)
-      }))
+        if (needles.length < 2) return
 
-      const absent = fields.filter((f) => f.at === -1).map((f) => f.key)
-      assert.deepEqual(absent, [], `template${id} did not render contact field(s): ${absent.join(', ')}`)
+        // Positions only mean anything within a single reading, so measure the
+        // spread in the first one that carries all the fields.
+        const haystack =
+          all.find((text) => needles.every((n) => text.includes(n.needle))) ?? all[0]
 
-      const at = fields.map((f) => f.at)
-      const spread = Math.max(...at) - Math.min(...at)
+        const fields = needles.map(({ key, needle }) => ({
+          key,
+          at: haystack.indexOf(needle)
+        }))
 
-      assert.ok(
-        spread <= WINDOW_CHARS,
-        `template${id} spread name/email/phone across ${spread} characters (limit ${WINDOW_CHARS}) — a parser will not read them as one contact block`
+        const absent = fields.filter((f) => f.at === -1).map((f) => f.key)
+        assert.deepEqual(absent, [], `template${id} did not render contact field(s) on ${fixture}.json: ${absent.join(', ')}`)
+
+        const at = fields.map((f) => f.at)
+        const spread = Math.max(...at) - Math.min(...at)
+
+        assert.ok(
+          spread <= WINDOW_CHARS,
+          `template${id} spread name/email/phone across ${spread} characters on ${fixture}.json (limit ${WINDOW_CHARS}) — a parser will not read them as one contact block`
+        )
+      })
+    }
+  }
+})
+
+// ---------------------------------------------------------------------------
+// Skill rows
+//
+// The external review's second concrete defect: category headers sit adjacent to
+// their skill blocks in parallel columns, and legacy parsers merge the text.
+// Five of the nine templates build `skillsSection` out of a two-column
+// `tabular` (template7's `\cvitem` is moderncv's hint-column tabular under
+// another name), so the label and its values are separate cells that the
+// content stream emits as separate lines.
+// ---------------------------------------------------------------------------
+
+type SkillRow = { name: string; label: string; probe: string }
+
+/**
+ * The keyword to look for beside the label.
+ *
+ * The first one, usually — but a two-character keyword like `Go` matches inside
+ * half the English language once whitespace is squashed out, so the first
+ * keyword of four characters or more wins, and the longest is the fallback.
+ */
+function probeKeyword(keywords: string[]): string {
+  const squashed = keywords.map(squash).filter(Boolean)
+  return (
+    squashed.find((keyword) => keyword.length >= 4) ??
+    squashed.slice().sort((a, b) => b.length - a.length)[0] ??
+    ''
+  )
+}
+
+function skillRowsOf(blueprint: Record<string, unknown>): SkillRow[] {
+  const skills = (blueprint.skills ?? []) as Array<{ name?: string; keywords?: string[] }>
+
+  return skills
+    .map((skill) => ({
+      name: skill.name ?? '',
+      label: squash(skill.name ?? ''),
+      probe: probeKeyword(skill.keywords ?? [])
+    }))
+    .filter((row) => row.label && row.probe)
+}
+
+/** What is wrong with one reading of one PDF's skills section, if anything. */
+function skillRowDefects(rows: SkillRow[], lines: string[]): string[] {
+  const defects: string[] = []
+
+  for (const row of rows) {
+    const together = lines.some((line) => line.includes(row.label) && line.includes(row.probe))
+    if (!together) {
+      defects.push(
+        `"${row.name}" and its keywords extract onto different lines — a parser reads the category as a value of its own`
+      )
+    }
+  }
+
+  for (const line of lines) {
+    const present = rows.filter((row) => line.includes(row.label))
+    if (present.length > 1) {
+      defects.push(
+        `${present.map((row) => `"${row.name}"`).join(' and ')} merged onto one extracted line`
+      )
+    }
+  }
+
+  return defects
+}
+
+/** Fixtures whose skills sections are shaped to exercise the column defect. */
+const SKILL_FIXTURES: FixtureName[] = ['grid', 'dense']
+
+describe('a skill category and its keywords extract as one row', { skip: NO_POPPLER }, () => {
+  for (const profile of TEMPLATE_PROFILES) {
+    test(`template${profile.id} cohesiveSkillRows is ${profile.cohesiveSkillRows}`, { timeout: SUITE_TIMEOUT_MS }, async () => {
+      const reported: string[] = []
+
+      for (const fixture of SKILL_FIXTURES) {
+        const rows = skillRowsOf(await fixtureFor(fixture))
+        if (!rows.length) continue
+
+        // A row only has to survive into one plausible reading, so the fixture
+        // is clean if any reading is clean, and the shortest defect list is the
+        // one worth reporting.
+        const perReading = lineReadings(await extractionFor(fixture, profile.id)).map((lines) =>
+          skillRowDefects(rows, lines)
+        )
+        const best = perReading.sort((a, b) => a.length - b.length)[0]
+
+        reported.push(...best.map((defect) => `    ${fixture}.json: ${defect}`))
+      }
+
+      assert.equal(
+        reported.length === 0,
+        profile.cohesiveSkillRows,
+        profile.cohesiveSkillRows
+          ? `template${profile.id} is recorded as keeping skill rows together but does not:\n${reported.join('\n')}`
+          : `template${profile.id} is recorded as merging skill columns, but every row now extracts cleanly — update TEMPLATE_PROFILES`
+      )
+    })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// Award records
+//
+// The external review's first concrete defect: a certifications grid whose
+// issuer and date break onto lines separate from the credential name, so a
+// parser reads three unrelated fragments instead of one record. `awards` is
+// where certifications live until F6 gives them a section of their own, and
+// `grid.json` shapes them as exactly name/issuer/date to match.
+//
+// The measure is the line span in the parser's reading. Zero means the three
+// fields extract as one record; anything above zero is the reported defect,
+// and the number says how badly.
+// ---------------------------------------------------------------------------
+
+type AwardRecord = { title: string; awarder: string; date: string; needles: string[] }
+
+function awardRecordsOf(blueprint: Record<string, unknown>): AwardRecord[] {
+  const awards = (blueprint.awards ?? []) as Array<{
+    title?: string
+    awarder?: string
+    date?: string
+  }>
+
+  return awards
+    .filter((award) => award.title && award.awarder && award.date)
+    .map((award) => ({
+      title: award.title as string,
+      awarder: award.awarder as string,
+      date: award.date as string,
+      needles: [award.title, award.awarder, award.date].map((value) => squash(value as string))
+    }))
+}
+
+/**
+ * The line a needle lands on, choosing the occurrence closest to `anchor`.
+ *
+ * Nearest rather than first because a date like `2018` may legitimately appear
+ * in the work section as well; the one that matters is the one beside its own
+ * record.
+ */
+function nearestLine(lines: string[], needle: string, anchor: number): number {
+  let best = -1
+
+  for (let i = 0; i < lines.length; i++) {
+    if (!lines[i].includes(needle)) continue
+    if (best === -1 || Math.abs(i - anchor) < Math.abs(best - anchor)) best = i
+  }
+
+  return best
+}
+
+/** How many lines apart an award's three fields land. `-1` if one is absent. */
+function recordSpan(record: AwardRecord, lines: string[]): number {
+  const [title, awarder, date] = record.needles
+  const anchor = lines.findIndex((line) => line.includes(title))
+  if (anchor === -1) return -1
+
+  const at = [anchor, nearestLine(lines, awarder, anchor), nearestLine(lines, date, anchor)]
+  if (at.includes(-1)) return -1
+
+  return Math.max(...at) - Math.min(...at)
+}
+
+describe('an award extracts as one record, not three fragments', { skip: NO_POPPLER }, () => {
+  for (const profile of TEMPLATE_PROFILES) {
+    test(`template${profile.id} cohesiveRecords is ${profile.cohesiveRecords}`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
+      // `grid.json` only. Its awards are exactly name/issuer/date, which is the
+      // shape the review asked for; dense.json's single award carries a prose
+      // summary that legitimately wraps, and measuring line spans across a
+      // wrapped paragraph would report the fixture rather than the template.
+      const records = awardRecordsOf(await fixtureFor('grid'))
+      const perReading = lineReadings(await extractionFor('grid', profile.id))
+
+      const reported: string[] = []
+
+      for (const record of records) {
+        const spans = perReading.map((lines) => recordSpan(record, lines))
+        const best = spans.filter((span) => span >= 0).sort((a, b) => a - b)[0]
+
+        if (best === undefined) {
+          reported.push(`    "${record.title}": one of title/awarder/date never reached the text layer`)
+        } else if (best > 0) {
+          reported.push(
+            `    "${record.title}": title, "${record.awarder}", and ${record.date} span ${best + 1} extracted lines`
+          )
+        }
+      }
+
+      assert.equal(
+        reported.length === 0,
+        profile.cohesiveRecords,
+        profile.cohesiveRecords
+          ? `template${profile.id} is recorded as keeping award records whole but does not:\n${reported.join('\n')}`
+          : `template${profile.id} is recorded as splitting award records, but every record now extracts on one line — update TEMPLATE_PROFILES`
+      )
+    })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// Orphan bullets
+//
+// An entry that carries a name and nothing else still gets its `\item`, and the
+// bullet prints with no text after it. A human skims past it; a parser reads a
+// value that is a bullet character. `sparse.json` is built to provoke exactly
+// this, which is why its education entry has an institution and no degree.
+// ---------------------------------------------------------------------------
+
+/**
+ * Deliberately not the dashes. An en dash alone on a line is a date range that
+ * wrapped, not a bullet, and including it would make this gate cry wolf on
+ * every template. template3's `\item[]` prints no glyph at all — an empty
+ * optional label — so it is correctly invisible here.
+ */
+const BARE_BULLET = /^[\s•·‣▪◦∙*]+$/
+
+function bareBulletLines(text: string): string[] {
+  return normalize(text)
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && BARE_BULLET.test(line))
+}
+
+describe('no extracted line is a bullet with nothing after it', { skip: NO_POPPLER }, () => {
+  for (const profile of TEMPLATE_PROFILES) {
+    test(`template${profile.id} orphanBullets is ${profile.orphanBullets}`, { timeout: SUITE_TIMEOUT_MS }, async () => {
+      const reported: string[] = []
+
+      for (const fixture of FIXTURE_NAMES) {
+        const { layout, raw, stream } = await extractionFor(fixture, profile.id)
+        const orphans = [layout, raw, stream].flatMap(bareBulletLines)
+
+        if (orphans.length) {
+          reported.push(`    ${fixture}.json: ${orphans.length} line(s) reading only ${JSON.stringify(orphans[0])}`)
+        }
+      }
+
+      assert.equal(
+        reported.length > 0,
+        profile.orphanBullets,
+        profile.orphanBullets
+          ? `template${profile.id} is recorded as emitting orphan bullets but none appeared — update TEMPLATE_PROFILES`
+          : `template${profile.id} is recorded as bullet-clean but emits bullets with no text:\n${reported.join('\n')}`
+      )
+    })
+  }
+})
+
+// ---------------------------------------------------------------------------
+// Page geometry
+//
+// The lowest-scoring axis of the external review, and the one the harness could
+// not see at all: margins, measured rather than asserted. `pdftotext -bbox`
+// gives a box per word in PDF points at 72 to the inch, origin top left;
+// pdfinfo gives the page size those boxes are measured against.
+//
+// This is the text bounding box, not the declared `geometry` margin. That is
+// the point — it is what a reader and a parser actually get, it accounts for a
+// class whose defaults nothing in this repo sets, and an overfull box that runs
+// into the margin shows up here as a number rather than as a warning nobody
+// reads.
+// ---------------------------------------------------------------------------
+
+/** The external review's universal rule, and F3's hard schema floor. */
+const MARGIN_FLOOR_IN = 0.5
+
+const PDF_POINTS_PER_INCH = 72
+
+type PageBox = {
+  width: number
+  height: number
+  words: number
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
+}
+
+function parsePageBoxes(bbox: string): PageBox[] {
+  const pages: PageBox[] = []
+  const pageRe = /<page width="([\d.]+)" height="([\d.]+)">([\s\S]*?)<\/page>/g
+
+  let page: RegExpExecArray | null
+  while ((page = pageRe.exec(bbox)) !== null) {
+    const wordRe = /<word xMin="(-?[\d.]+)" yMin="(-?[\d.]+)" xMax="(-?[\d.]+)" yMax="(-?[\d.]+)"/g
+
+    let minX = Infinity
+    let maxX = -Infinity
+    let minY = Infinity
+    let maxY = -Infinity
+    let words = 0
+
+    let word: RegExpExecArray | null
+    while ((word = wordRe.exec(page[3])) !== null) {
+      words++
+      minX = Math.min(minX, Number(word[1]))
+      minY = Math.min(minY, Number(word[2]))
+      maxX = Math.max(maxX, Number(word[3]))
+      maxY = Math.max(maxY, Number(word[4]))
+    }
+
+    pages.push({ width: Number(page[1]), height: Number(page[2]), words, minX, maxX, minY, maxY })
+  }
+
+  return pages
+}
+
+function pageCountFromInfo(info: string): number {
+  const match = info.match(/^Pages:\s+(\d+)/m)
+  return match ? Number(match[1]) : 0
+}
+
+function paperFromInfo(info: string): string {
+  const match = info.match(/^Page size:\s+(.+)$/m)
+  return match ? match[1].trim() : 'unknown'
+}
+
+type MarginReading = { inches: number; where: string }
+
+function tightestMargin(fixture: FixtureName, pages: PageBox[]): MarginReading | undefined {
+  let tightest: MarginReading | undefined
+
+  pages.forEach((page, index) => {
+    // A page with no words has no text box to measure. Blank trailing pages are
+    // a layout smell, but they are not a margin violation.
+    if (!page.words) return
+
+    const edges: Array<[string, number]> = [
+      ['left', page.minX],
+      ['right', page.width - page.maxX],
+      ['top', page.minY],
+      ['bottom', page.height - page.maxY]
+    ]
+
+    for (const [edge, points] of edges) {
+      const inches = points / PDF_POINTS_PER_INCH
+      if (!tightest || inches < tightest.inches) {
+        tightest = { inches, where: `${fixture}.json page ${index + 1} ${edge}` }
+      }
+    }
+  })
+
+  return tightest
+}
+
+describe('text stays clear of the page edges', { skip: NO_POPPLER }, () => {
+  for (const profile of TEMPLATE_PROFILES) {
+    test(`template${profile.id} clearsMarginFloor is ${profile.clearsMarginFloor}`, { timeout: SUITE_TIMEOUT_MS }, async () => {
+      let tightest: MarginReading | undefined
+      const papers = new Set<string>()
+
+      for (const fixture of FIXTURE_NAMES) {
+        const { bbox, info } = await extractionFor(fixture, profile.id)
+        const pages = parsePageBoxes(bbox)
+
+        // Cross-check the two tools against each other. A bbox extraction that
+        // silently stopped short would otherwise measure a document that is not
+        // the one that was rendered.
+        assert.equal(
+          pages.length,
+          pageCountFromInfo(info),
+          `template${profile.id} on ${fixture}.json: pdftotext -bbox reported ${pages.length} page(s) but pdfinfo reported ${pageCountFromInfo(info)}`
+        )
+
+        papers.add(paperFromInfo(info))
+
+        const reading = tightestMargin(fixture, pages)
+        if (reading && (!tightest || reading.inches < tightest.inches)) tightest = reading
+      }
+
+      assert.ok(tightest, `template${profile.id} produced no measurable text on any fixture`)
+
+      const measured = tightest.inches.toFixed(3)
+
+      assert.equal(
+        tightest.inches >= MARGIN_FLOOR_IN,
+        profile.clearsMarginFloor,
+        profile.clearsMarginFloor
+          ? `template${profile.id} is recorded as clearing the ${MARGIN_FLOOR_IN}in floor but its text comes within ${measured}in of the edge (${tightest.where}; paper ${[...papers].join(', ')})`
+          : `template${profile.id} is recorded as breaching the ${MARGIN_FLOOR_IN}in floor but its tightest margin is now ${measured}in (${tightest.where}) — update TEMPLATE_PROFILES`
       )
     })
   }
@@ -410,7 +935,7 @@ describe('the contact block is contiguous enough for a parser to find', { skip: 
 // ---------------------------------------------------------------------------
 
 /** Everything TeX may introduce on its own without it meaning icon-font glyphs. */
-const TYPOGRAPHIC = new Set([...'–—‘’“”…•·−­ ', ...'ﬀﬁﬂﬃﬄ'])
+const TYPOGRAPHIC = new Set([...'–—‘’“”…•·−­ ', ...'ﬀﬁﬂﬃﬄ'])
 
 function isPrivateUse(char: string): boolean {
   const code = char.codePointAt(0) ?? 0
@@ -454,9 +979,13 @@ describe('the template catalog is internally consistent', () => {
   })
 
   for (const profile of TEMPLATE_PROFILES) {
-    // atsGrade is the conjunction of the four gates above and a clean text
-    // layer. The four gates are asserted per template already, so what is left
-    // to check here is that the flag agrees with the icon finding.
+    // atsGrade is the conjunction of the four original gates and a clean text
+    // layer. Those gates are asserted per template already, so what is left to
+    // check here is that the flag agrees with the icon finding. The four fields
+    // added by the harness v2 work — clearsMarginFloor, cohesiveSkillRows,
+    // cohesiveRecords, orphanBullets — deliberately do NOT feed atsGrade yet:
+    // they record defects F3 and F5 have not fixed, and folding them in now
+    // would shrink ATS_TEMPLATE_IDS for problems nobody has addressed.
     test(`template${profile.id} atsGrade is ${profile.atsGrade}`, () => {
       assert.equal(
         profile.atsGrade,
@@ -467,11 +996,11 @@ describe('the template catalog is internally consistent', () => {
   }
 })
 
-describe('the template catalog matches what the harness measures', { skip: !PDFTOTEXT && 'pdftotext not on PATH' }, () => {
+describe('the template catalog matches what the harness measures', { skip: NO_POPPLER }, () => {
   for (const profile of TEMPLATE_PROFILES) {
     test(`template${profile.id} iconLabeledContacts is ${profile.iconLabeledContacts}`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
-      const blueprint = JSON.parse(await readFile(resolve(FIXTURES, 'dense.json'), 'utf8'))
-      const { raw } = await extractionFor(profile.id)
+      const blueprint = await fixtureFor('dense')
+      const { raw } = await extractionFor('dense', profile.id)
       const stray = strayGlyphs(raw, parseBlueprint(blueprint))
 
       assert.equal(

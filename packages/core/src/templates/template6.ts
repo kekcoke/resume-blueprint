@@ -136,7 +136,10 @@ const generator: Omit<Generator, 'resumeHeader'> = {
           dateRange = endDate
         }
 
-        if (highlights) {
+        // `highlights` is destructured with a `[]` default above, so a truthiness
+        // check is always true: a job with no highlights opened an empty
+        // `newitemize`, which is a hard LaTeX error rather than a layout defect.
+        if (highlights.length) {
           dutyLines = source`
             \\begin{newitemize}
               ${highlights.map((duty) => `\\item {${duty}}`)}

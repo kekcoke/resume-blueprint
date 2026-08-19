@@ -17,8 +17,11 @@ jobs:
   test:
     name: build and test (node ${{ matrix.node }})
     runs-on: ubuntu-latest
-    # Nine Tectonic compiles against a cold package cache is the slow path.
-    timeout-minutes: 30
+    # Thirty-six Tectonic compiles — four parse-fidelity fixtures across nine
+    # templates — against a cold package cache is the slow path. The cold
+    # penalty is per document class, so it stays at nine downloads; the warm
+    # path is what quadrupled.
+    timeout-minutes: 45
 
     strategy:
       fail-fast: false
@@ -36,13 +39,15 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
 
-      # pdftotext. Without it the parse-fidelity gates would skip — and under
-      # CI, ats.test.ts turns that skip into a failure on purpose.
+      # pdftotext for the text layer and pdfinfo for the page geometry. Without
+      # both the parse-fidelity gates would skip — and under CI, ats.test.ts
+      # turns that skip into a failure on purpose.
       - name: Install poppler
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends poppler-utils
           pdftotext -v
+          pdfinfo -v
 
       # Tectonic downloads TeX packages on the first compile of each document
       # class. That download, not the binary, is what makes a cold run slow.
