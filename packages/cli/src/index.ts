@@ -25,16 +25,21 @@ Arguments:
   <blueprint.json>     Path to a JSON Resume blueprint, or "-" to read stdin.
 
 Options:
-  -t, --template <n>   Template ${TEMPLATE_IDS[0]}-${TEMPLATE_IDS[TEMPLATE_IDS.length - 1]}; overrides the blueprint's selectedTemplate.
-  -o, --output <path>  Write to this path. Defaults to stdout.
-      --timeout <ms>   Compile timeout in milliseconds (default 60000).
-      --keep-temp      Retain the compile directory and print its path.
-  -h, --help           Show this help.
+  -t, --template <n>     Template ${TEMPLATE_IDS[0]}-${TEMPLATE_IDS[TEMPLATE_IDS.length - 1]}; overrides the blueprint's selectedTemplate.
+  -o, --output <path>    Write to this path. Defaults to stdout.
+      --timeout <ms>     Compile timeout in milliseconds (default 60000).
+      --keep-temp        Retain the compile directory and print its path.
+      --font <name>      template|calibri|arial|helvetica|garamond|georgia. Merges into document.
+      --font-size <pt>   10, 11, or 12. Merges into document.
+      --margin <length>  e.g. "0.75in", "2cm"; clamped to a 0.5in floor. Merges into document.
+      --line-spacing <n> 1.0-1.15; clamped. Merges into document.
+  -h, --help             Show this help.
 
 Examples:
   resume render fixtures/sample.json -t 3 -o ada.pdf
   cat blueprint.json | resume render - -o out.pdf
   resume validate fixtures/sample.json
+  resume render fixtures/sample.json --font calibri --margin 1in -o ada.pdf
 `
 
 async function readStdin(): Promise<string> {
@@ -62,6 +67,35 @@ function withTemplate(blueprint: unknown, template?: number): unknown {
   return { ...(blueprint as object), selectedTemplate: template }
 }
 
+/**
+ * Applies --font/--font-size/--margin/--line-spacing on top of whatever
+ * `document` block the blueprint already declared.
+ *
+ * Merged field by field, not replaced wholesale — same reasoning as MCP's
+ * `withOverrides` in packages/mcp/src/tools.ts: a blueprint that already set
+ * `document.accentColor` should not lose it just because `--font-size` was
+ * passed on this one invocation.
+ *
+ * Values are passed through as strings/numbers rather than validated here —
+ * `BlueprintSchema` (via DocumentConfigSchema) is the single source of truth
+ * for what's valid, and an invalid value surfaces as the same
+ * formatValidationError output any other bad blueprint field would.
+ */
+function withDocument(blueprint: unknown, override: Record<string, unknown>): unknown {
+  if (Object.keys(override).length === 0) return blueprint
+  const bp = blueprint as { document?: Record<string, unknown> }
+  return { ...(blueprint as object), document: { ...bp.document, ...override } }
+}
+
+/** Parses a --font-size/--line-spacing flag, rejecting non-finite input
+ * (e.g. `--font-size banana`) with a CliError rather than letting a NaN
+ * silently pass DocumentConfigSchema's numeric clamps untouched. */
+function parseNumberFlag(name: string, raw: string): number {
+  const n = Number(raw)
+  if (!Number.isFinite(n)) throw new CliError(`${name} must be a number, got "${raw}"`)
+  return n
+}
+
 async function emit(data: Buffer | string, output?: string): Promise<void> {
   if (output) {
     await writeFile(output, data)
@@ -80,6 +114,10 @@ async function main(argv: string[]): Promise<number> {
       output: { type: 'string', short: 'o' },
       timeout: { type: 'string' },
       'keep-temp': { type: 'boolean' },
+      font: { type: 'string' },
+      'font-size': { type: 'string' },
+      margin: { type: 'string' },
+      'line-spacing': { type: 'string' },
       help: { type: 'boolean', short: 'h' }
     }
   })
@@ -113,7 +151,17 @@ async function main(argv: string[]): Promise<number> {
     throw new CliError(`--template must be one of ${TEMPLATE_IDS.join(', ')}`)
   }
 
-  const blueprint = withTemplate(await readInput(path), template)
+  const documentOverride: Record<string, unknown> = {}
+  if (values.font !== undefined) documentOverride.fontFamily = values.font
+  if (values['font-size'] !== undefined) {
+    documentOverride.fontSize = parseNumberFlag('--font-size', values['font-size'])
+  }
+  if (values.margin !== undefined) documentOverride.margin = values.margin
+  if (values['line-spacing'] !== undefined) {
+    documentOverride.lineSpacing = parseNumberFlag('--line-spacing', values['line-spacing'])
+  }
+
+  const blueprint = withDocument(withTemplate(await readInput(path), template), documentOverride)
 
   switch (command) {
     case 'validate': {
