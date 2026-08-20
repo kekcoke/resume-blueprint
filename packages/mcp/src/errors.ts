@@ -1,5 +1,10 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
-import { isValidationError, formatValidationError, TectonicError } from '@resume-blueprint/core'
+import {
+  isValidationError,
+  formatValidationError,
+  TectonicError,
+  ProfileParseError
+} from '@resume-blueprint/core'
 import {
   ConflictError,
   NotFoundError,
@@ -26,6 +31,14 @@ function errorResult(text: string): CallToolResult {
 export function toToolError(error: unknown): CallToolResult {
   if (isValidationError(error)) {
     return errorResult(`Invalid blueprint:\n${formatValidationError(error)}`)
+  }
+
+  // Malformed markdown handed to resume_import. Expected user error, not a
+  // server fault: without this it falls through to the catch-all, which dumps
+  // a stack to stderr and labels it "Unexpected error" — sending the caller to
+  // look for a bug instead of at their document.
+  if (error instanceof ProfileParseError) {
+    return errorResult(`Could not parse the profile: ${error.message}`)
   }
 
   if (error instanceof TectonicError) {

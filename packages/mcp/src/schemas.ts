@@ -102,6 +102,21 @@ export const ResumeRevertInput = z.object({
 
 export const ResumeTemplatesInput = z.object({})
 
+/**
+ * Takes the markdown itself, not a path.
+ *
+ * No other tool on this server reads a caller-supplied path, and adding one
+ * would hand an agent an arbitrary local-file read through a resume tool --
+ * a capability class this server does not otherwise have, and one nothing
+ * here is positioned to guard (store's `ID_PATTERN` is the only traversal
+ * defense in the repo, and it guards generated filenames, not user input).
+ * The agent already has file-reading tools; the CLI is the adapter that reads
+ * from a path.
+ */
+export const ResumeImportInput = z.object({
+  markdown: z.string()
+})
+
 // --- Output schemas -----------------------------------------------------
 //
 // Declared so the SDK's validateToolOutput actually checks structuredContent
@@ -128,6 +143,15 @@ export const ResumeListOutput = z.object({
 export const ResumeGetOutput = z.object({
   blueprint: z.record(z.unknown()),
   rev: z.string()
+})
+
+/** Deliberately does not include an `id` or `rev`: this tool writes nothing.
+ *  `warnings` is the load-bearing half -- the parser reports every section it
+ *  could not map and every reading it had to assume, and an agent that ignores
+ *  it will store a blueprint with a job title in the employer field. */
+export const ResumeImportOutput = z.object({
+  blueprint: z.record(z.unknown()),
+  warnings: z.array(z.string())
 })
 
 export const ResumeCreateOutput = z.object(IdRevOutput)

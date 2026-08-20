@@ -12,6 +12,7 @@ import {
   TEMPLATE_PROFILES,
   HONOURED_DOCUMENT_FIELDS,
   resolveDocumentConfig,
+  profileToBlueprint,
   type DocumentConfig
 } from '@resume-blueprint/core'
 import { CORE_BUILD } from './buildStamp.js'
@@ -32,6 +33,7 @@ import {
   ResumeDiffInput,
   ResumeRevertInput,
   ResumeTemplatesInput,
+  ResumeImportInput,
   ResumeListOutput,
   ResumeGetOutput,
   ResumeCreateOutput,
@@ -46,7 +48,8 @@ import {
   ResumeHistoryOutput,
   ResumeDiffOutput,
   ResumeRevertOutput,
-  ResumeTemplatesOutput
+  ResumeTemplatesOutput,
+  ResumeImportOutput
 } from './schemas.js'
 import { toToolError } from './errors.js'
 import {
@@ -496,6 +499,49 @@ export function registerTools(server: McpServer): void {
         return {
           content: [{ type: 'text', text }],
           structuredContent: { templates }
+        }
+      } catch (error) {
+        return toToolError(error)
+      }
+    }
+  )
+
+  server.registerTool(
+    'resume_import',
+    {
+      title: 'Import a master profile',
+      description:
+        'Parses a master-profile markdown document into a blueprint, stripping the "[cite: ...]" ' +
+        'artifacts that generators leave behind. Returns the blueprint and a list of warnings; it ' +
+        'stores nothing — pass the result to resume_create when the warnings look acceptable.',
+      inputSchema: ResumeImportInput,
+      outputSchema: ResumeImportOutput,
+      // Reads nothing and writes nothing: the markdown arrives as an argument.
+      annotations: { readOnlyHint: true }
+    },
+    async ({ markdown }) => {
+      try {
+        const { blueprint, warnings } = profileToBlueprint(markdown)
+
+        // The counts are the fast sanity check ("3 roles, not 1"); the warnings
+        // are the part that actually needs reading, so they go in the text
+        // channel in full rather than being summarized to a number.
+        const counts = [
+          ['work', blueprint.work?.length],
+          ['skill groups', blueprint.skills?.length],
+          ['education', blueprint.education?.length],
+          ['certificates', blueprint.certificates?.length]
+        ]
+          .filter(([, n]) => n)
+          .map(([label, n]) => `${n} ${label}`)
+          .join(', ')
+
+        const summary = `imported ${counts || 'basics only'}`
+        const text = warnings.length ? `${summary}\n\n${warnings.join('\n')}` : summary
+
+        return {
+          content: [{ type: 'text', text }],
+          structuredContent: { blueprint, warnings }
         }
       } catch (error) {
         return toToolError(error)
