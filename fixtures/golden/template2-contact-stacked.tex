@@ -1,0 +1,141 @@
+%!TEX TS-program = xelatex
+%!TEX encoding = UTF-8 Unicode
+% Awesome CV LaTeX Template
+%
+% This template has been downloaded from:
+% https://github.com/posquit0/Awesome-CV
+%
+% Author:
+% Claud D. Park <posquit0.bj@gmail.com>
+% http://www.posquit0.com
+%
+% Template license:
+% CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/)
+%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%     Configuration
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Themes: Awesome-CV
+\documentclass[]{awesome-cv}
+\usepackage{textcomp}
+%%% Override a directory location for fonts(default: 'fonts/')
+\fontdir[fonts/]
+
+%%% Configure a directory location for sections
+\newcommand*{\sectiondir}{resume/}
+
+%%% Override color
+% Awesome Colors: awesome-emerald, awesome-skyblue, awesome-red, awesome-pink, awesome-orange
+%                 awesome-nephritis, awesome-concrete, awesome-darknight
+%% Color for highlight
+% Define your custom color if you don't like awesome colors
+\colorlet{awesome}{awesome-red}
+%\definecolor{awesome}{HTML}{CA63A8}
+%% Colors for text
+%\definecolor{darktext}{HTML}{414141}
+%\definecolor{text}{HTML}{414141}
+%\definecolor{graytext}{HTML}{414141}
+%\definecolor{lighttext}{HTML}{414141}
+
+%%% Override a separator for social informations in header(default: ' | ')
+%\headersocialsep[\quad\textbar\quad]
+    \begin{document}
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      %     Profile
+      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \begin{center}
+      \headerfirstnamestyle{Ada} \headerlastnamestyle{Lovelace} \\
+      \headerpositionstyle{Principal Engineer \& Numerical Analyst} \\
+      \vspace{2mm}
+      {\faEnvelope\ ada@example.com} \\
+{\faMobile\ (555) 010-1843} \\
+{\faMapMarker\ London, UK} \\
+{\faLink\ \href{https://example.com/ada}{https://example.\allowbreak{}com/\allowbreak{}ada}} \\
+{\faLink\ \href{https://linkedin.com/in/ada-lovelace}{linkedin.\allowbreak{}com/\allowbreak{}in/\allowbreak{}ada-\allowbreak{}lovelace}} \\
+{\faLink\ \href{https://example.com/notes}{Personal \& Lab Notes: example.\allowbreak{}com/\allowbreak{}notes}}
+      \\ \vspace{6.0mm} \headerquotestyle{Engineer with a decade of work on general-purpose computing machines, publishing the first algorithm intended for one and leading the numerical methods group that made it practical.}
+      \end{center}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %     Education
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    \vspace{3pt}
+    \cvsection{Education}
+    \begin{cventries}
+    \cventry
+{BSc in Mathematics}
+{University of London}
+{London, UK}
+{2011 – 2015}
+{GPA: 3.9/4.0}
+    \end{cventries}
+
+    \vspace{-2mm}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      %     Experience
+      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \vspace{3pt}
+      \cvsection{Experience}
+      \begin{cventries}
+      \cventry
+            {Principal Engineer}
+            {Analytical Engine Works}
+            {London, UK}
+            {Jan 2019 – Present}
+            {Led the numerical methods group.\endgraf\vspace{4mm}\begin{cvitems}
+  \setlength\itemsep{2pt}
+  \item {Designed the first published algorithm for a general-purpose computing machine}
+  \item {Cut batch computation latency by 45\% across the note-taking pipeline}
+  \item {Mentored 6 engineers; 3 promoted within 18 months}
+\end{cvitems}}
+      \cventry
+            {Research Fellow}
+            {Royal Society}
+            {London, UK}
+            {Jun 2015 – Dec 2018}
+            {\begin{cvitems}
+  \setlength\itemsep{2pt}
+  \item {Published 4 papers on symbolic computation}
+  \item {Built the society's first mechanical tabulation workflow}
+\end{cvitems}}
+      \end{cventries}
+\vspace{3pt}
+\cvsection{Skills}
+\begin{cventries}
+\cventry
+{}
+{\begin{cvitems}
+\setlength\itemsep{2pt}
+\item {\textbf{Languages:} TypeScript, Python, Rust}
+\item {\textbf{Infrastructure:} Docker, Postgres, Kubernetes}
+\end{cvitems}}
+{}
+{}
+{}
+\end{cventries}
+
+\vspace{-7mm}
+\vspace{3pt}
+      \cvsection{Projects}
+      \begin{cventries}
+      \cventry
+  {Bernoulli number generator for the Analytical Engine.}
+  {Note G}
+  {algorithms, computation}
+  {\href{https://example.com/note-g}{https://example.com/note-g}}
+  {}
+
+\vspace{-5mm}
+      \end{cventries}
+\vspace{3pt}
+    \cvsection{Awards}
+    \begin{cvhonors}
+    \cvhonor
+{Gold Medal for Numerical Analysis}
+{Awarded for contributions to mechanical computation.}
+{Royal Society}
+{2020}
+    \end{cvhonors}
+    \ 
+    \end{document}

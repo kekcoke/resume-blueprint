@@ -131,6 +131,71 @@ describe('TeX generation is stable across font family overrides', () => {
   }
 })
 
+// F5 — contactLayout. One golden case per template exercising its
+// *non-default* branch: templates 1-6 and 9 default to 'row' (see
+// documentConfig.ts's GLOBAL_DEFAULTS), so 'stacked' is their new behavior;
+// templates 7 and 8 are recorded with contactLayout: 'stacked' as their
+// TEMPLATE_DEFAULTS (moderncv/mcdowellcv's own per-field contact macros),
+// so 'row' is theirs.
+describe('TeX generation is stable across contactLayout overrides', () => {
+  const CASES: Array<{ id: number; contactLayout: 'row' | 'stacked' }> = [
+    { id: 1, contactLayout: 'stacked' },
+    { id: 2, contactLayout: 'stacked' },
+    { id: 3, contactLayout: 'stacked' },
+    { id: 4, contactLayout: 'stacked' },
+    { id: 5, contactLayout: 'stacked' },
+    { id: 6, contactLayout: 'stacked' },
+    { id: 7, contactLayout: 'row' },
+    { id: 8, contactLayout: 'row' },
+    { id: 9, contactLayout: 'stacked' }
+  ]
+
+  for (const { id, contactLayout } of CASES) {
+    test(`template${id} with contactLayout '${contactLayout}' matches its golden snapshot`, async () => {
+      const { texDoc } = blueprintToTex({
+        ...sample,
+        selectedTemplate: id,
+        document: { contactLayout }
+      })
+      const goldenPath = resolve(GOLDEN, `template${id}-contact-${contactLayout}.tex`)
+
+      if (UPDATE_GOLDEN || !existsSync(goldenPath)) {
+        await writeFile(goldenPath, texDoc, 'utf8')
+        return
+      }
+
+      const expected = await readFile(goldenPath, 'utf8')
+      assert.equal(
+        texDoc,
+        expected,
+        `template${id}+contactLayout:${contactLayout} TeX output drifted. Re-run with UPDATE_GOLDEN=1 if intended.`
+      )
+    })
+  }
+})
+
+// Coarse, cheap regression guard alongside the golden cases above: every
+// template's rendered TeX must actually change between 'row' and 'stacked',
+// not silently ignore the override the way all nine did before F5.
+describe('every template branches on contactLayout', () => {
+  for (const id of TEMPLATE_IDS) {
+    test(`template${id} renders differently for 'row' vs 'stacked'`, () => {
+      const row = blueprintToTex({
+        ...sample,
+        selectedTemplate: id,
+        document: { contactLayout: 'row' }
+      }).texDoc
+      const stacked = blueprintToTex({
+        ...sample,
+        selectedTemplate: id,
+        document: { contactLayout: 'stacked' }
+      }).texDoc
+
+      assert.notEqual(row, stacked, `template${id} ignores document.contactLayout`)
+    })
+  }
+})
+
 describe('every template compiles to a valid PDF', () => {
   for (const id of TEMPLATE_IDS) {
     test(
