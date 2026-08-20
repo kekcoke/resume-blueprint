@@ -1,6 +1,7 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks, joinContactInfo } from './profiles.js'
+import { certificateLine, defaultCertificatesSection } from './certificates.js'
 import { isFontSupported, georgiaFileBasename } from './fonts.js'
 import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
@@ -318,6 +319,26 @@ const generator: Generator = {
     `
   },
 
+  certificatesSection(certificates, heading, config) {
+    if (!certificates) {
+      return ''
+    }
+
+    return source`
+      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      %
+      %     Certificates
+      %
+      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \\vspace{${config.sectionSpacing}pt}
+      \\section{${heading || 'Certificates'}}
+      ${certificates.map((cert) => {
+        const line = certificateLine(cert)
+        return line ? `${line}\\\\` : ''
+      })}
+    `
+  },
+
   resumeHeader() {
     return stripIndent`
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -453,6 +474,15 @@ function template4(values: FormValues, config: ResolvedDocumentConfig) {
 
           case 'awards':
             return generator.awardsSection(values.awards, headings.awards, config)
+
+          case 'certificates':
+            return (
+              generator.certificatesSection?.(
+                values.certificates,
+                headings.certificates,
+                config
+              ) ?? defaultCertificatesSection(values.certificates, headings.certificates, config)
+            )
 
           default:
             return ''

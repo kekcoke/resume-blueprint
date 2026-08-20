@@ -111,13 +111,21 @@ export const AwardSchema = z.object({
   summary: text.optional()
 })
 
+export const CertificateSchema = z.object({
+  name: text.optional(),
+  issuer: text.optional(),
+  date: text.optional(),
+  url: text.optional()
+})
+
 export const SECTION_NAMES = [
   'profile',
   'education',
   'work',
   'skills',
   'projects',
-  'awards'
+  'awards',
+  'certificates'
 ] as const
 
 export const SectionSchema = z.enum(SECTION_NAMES)
@@ -178,6 +186,7 @@ export const BlueprintSchema = z.object({
   skills: z.array(SkillSchema).optional(),
   projects: z.array(ProjectSchema).optional(),
   awards: z.array(AwardSchema).optional(),
+  certificates: z.array(CertificateSchema).optional(),
 
   /** Per-section heading overrides, e.g. `{ work: 'Experience' }`. */
   headings: z.record(SectionSchema, z.string()).default({}),
@@ -211,6 +220,7 @@ export type Education = z.infer<typeof EducationSchema>
 export type Skill = z.infer<typeof SkillSchema>
 export type Project = z.infer<typeof ProjectSchema>
 export type Award = z.infer<typeof AwardSchema>
+export type Certificate = z.infer<typeof CertificateSchema>
 export type SectionName = z.infer<typeof SectionSchema>
 
 /** The `document` block as the caller may supply it: sparse, every field optional. */

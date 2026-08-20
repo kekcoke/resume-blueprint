@@ -1,6 +1,7 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks, joinContactInfo } from './profiles.js'
+import { certificateLine, defaultCertificatesSection } from './certificates.js'
 import { nfssFontPreamble } from './fonts.js'
 import type { FormValues, GeneratorWithSummary, ResolvedDocumentConfig } from '../types.js'
 
@@ -269,6 +270,21 @@ const generator: GeneratorWithSummary = {
     `
   },
 
+  certificatesSection(certificates, heading, config) {
+    if (!certificates) {
+      return ''
+    }
+
+    return source`
+      \\vspace{${config.sectionSpacing}pt}
+      \\section{${heading || 'CERTIFICATES'}}
+      ${certificates.map((cert) => {
+        const line = certificateLine(cert)
+        return line ? `${line} \\\\\\\\` : ''
+      })}
+    `
+  },
+
   // res.cls's `[line,margin]` class options are semantic flags (margin
   // notes for dates/locations), not lengths — nothing here touches them.
   // Page margin and paper size are unknown-native (res.cls owns its own
@@ -350,6 +366,16 @@ function template5(values: FormValues, config: ResolvedDocumentConfig) {
 
               case 'awards':
                 return generator.awardsSection(values.awards, headings.awards, config)
+
+              case 'certificates':
+                return (
+                  generator.certificatesSection?.(
+                    values.certificates,
+                    headings.certificates,
+                    config
+                  ) ??
+                  defaultCertificatesSection(values.certificates, headings.certificates, config)
+                )
 
               default:
                 return ''

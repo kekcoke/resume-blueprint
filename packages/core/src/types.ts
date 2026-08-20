@@ -2,6 +2,7 @@ import type {
   Award,
   Basics,
   Blueprint,
+  Certificate,
   Education,
   Project,
   Skill,
@@ -9,7 +10,7 @@ import type {
 } from './schema.js'
 import type { ResolvedDocumentConfig } from './templates/documentConfig.js'
 
-export type { Award, Basics, Education, Project, Skill, Work }
+export type { Award, Basics, Certificate, Education, Project, Skill, Work }
 export type { ResolvedDocumentConfig }
 
 /**
@@ -81,6 +82,19 @@ export type Generator = {
   ) => string
   awardsSection: (
     awards: Array<Award> | undefined,
+    heading: string | undefined,
+    config: ResolvedDocumentConfig
+  ) => string
+  /**
+   * Optional, unlike every other Generator method: `templates/index.ts`'s
+   * dispatch falls back to `defaultCertificatesSection` (see
+   * `templates/certificates.ts`) when a template omits this, so a future
+   * template can't silently drop certificates the way an unguarded optional
+   * method could. All nine templates in this repo implement it directly;
+   * the fallback exists for templates not yet written.
+   */
+  certificatesSection?: (
+    certificates: Array<Certificate> | undefined,
     heading: string | undefined,
     config: ResolvedDocumentConfig
   ) => string

@@ -1,6 +1,7 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks, joinContactInfo } from './profiles.js'
+import { certificateLine, defaultCertificatesSection } from './certificates.js'
 import { accentColorToTeX } from './documentConfig.js'
 import { nfssFontPreamble } from './fonts.js'
 import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
@@ -237,6 +238,22 @@ const generator: Generator = {
     `
   },
 
+  certificatesSection(certificates, heading, config) {
+    if (!certificates) {
+      return ''
+    }
+
+    return source`
+      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \\vspace{${config.sectionSpacing}pt}
+      \\resheading{${heading || 'Certificates'}}
+      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \\begin{itemize}[leftmargin=*, itemsep=${config.bulletSpacing}pt]
+      ${certificates.map((cert) => `\\item[] ${certificateLine(cert)}`)}
+      \\end{itemize}
+    `
+  },
+
   resumeHeader(config) {
     // TEMPLATE_DEFAULTS[3] is {paper: 'letter', fontSize: 11}, matching this
     // class line's current literal '[11pt]' (no page-size option today means
@@ -393,6 +410,15 @@ function template3(values: FormValues, config: ResolvedDocumentConfig) {
 
           case 'awards':
             return generator.awardsSection(values.awards, headings.awards, config)
+
+          case 'certificates':
+            return (
+              generator.certificatesSection?.(
+                values.certificates,
+                headings.certificates,
+                config
+              ) ?? defaultCertificatesSection(values.certificates, headings.certificates, config)
+            )
 
           default:
             return ''

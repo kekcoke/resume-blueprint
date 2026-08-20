@@ -1,6 +1,7 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks, joinContactInfo } from './profiles.js'
+import { certificateLine, defaultCertificatesSection } from './certificates.js'
 import { accentColorToTeX } from './documentConfig.js'
 import { isFontSupported, georgiaFontspecTarget } from './fonts.js'
 import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
@@ -274,6 +275,21 @@ const generator: Generator = {
     `
   },
 
+  certificatesSection(certificates, heading, config) {
+    if (!certificates) {
+      return ''
+    }
+
+    return source`
+      \\vspace{${config.sectionSpacing}pt}
+      \\cvsection{${heading || 'Certificates'}}
+      \\begin{itemize}
+      \\setlength\\itemsep{${config.bulletSpacing}pt}
+      ${certificates.map((cert) => `\\item ${certificateLine(cert)}`)}
+      \\end{itemize}
+    `
+  },
+
   resumeHeader(config) {
     const accentLine = config.accentColor
       ? `\\definecolor{awesome}{HTML}{${accentColorToTeX(config.accentColor)}}`
@@ -415,6 +431,15 @@ function template2(values: FormValues, config: ResolvedDocumentConfig) {
 
           case 'awards':
             return generator.awardsSection(values.awards, headings.awards, config)
+
+          case 'certificates':
+            return (
+              generator.certificatesSection?.(
+                values.certificates,
+                headings.certificates,
+                config
+              ) ?? defaultCertificatesSection(values.certificates, headings.certificates, config)
+            )
 
           default:
             return ''

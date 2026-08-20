@@ -1,6 +1,7 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks, joinContactInfo } from './profiles.js'
+import { certificateLine, defaultCertificatesSection } from './certificates.js'
 import { nfssFontPreamble } from './fonts.js'
 import { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
@@ -278,6 +279,20 @@ const generator: Generator = {
     `
   },
 
+  certificatesSection(certificates, heading) {
+    if (!certificates) {
+      return ''
+    }
+
+    return source`
+      \\header{${heading || 'Certificates'}}
+      ${certificates.map((cert) => {
+        const line = certificateLine(cert)
+        return line ? `${line}\\\\` : ''
+      })}
+    `
+  },
+
   resumeHeader(config) {
     return stripIndent`
       %\\renewcommand{\\encodingdefault}{cg}
@@ -414,6 +429,15 @@ function template1(values: FormValues, config: ResolvedDocumentConfig) {
 
           case 'awards':
             return generator.awardsSection(values.awards, headings.awards, config)
+
+          case 'certificates':
+            return (
+              generator.certificatesSection?.(
+                values.certificates,
+                headings.certificates,
+                config
+              ) ?? defaultCertificatesSection(values.certificates, headings.certificates, config)
+            )
 
           default:
             return ''

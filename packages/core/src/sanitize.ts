@@ -157,6 +157,7 @@ const CONTENT_KEYS = [
   'skills',
   'projects',
   'awards',
+  'certificates',
   'headings'
 ] as const
 

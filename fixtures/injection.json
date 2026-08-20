@@ -34,5 +34,13 @@
       "url": "file:///etc/passwd"
     }
   ],
+  "certificates": [
+    {
+      "name": "\\input{/etc/passwd}",
+      "issuer": "{\\bf Evil CA}\\write18{id}",
+      "date": "2024",
+      "url": "javascript:alert(document.cookie)"
+    }
+  ],
   "selectedTemplate": 1
 }

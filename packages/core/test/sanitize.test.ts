@@ -112,7 +112,8 @@ describe('sanitizeBlueprint', () => {
       'work',
       'skills',
       'projects',
-      'awards'
+      'awards',
+      'certificates'
     ])
   })
 
@@ -121,6 +122,22 @@ describe('sanitizeBlueprint', () => {
       parseBlueprint({ basics: { name: '  Ada   Byron  ' }, selectedTemplate: 1 })
     )
     assert.equal(result.basics?.name, 'Ada Byron')
+  })
+
+  // Same allowlist trap as `document` below, but for CONTENT_KEYS rather than
+  // the control-field list: `certificates` must be listed in CONTENT_KEYS or
+  // every certificate is silently dropped before getTemplateData ever sees
+  // it, with no error anywhere in the chain (F6).
+  test('does not drop the certificates block', () => {
+    const result = sanitizeBlueprint(
+      parseBlueprint({
+        basics: { name: 'Ada' },
+        selectedTemplate: 1,
+        certificates: [{ name: 'AWS Certified Cloud Practitioner', issuer: 'AWS', date: '2025' }]
+      })
+    )
+    assert.equal(result.certificates?.length, 1)
+    assert.equal(result.certificates?.[0].name, 'AWS Certified Cloud Practitioner')
   })
 
   // sanitizeBlueprint builds its result from an explicit allowlist
