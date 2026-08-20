@@ -30,6 +30,7 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const BIN = resolve(HERE, '..', 'dist', 'index.js')
 const FIXTURES = resolve(HERE, '..', '..', '..', 'fixtures')
 const SAMPLE = resolve(FIXTURES, 'sample.json')
+const PROFILE = resolve(FIXTURES, 'profile.md')
 
 interface Run {
   code: number
@@ -277,5 +278,77 @@ describe('document flags', () => {
 
     assert.equal(code, 1)
     assert.match(stderr, /--font-size must be a number/)
+  })
+})
+
+describe('import', () => {
+  test('writes a blueprint to stdout and warnings to stderr', async () => {
+    // The split is what makes `resume import p.md | resume validate -` work
+    // while a human still sees what the parser had to assume.
+    const { code, stdout, stderr } = await cli('import', PROFILE)
+
+    assert.equal(code, 0)
+    const blueprint = JSON.parse(stdout)
+    assert.equal(blueprint.basics.name, 'Ada Lovelace')
+    assert.match(stderr, /removed \d+ citation artifacts/)
+  })
+
+  test('the output round-trips through validate', async () => {
+    // The importer returns BlueprintInput, not Blueprint -- this is what
+    // asserts that the un-defaulted shape is still valid input.
+    const { stdout } = await cli('import', PROFILE)
+    const validated = await invoke(process.execPath, [BIN, 'validate', '-'], stdout)
+
+    assert.equal(validated.code, 0)
+    assert.match(validated.stderr, /blueprint is valid/)
+  })
+
+  test('leaves no citation artifact in the emitted blueprint', async () => {
+    const { stdout } = await cli('import', PROFILE)
+    assert.ok(!stdout.includes('[cite'))
+  })
+
+  test('reads markdown from stdin', async () => {
+    const markdown = await readFile(PROFILE, 'utf8')
+    const { code, stdout } = await invoke(process.execPath, [BIN, 'import', '-'], markdown)
+
+    assert.equal(code, 0)
+    assert.equal(JSON.parse(stdout).basics.name, 'Ada Lovelace')
+  })
+
+  test('--strict turns warnings into a non-zero exit', async () => {
+    const lenient = await cli('import', PROFILE)
+    const strict = await cli('import', PROFILE, '--strict')
+
+    assert.equal(lenient.code, 0)
+    assert.equal(strict.code, 1)
+    // The blueprint is still emitted -- --strict is a gate on the caller, not
+    // a reason to withhold the parse.
+    assert.equal(JSON.parse(strict.stdout).basics.name, 'Ada Lovelace')
+  })
+
+  test('an unreadable path fails with the errno, not a stack trace', async () => {
+    const { code, stdout, stderr } = await cli('import', resolve(FIXTURES, 'does-not-exist.md'))
+
+    assert.equal(code, 1)
+    assert.equal(stdout, '')
+    assert.match(stderr, /cannot read .*does-not-exist\.md: ENOENT/)
+  })
+
+  test('markdown that is not a profile is a readable error', async () => {
+    const { code, stdout, stderr } = await invoke(
+      process.execPath,
+      [BIN, 'import', '-'],
+      'just some prose with no headings'
+    )
+
+    assert.equal(code, 1)
+    assert.equal(stdout, '')
+    assert.match(stderr, /could not parse the profile/)
+  })
+
+  test('import appears in the usage text', async () => {
+    const { stdout } = await cli('--help')
+    assert.match(stdout, /resume import <profile\.md>/)
   })
 })
