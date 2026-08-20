@@ -7,6 +7,7 @@ import template6 from './template6.js'
 import template7 from './template7.js'
 import template8 from './template8.js'
 import template9 from './template9.js'
+import template10 from './template10.js'
 import {
   TEMPLATE1,
   TEMPLATE2,
@@ -16,7 +17,8 @@ import {
   TEMPLATE6,
   TEMPLATE7,
   TEMPLATE8,
-  TEMPLATE9
+  TEMPLATE9,
+  TEMPLATE10
 } from './constants.js'
 import { resolveDocumentConfig } from './documentConfig.js'
 import { fontFiles } from './fonts.js'
@@ -179,6 +181,15 @@ export default function getTemplateData(data: FormValues): TemplateData {
     case TEMPLATE9:
       return {
         texDoc: template9(data, config),
+        opts: {
+          cmd: 'pdflatex',
+          fonts: [...fontFiles(config)]
+        }
+      }
+
+    case TEMPLATE10:
+      return {
+        texDoc: template10(data, config),
         opts: {
           cmd: 'pdflatex',
           fonts: [...fontFiles(config)]
