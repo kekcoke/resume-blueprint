@@ -1,4 +1,4 @@
-import type { Basics } from '../types.js'
+import type { Basics, ResolvedDocumentConfig } from '../types.js'
 
 /**
  * Renders `basics.profiles` into the contact run as linked, readable text.
@@ -51,6 +51,24 @@ export function profileLinks(profiles: Basics['profiles'] = []): string[] {
 
     return [`\\href{${url}}{${label}${breakableUrl(shown)}}`]
   })
+}
+
+/**
+ * Joins a contact line's fields (email, phone, location, links...) according
+ * to `document.contactLayout` (F5). `'row'` keeps each template's existing
+ * separator — one horizontal line, matching the external feedback's ask.
+ * `'stacked'` swaps it for a LaTeX line break, one field per line.
+ *
+ * Fields are expected already filtered of falsy values by the caller in most
+ * templates (built via a destructure-then-array step) — `filter(Boolean)`
+ * here as well so a template can pass its raw field list directly.
+ */
+export function joinContactInfo(
+  fields: Array<string | undefined>,
+  layout: ResolvedDocumentConfig['contactLayout'],
+  rowSeparator: string
+): string {
+  return fields.filter(Boolean).join(layout === 'stacked' ? ' \\\\\n' : rowSeparator)
 }
 
 function alphanumeric(text?: string): string {

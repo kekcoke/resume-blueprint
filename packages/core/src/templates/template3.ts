@@ -1,12 +1,12 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
-import { breakableUrl, profileLinks } from './profiles.js'
+import { breakableUrl, profileLinks, joinContactInfo } from './profiles.js'
 import { accentColorToTeX } from './documentConfig.js'
 import { nfssFontPreamble } from './fonts.js'
 import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
-  profileSection(basics) {
+  profileSection(basics, config) {
     if (!basics) {
       return ''
     }
@@ -15,9 +15,11 @@ const generator: Generator = {
       basics
     const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
 
-    const info = [email, phone, location.address, websiteLine, ...profileLinks(profiles)]
-      .filter(Boolean)
-      .join(' | ')
+    const info = joinContactInfo(
+      [email, phone, location.address, websiteLine, ...profileLinks(profiles)],
+      config.contactLayout,
+      ' | '
+    )
 
     // Both sit below the header rule rather than inside the tabular: its cells
     // are single-line, so a job title or a paragraph put in one would run off
@@ -39,16 +41,17 @@ const generator: Generator = {
     `
   },
 
-  educationSection(education, heading) {
+  educationSection(education, heading, config) {
     if (!education) {
       return ''
     }
 
     return source`
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \\vspace{${config.sectionSpacing}pt}
       \\resheading{${heading || 'Education'}}
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      \\begin{itemize}[leftmargin=*]
+      \\begin{itemize}[leftmargin=*, itemsep=${config.bulletSpacing}pt]
 
       ${education.map((school) => {
         const {
@@ -103,16 +106,17 @@ const generator: Generator = {
     `
   },
 
-  workSection(work, heading) {
+  workSection(work, heading, config) {
     if (!work) {
       return ''
     }
 
     return source`
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \\vspace{${config.sectionSpacing}pt}
       \\resheading{${heading || 'Experience'}}
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      \\begin{itemize}[leftmargin=*]
+      \\begin{itemize}[leftmargin=*, itemsep=${config.bulletSpacing}pt]
       ${work.map((job) => {
         const { name, position, location, startDate, endDate, summary, highlights } =
           job
@@ -128,9 +132,9 @@ const generator: Generator = {
           dateRange = endDate
         }
 
-        if (highlights) {
+        if (highlights?.length) {
           dutyLines = source`
-            \\begin{itemize}
+            \\begin{itemize}[itemsep=${config.bulletSpacing}pt]
               ${highlights.map((duty) => `\\item ${duty}`)}
             \\end{itemize}
             `
@@ -153,17 +157,17 @@ const generator: Generator = {
     `
   },
 
-  skillsSection(skills, heading) {
+  skillsSection(skills, heading, config) {
     if (!skills) {
       return ''
     }
 
     return source`
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \\vspace{${config.sectionSpacing}pt}
       \\resheading{${heading || 'Skills'}}
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      \\begin{itemize}[leftmargin=*]
-      \\setlength\\itemsep{0em}
+      \\begin{itemize}[leftmargin=*, itemsep=${config.bulletSpacing}pt]
       ${skills.map((skill) => {
         const { name = '', keywords = [] } = skill
         return `\\item[] \\skill{${name}}{${keywords.join(', ')}}`
@@ -172,16 +176,17 @@ const generator: Generator = {
     `
   },
 
-  projectsSection(projects, heading) {
+  projectsSection(projects, heading, config) {
     if (!projects) {
       return ''
     }
 
     return source`
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \\vspace{${config.sectionSpacing}pt}
       \\resheading{${heading || 'Projects'}}
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      \\begin{itemize}[leftmargin=*]
+      \\begin{itemize}[leftmargin=*, itemsep=${config.bulletSpacing}pt]
       ${projects.map((project) => {
         const { name = '', description = '', keywords = [], url = '' } = project
 
@@ -203,16 +208,17 @@ const generator: Generator = {
     `
   },
 
-  awardsSection(awards, heading) {
+  awardsSection(awards, heading, config) {
     if (!awards) {
       return ''
     }
 
     return source`
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \\vspace{${config.sectionSpacing}pt}
       \\resheading{${heading || 'Awards'}}
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-      \\begin{itemize}[leftmargin=*]
+      \\begin{itemize}[leftmargin=*, itemsep=${config.bulletSpacing}pt]
       ${awards.map((award) => {
         const { title = '', summary = '', date = '', awarder = '' } = award
 
@@ -367,25 +373,26 @@ function template3(values: FormValues, config: ResolvedDocumentConfig) {
       .map((section) => {
         switch (section) {
           case 'profile':
-            return generator.profileSection(values.basics)
+            return generator.profileSection(values.basics, config)
 
           case 'education':
             return generator.educationSection(
               values.education,
-              headings.education
+              headings.education,
+              config
             )
 
           case 'work':
-            return generator.workSection(values.work, headings.work)
+            return generator.workSection(values.work, headings.work, config)
 
           case 'skills':
-            return generator.skillsSection(values.skills, headings.skills)
+            return generator.skillsSection(values.skills, headings.skills, config)
 
           case 'projects':
-            return generator.projectsSection(values.projects, headings.projects)
+            return generator.projectsSection(values.projects, headings.projects, config)
 
           case 'awards':
-            return generator.awardsSection(values.awards, headings.awards)
+            return generator.awardsSection(values.awards, headings.awards, config)
 
           default:
             return ''

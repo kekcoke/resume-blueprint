@@ -1,6 +1,6 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
-import { breakableUrl, profileLinks } from './profiles.js'
+import { breakableUrl, profileLinks, joinContactInfo } from './profiles.js'
 import { nfssFontPreamble } from './fonts.js'
 import type { FormValues, GeneratorWithSummary, ResolvedDocumentConfig } from '../types.js'
 
@@ -25,7 +25,7 @@ const generator: GeneratorWithSummary = {
   // Name / title / contacts / summary, in that order: it is the order a reader
   // and a parser both expect, and it keeps the contact details adjacent to the
   // name rather than stranded at the bottom of the header.
-  summarySection(basics) {
+  summarySection(basics, config) {
     if (!basics) {
       return ''
     }
@@ -33,9 +33,11 @@ const generator: GeneratorWithSummary = {
     const { label, summary, email, phone, location = {}, website, profiles } = basics
     const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
 
-    const contacts = [email, phone, location.address, websiteLine, ...profileLinks(profiles)]
-      .filter(Boolean)
-      .join(' | ')
+    const contacts = joinContactInfo(
+      [email, phone, location.address, websiteLine, ...profileLinks(profiles)],
+      config.contactLayout,
+      ' | '
+    )
 
     if (!label && !summary && !contacts) {
       return ''
@@ -49,7 +51,7 @@ const generator: GeneratorWithSummary = {
     `
   },
 
-  educationSection(education, heading) {
+  educationSection(education, heading, config) {
     if (!education) {
       return ''
     }
@@ -57,6 +59,7 @@ const generator: GeneratorWithSummary = {
     const lastSchoolIndex = education.length - 1
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\section{${heading || 'EDUCATION'}}
       ${education.map((school, i) => {
         const {
@@ -121,12 +124,13 @@ const generator: GeneratorWithSummary = {
     `
   },
 
-  workSection(work, heading) {
+  workSection(work, heading, config) {
     if (!work) {
       return ''
     }
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\section{${heading || 'EXPERIENCE'}}
       ${work.map((job) => {
         const {
@@ -174,9 +178,9 @@ const generator: GeneratorWithSummary = {
           jobLine += `${summary}\\\\`
         }
 
-        if (highlights) {
+        if (highlights?.length) {
           jobLine += source`
-            \\begin{itemize} \\itemsep 3pt
+            \\begin{itemize} \\itemsep ${config.bulletSpacing}pt
             ${highlights.map((highlight) => `\\item ${highlight}`)}
             \\end{itemize}
           `
@@ -187,29 +191,31 @@ const generator: GeneratorWithSummary = {
     `
   },
 
-  skillsSection(skills, heading) {
+  skillsSection(skills, heading, config) {
     if (!skills) {
       return ''
     }
 
-    // p-columns rather than 'l': see template1's skillsSection.
+    // One row per category, category and keywords in the same run of text —
+    // the previous two-column `tabular` put the label and its values in
+    // separate cells, which a parser reads as two unrelated fragments (F5).
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\section{${heading || 'SKILLS'}}
-      \\begin{tabular}{@{}p{7em}@{\\hspace{1em}}p{\\dimexpr\\linewidth-8em\\relax}@{}}
       ${skills.map((skill) => {
         const { name, keywords = [] } = skill
-        return `\\textbf{${name || ''}}: & ${keywords.join(', ') || ''}\\\\`
+        return `\\textbf{${name || ''}}: ${keywords.join(', ') || ''}\\\\`
       })}
-      \\end{tabular}
     `
   },
 
-  projectsSection(projects, heading) {
+  projectsSection(projects, heading, config) {
     if (!projects) {
       return ''
     }
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\section{${heading || 'PROJECTS'}}
       ${projects.map((project) => {
         const { name, description, keywords = [], url } = project
@@ -242,12 +248,13 @@ const generator: GeneratorWithSummary = {
     `
   },
 
-  awardsSection(awards, heading) {
+  awardsSection(awards, heading, config) {
     if (!awards) {
       return ''
     }
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\section{${heading || 'AWARDS'}}
       ${awards.map((award) => {
         const { title, summary, date, awarder } = award
@@ -314,33 +321,35 @@ function template5(values: FormValues, config: ResolvedDocumentConfig) {
     \\usepackage[T1]{fontenc}
     ${preambleTail}
     \\begin{document}
-      ${generator.profileSection(values.basics)}
+      ${generator.profileSection(values.basics, config)}
       \\begin{resume}
         \\vspace{-5mm}
-        ${generator.summarySection(values.basics)}
+        ${generator.summarySection(values.basics, config)}
         ${values.sections
           .map((section) => {
             switch (section) {
               case 'education':
                 return generator.educationSection(
                   values.education,
-                  headings.education
+                  headings.education,
+                  config
                 )
 
               case 'work':
-                return generator.workSection(values.work, headings.work)
+                return generator.workSection(values.work, headings.work, config)
 
               case 'skills':
-                return generator.skillsSection(values.skills, headings.skills)
+                return generator.skillsSection(values.skills, headings.skills, config)
 
               case 'projects':
                 return generator.projectsSection(
                   values.projects,
-                  headings.projects
+                  headings.projects,
+                  config
                 )
 
               case 'awards':
-                return generator.awardsSection(values.awards, headings.awards)
+                return generator.awardsSection(values.awards, headings.awards, config)
 
               default:
                 return ''

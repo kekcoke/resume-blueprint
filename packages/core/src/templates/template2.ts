@@ -1,12 +1,12 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
-import { breakableUrl, profileLinks } from './profiles.js'
+import { breakableUrl, profileLinks, joinContactInfo } from './profiles.js'
 import { accentColorToTeX } from './documentConfig.js'
 import { isFontSupported, georgiaFontspecTarget } from './fonts.js'
 import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
-  profileSection(basics) {
+  profileSection(basics, config) {
     if (!basics) {
       return ''
     }
@@ -55,9 +55,11 @@ const generator: Generator = {
     const profileLines = profileLinks(profiles).map(
       (link) => `{\\faLink\\ ${link}}`
     )
-    const info = [emailLine, phoneLine, addressLine, websiteLine, ...profileLines]
-      .filter(Boolean)
-      .join(' | ')
+    const info = joinContactInfo(
+      [emailLine, phoneLine, addressLine, websiteLine, ...profileLines],
+      config.contactLayout,
+      ' | '
+    )
 
     return stripIndent`
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -73,7 +75,7 @@ const generator: Generator = {
     `
   },
 
-  educationSection(education, heading) {
+  educationSection(education, heading, config) {
     if (!education) {
       return ''
     }
@@ -82,6 +84,7 @@ const generator: Generator = {
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       %     Education
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \\vspace{${config.sectionSpacing}pt}
       \\cvsection{${heading || 'Education'}}
       \\begin{cventries}
       ${education.map((school) => {
@@ -128,7 +131,7 @@ const generator: Generator = {
     `
   },
 
-  workSection(work, heading) {
+  workSection(work, heading, config) {
     if (!work) {
       return ''
     }
@@ -137,6 +140,7 @@ const generator: Generator = {
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       %     Experience
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \\vspace{${config.sectionSpacing}pt}
       \\cvsection{${heading || 'Experience'}}
       \\begin{cventries}
       ${work.map((job) => {
@@ -154,9 +158,10 @@ const generator: Generator = {
           dateRange = endDate
         }
 
-        if (highlights) {
+        if (highlights?.length) {
           dutyLines = source`
             \\begin{cvitems}
+              \\setlength\\itemsep{${config.bulletSpacing}pt}
               ${highlights.map((duty) => `\\item {${duty}}`)}
             \\end{cvitems}
             `
@@ -183,30 +188,31 @@ const generator: Generator = {
     `
   },
 
-  skillsSection(skills, heading) {
+  skillsSection(skills, heading, config) {
     if (!skills) {
       return ''
     }
 
-    // Only the value column becomes a p-column here. See template1's
-    // skillsSection for why 'l' loses content; the label column is short enough
-    // that it never overflows, and making it a p-column too drops the label onto
-    // its own line, because awesome-cv sets \\skill two points smaller than the
-    // label and the two cells then take different first baselines.
+    // One row per category, category and keywords in the same run of text —
+    // the previous two-column `tabular` put the label and its values in
+    // separate cells, which a parser reads as two unrelated fragments (F5).
+    // `cvitems` is the same bulleted-list macro this template's own
+    // `workSection` already uses for highlights.
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\cvsection{${heading || 'Skills'}}
       \\begin{cventries}
       \\cventry
       {}
-      {\\def\\arraystretch{1.15}{\\begin{tabular}{@{}l@{\\hspace{1em}}p{\\dimexpr\\textwidth-9em\\relax}@{}}
+      {\\begin{cvitems}
+      \\setlength\\itemsep{${config.bulletSpacing}pt}
       ${skills.map((skill) => {
         const { name, keywords = [] } = skill
-        const nameLine = name ? `${name}: ` : ''
-        const detailsLine = `{\\skill{ ${keywords.join(', ') || ''}}}`
+        const nameLine = name ? `\\textbf{${name}:} ` : ''
 
-        return `${nameLine} & ${detailsLine} \\\\`
+        return `\\item {${nameLine}${keywords.join(', ') || ''}}`
       })}
-      \\end{tabular}}}
+      \\end{cvitems}}
       {}
       {}
       {}
@@ -216,12 +222,13 @@ const generator: Generator = {
     `
   },
 
-  projectsSection(projects, heading) {
+  projectsSection(projects, heading, config) {
     if (!projects) {
       return ''
     }
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\cvsection{${heading || 'Projects'}}
       \\begin{cventries}
       ${projects.map((project) => {
@@ -243,12 +250,13 @@ const generator: Generator = {
     `
   },
 
-  awardsSection(awards, heading) {
+  awardsSection(awards, heading, config) {
     if (!awards) {
       return ''
     }
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\cvsection{${heading || 'Awards'}}
       \\begin{cvhonors}
       ${awards.map((award) => {
@@ -387,25 +395,26 @@ function template2(values: FormValues, config: ResolvedDocumentConfig) {
       .map((section) => {
         switch (section) {
           case 'profile':
-            return generator.profileSection(values.basics)
+            return generator.profileSection(values.basics, config)
 
           case 'education':
             return generator.educationSection(
               values.education,
-              headings.education
+              headings.education,
+              config
             )
 
           case 'work':
-            return generator.workSection(values.work, headings.work)
+            return generator.workSection(values.work, headings.work, config)
 
           case 'skills':
-            return generator.skillsSection(values.skills, headings.skills)
+            return generator.skillsSection(values.skills, headings.skills, config)
 
           case 'projects':
-            return generator.projectsSection(values.projects, headings.projects)
+            return generator.projectsSection(values.projects, headings.projects, config)
 
           case 'awards':
-            return generator.awardsSection(values.awards, headings.awards)
+            return generator.awardsSection(values.awards, headings.awards, config)
 
           default:
             return ''

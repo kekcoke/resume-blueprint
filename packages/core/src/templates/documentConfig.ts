@@ -106,11 +106,23 @@ export const TEMPLATE_DEFAULTS: Record<(typeof TEMPLATE_IDS)[number], Partial<Re
     // built on the standard LaTeX size-option convention, whose default
     // absent an option is 10pt, same as every other class in this file that
     // omits a size option.
-    fontSize: 10
+    fontSize: 10,
+    // moderncv's own \address/\phone/\email/\homepage calls stack one per
+    // line by class design (\makecvtitle, banking style) — recorded as this
+    // template's current hardcoded behavior, same reasoning as templates
+    // 1/4's margin entries, not a new preference. An explicit
+    // document.contactLayout: 'row' still works: profileSection folds every
+    // field into \extrainfo, moderncv's one free-text line.
+    contactLayout: 'stacked'
   },
   8: {
     // mcdowellcv.cls owns its own geometry; left unset for the same reason
     // as templates 2 and 5.
+    // \address{}/\contacts{} are this template's own macros, joined here
+    // (not by the class) with explicit \linebreaks — recorded as the
+    // current hardcoded behavior, same reasoning as template 7 above. An
+    // explicit document.contactLayout: 'row' switches the join separator.
+    contactLayout: 'stacked'
   },
   9: {
     paper: 'letter',
@@ -177,23 +189,115 @@ export function accentColorToTeX(hex: string): string {
  * other entry here (`accentColor` is listed for 2/3/7/9 the same way even
  * though it's a free hex value, not a fixed set).
  *
- * `sectionSpacing`, `bulletSpacing`, and `contactLayout` are resolved by
- * every template (see `resolveDocumentConfig`) but consumed by none yet —
- * F5 is what makes them do something. `accentColor` only ever appears for
- * 2, 3, 7, and 9, matching the doc's variable table in
- * docs/next-features.md.
+ * `sectionSpacing`, `bulletSpacing`, and `contactLayout` are honoured by all
+ * nine as of F5: `sectionSpacing` reaches every section heading (either a
+ * macro defined in `resumeHeader` or an additive `\vspace` at the call
+ * site), `bulletSpacing` reaches every list environment a template opens,
+ * and `contactLayout` reaches the contact block built in `profileSection`
+ * (or `summarySection`, for the three templates that route it there).
+ * `accentColor` only ever appears for 2, 3, 7, and 9, matching the doc's
+ * variable table in docs/next-features.md.
  */
 export const HONOURED_DOCUMENT_FIELDS: Record<
   (typeof TEMPLATE_IDS)[number],
   ReadonlyArray<keyof ResolvedDocumentConfig>
 > = {
-  1: ['paper', 'fontSize', 'margin', 'lineSpacing', 'linkStyle', 'fontFamily'],
-  2: ['paper', 'margin', 'accentColor', 'lineSpacing', 'linkStyle', 'fontFamily'],
-  3: ['paper', 'fontSize', 'margin', 'accentColor', 'lineSpacing', 'linkStyle', 'fontFamily'],
-  4: ['margin', 'lineSpacing', 'linkStyle', 'fontFamily'],
-  5: ['paper', 'margin', 'lineSpacing', 'linkStyle', 'fontFamily'],
-  6: ['paper', 'fontSize', 'margin', 'lineSpacing', 'linkStyle', 'fontFamily'],
-  7: ['paper', 'fontSize', 'margin', 'accentColor', 'lineSpacing', 'linkStyle', 'fontFamily'],
-  8: ['paper', 'margin', 'lineSpacing', 'linkStyle', 'fontFamily'],
-  9: ['paper', 'fontSize', 'margin', 'accentColor', 'lineSpacing', 'linkStyle', 'fontFamily']
+  1: [
+    'paper',
+    'fontSize',
+    'margin',
+    'lineSpacing',
+    'sectionSpacing',
+    'bulletSpacing',
+    'contactLayout',
+    'linkStyle',
+    'fontFamily'
+  ],
+  2: [
+    'paper',
+    'margin',
+    'accentColor',
+    'lineSpacing',
+    'sectionSpacing',
+    'bulletSpacing',
+    'contactLayout',
+    'linkStyle',
+    'fontFamily'
+  ],
+  3: [
+    'paper',
+    'fontSize',
+    'margin',
+    'accentColor',
+    'lineSpacing',
+    'sectionSpacing',
+    'bulletSpacing',
+    'contactLayout',
+    'linkStyle',
+    'fontFamily'
+  ],
+  4: [
+    'margin',
+    'lineSpacing',
+    'sectionSpacing',
+    'bulletSpacing',
+    'contactLayout',
+    'linkStyle',
+    'fontFamily'
+  ],
+  5: [
+    'paper',
+    'margin',
+    'lineSpacing',
+    'sectionSpacing',
+    'bulletSpacing',
+    'contactLayout',
+    'linkStyle',
+    'fontFamily'
+  ],
+  6: [
+    'paper',
+    'fontSize',
+    'margin',
+    'lineSpacing',
+    'sectionSpacing',
+    'bulletSpacing',
+    'contactLayout',
+    'linkStyle',
+    'fontFamily'
+  ],
+  7: [
+    'paper',
+    'fontSize',
+    'margin',
+    'accentColor',
+    'lineSpacing',
+    'sectionSpacing',
+    'bulletSpacing',
+    'contactLayout',
+    'linkStyle',
+    'fontFamily'
+  ],
+  8: [
+    'paper',
+    'margin',
+    'lineSpacing',
+    'sectionSpacing',
+    'bulletSpacing',
+    'contactLayout',
+    'linkStyle',
+    'fontFamily'
+  ],
+  9: [
+    'paper',
+    'fontSize',
+    'margin',
+    'accentColor',
+    'lineSpacing',
+    'sectionSpacing',
+    'bulletSpacing',
+    'contactLayout',
+    'linkStyle',
+    'fontFamily'
+  ]
 }

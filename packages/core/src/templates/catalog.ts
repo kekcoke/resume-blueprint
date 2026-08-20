@@ -89,7 +89,9 @@ export const TEMPLATE_PROFILES: readonly TemplateProfile[] = [
     // pull — measured clearing the floor at 0.753in (multipage.json, page 1
     // top) after that change.
     clearsMarginFloor: true,
-    cohesiveSkillRows: false,
+    // F5 converted skillsSection's two-column tabular to one line per
+    // category.
+    cohesiveSkillRows: true,
     cohesiveRecords: false,
     orphanBullets: false
   },
@@ -99,7 +101,8 @@ export const TEMPLATE_PROFILES: readonly TemplateProfile[] = [
     atsGrade: false,
     iconLabeledContacts: true,
     clearsMarginFloor: true,
-    cohesiveSkillRows: false,
+    // F5 converted skillsSection's two-column tabular to a `cvitems` list.
+    cohesiveSkillRows: true,
     cohesiveRecords: false,
     orphanBullets: false
   },
@@ -122,14 +125,17 @@ export const TEMPLATE_PROFILES: readonly TemplateProfile[] = [
     // to clear a fixed-offset overrun near the page foot — measured
     // clearing the floor at 0.603in bottom across all four F2 fixtures.
     clearsMarginFloor: true,
-    cohesiveSkillRows: false,
+    // F5 converted skillsSection's two-column tabular to one line per
+    // category.
+    cohesiveSkillRows: true,
     // Regressed from true by the margin fix directly above: the wider
     // margin narrows the text column (this template has one `margin` value
     // for all four sides, not a per-side one), and "Distinguished
     // Engineering Award" now wraps its award line across two extracted
     // lines instead of one. A genuine trade-off, not an oversight — the
-    // alternative was leaving the page-bottom overrun unfixed. Left for F5,
-    // which already owns this template's layout work.
+    // alternative was leaving the page-bottom overrun unfixed. Deferred to
+    // F6, which owns the certificates/award-record schema work this
+    // regression falls under.
     cohesiveRecords: false,
     orphanBullets: false
   },
@@ -139,7 +145,9 @@ export const TEMPLATE_PROFILES: readonly TemplateProfile[] = [
     atsGrade: true,
     iconLabeledContacts: false,
     clearsMarginFloor: true,
-    cohesiveSkillRows: false,
+    // F5 converted skillsSection's two-column tabular to one line per
+    // category.
+    cohesiveSkillRows: true,
     cohesiveRecords: true,
     orphanBullets: false
   },
@@ -171,7 +179,10 @@ export const TEMPLATE_PROFILES: readonly TemplateProfile[] = [
     clearsMarginFloor: true,
     cohesiveSkillRows: true,
     cohesiveRecords: true,
-    orphanBullets: true
+    // F5 guarded educationSection's degree-line \item on non-empty content —
+    // an entry with no studyType/area/score no longer opens an itemize with
+    // nothing after its bullet.
+    orphanBullets: false
   },
   {
     id: 9,
@@ -179,7 +190,9 @@ export const TEMPLATE_PROFILES: readonly TemplateProfile[] = [
     atsGrade: true,
     iconLabeledContacts: false,
     clearsMarginFloor: true,
-    cohesiveSkillRows: false,
+    // F5 replaced \SkillsEntry's fixed-width \parbox with a single-line
+    // concatenation.
+    cohesiveSkillRows: true,
     cohesiveRecords: true,
     orphanBullets: false
   }

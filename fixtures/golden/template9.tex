@@ -52,7 +52,7 @@
     \large \usefont{OT1}{phv}{m}{n}\hfill \textit{#1}
     \par \normalsize \normalfont}
 
-\newcommand{\NewPart}[1]{\section*{\uppercase{#1}}}
+\newcommand{\NewPart}[1]{\vspace{3pt}\section*{\uppercase{#1}}}
 
 \newcommand{\PersonalEntry}[2]{
     \noindent\hangindent=2em\hangafter=0 % Indentation
@@ -60,11 +60,13 @@
     \textit{#1}}                      % Entry name (birth, address, etc.)
     \hspace{1.5em} #2 \par}              % Entry value
 
-\newcommand{\SkillsEntry}[2]{                % Same as \PersonalEntry
+% Not parbox{spacebox}{...}-based like its PersonalEntry/AwardsEntry
+% siblings: a fixed-width box puts the category label and its keywords
+% in what a parser reads as two separate fragments, the same defect as
+% a two-column tabular (F5). Single-line concatenation instead.
+\newcommand{\SkillsEntry}[2]{
     \noindent\hangindent=2em\hangafter=0 % Indentation
-    \parbox{\spacebox}{                  % Box to align text
-    \textit{#1}}                    % Entry name (birth, address, etc.)
-    \hspace{1.5em} #2 \par}              % Entry value
+    \textbf{#1} #2 \par}                 % Entry name, then its value
 
 \newcommand{\AwardsEntry}[2]{                % Same as \PersonalEntry
     \noindent\hangindent=2em\hangafter=0 % Indentation
@@ -123,7 +125,7 @@
             {Principal Engineer}
             {Jan 2019 - Present}
             {Analytical Engine Works, London, UK}
-            {Led the numerical methods group.\par\begin{itemize} \itemsep -1pt
+            {Led the numerical methods group.\par\begin{itemize} \itemsep 2pt
   \item Designed the first published algorithm for a general-purpose computing machine
   \item Cut batch computation latency by 45\% across the note-taking pipeline
   \item Mentored 6 engineers; 3 promoted within 18 months
@@ -133,15 +135,15 @@
             {Research Fellow}
             {Jun 2015 - Dec 2018}
             {Royal Society, London, UK}
-            {\begin{itemize} \itemsep -1pt
+            {\begin{itemize} \itemsep 2pt
   \item Published 4 papers on symbolic computation
   \item Built the society's first mechanical tabulation workflow
 \end{itemize}}
 %%% Skills
 %%% ------------------------------------------------------------
 \NewPart{Skills}{}
-\SkillsEntry{Languages}{TypeScript, Python, Rust}
-\SkillsEntry{Infrastructure}{Docker, Postgres, Kubernetes}
+\SkillsEntry{Languages:}{TypeScript, Python, Rust}
+\SkillsEntry{Infrastructure:}{Docker, Postgres, Kubernetes}
 %%% Projects
       %%% ------------------------------------------------------------
       \NewPart{Projects}{}
