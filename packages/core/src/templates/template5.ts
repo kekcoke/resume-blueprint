@@ -1,6 +1,7 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
+import { nfssFontPreamble } from './fonts.js'
 import type { FormValues, GeneratorWithSummary, ResolvedDocumentConfig } from '../types.js'
 
 const generator: GeneratorWithSummary = {
@@ -269,7 +270,8 @@ const generator: GeneratorWithSummary = {
   resumeHeader(config) {
     return [
       config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+      nfssFontPreamble(5, config)
     ]
       .filter(Boolean)
       .join('\n')

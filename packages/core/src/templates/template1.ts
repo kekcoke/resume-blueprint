@@ -1,6 +1,7 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
+import { nfssFontPreamble } from './fonts.js'
 import { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
@@ -365,7 +366,8 @@ function template1(values: FormValues, config: ResolvedDocumentConfig) {
     // Additive rather than replacing '[hidelinks]{hyperref}' below: layering
     // \hypersetup after hyperref is already loaded needs no knowledge of
     // exactly how that line reads, and never fires when linkStyle is 'hidden'.
-    config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+    config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+    nfssFontPreamble(1, config)
   ]
     .filter(Boolean)
     .join('\n')

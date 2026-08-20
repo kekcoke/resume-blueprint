@@ -2,6 +2,7 @@ import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
 import { accentColorToTeX } from './documentConfig.js'
+import { nfssFontPreamble, isFontSupported } from './fonts.js'
 import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
@@ -227,7 +228,8 @@ const generator: Generator = {
 
     const extraLines = [
       config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+      nfssFontPreamble(9, config)
     ]
       .filter(Boolean)
       .join('\n')
@@ -242,6 +244,21 @@ const generator: Generator = {
     const sectionColor = config.accentColor
       ? `\\color[HTML]{${accentColorToTeX(config.accentColor)}}`
       : ''
+
+    // \MyName/\MySlogan/\sectionfont hardcode `\usefont{OT1}{phv}{...}` —
+    // Helvetica by deliberate choice, not a stand-in for whatever
+    // \sfdefault happens to resolve to (lmodern's default sans, absent any
+    // override), so this can't be a blanket `phv` -> `\sfdefault` swap
+    // without changing default (fontFamily: 'template') output. Only swap
+    // when a supported override is actually active, and swap the encoding
+    // too: `\usefont{OT1}{\sfdefault}{...}` was tried and rejected — it
+    // silently falls back to Computer Modern (`cmr10`) for carlito/arimo,
+    // since their fontspec/OpenType-feature routes have no OT1-encoded
+    // shape. `\encodingdefault` tracks whatever encoding is actually active
+    // and resolves correctly for all four NFSS families in the spike.
+    const fontOverrideActive = config.fontFamily !== 'template' && isFontSupported(9, config.fontFamily)
+    const sectionFontEncoding = fontOverrideActive ? '\\encodingdefault' : 'OT1'
+    const sectionFontFamily = fontOverrideActive ? '\\sfdefault' : 'phv'
 
     return stripIndent`
       \\usepackage[english]{babel}
@@ -280,7 +297,7 @@ const generator: Generator = {
       \\usepackage{sectsty}
 
       \\sectionfont{                 % Change font of \\section command
-        ${sectionColor}\\usefont{OT1}{phv}{b}{n}%   % bch-b-n: CharterBT-Bold font
+        ${sectionColor}\\usefont{${sectionFontEncoding}}{${sectionFontFamily}}{b}{n}%   % bch-b-n: CharterBT-Bold font
         \\sectionrule{0pt}{0pt}{-5pt}{3pt}}
 
       %%% Macros
@@ -290,11 +307,11 @@ const generator: Generator = {
       \\newcommand{\\sepspace}{\\vspace*{1em}}   % Vertical space macro
 
       \\newcommand{\\MyName}[1]{ % Name
-          \\Huge \\usefont{OT1}{phv}{b}{n} \\hfill #1
+          \\Huge \\usefont{${sectionFontEncoding}}{${sectionFontFamily}}{b}{n} \\hfill #1
           \\par \\normalsize \\normalfont}
 
       \\newcommand{\\MySlogan}[1]{ % Slogan (optional)
-          \\large \\usefont{OT1}{phv}{m}{n}\\hfill \\textit{#1}
+          \\large \\usefont{${sectionFontEncoding}}{${sectionFontFamily}}{m}{n}\\hfill \\textit{#1}
           \\par \\normalsize \\normalfont}
 
       \\newcommand{\\NewPart}[1]{\\section*{\\uppercase{#1}}}
