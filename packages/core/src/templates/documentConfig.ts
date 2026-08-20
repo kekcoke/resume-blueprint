@@ -135,6 +135,21 @@ export const TEMPLATE_DEFAULTS: Record<(typeof TEMPLATE_IDS)[number], Partial<Re
     // the dead option is out of scope here (see F12); an explicit
     // `document.fontSize` override still works correctly (Step 5 below).
     fontSize: 10
+  },
+  10: {
+    // F7's Word-alike preset: the external feedback's universal rules
+    // shipped as this template's *defaults*, not merely values it accepts.
+    // Plain `article`, no vendored class and no negative-vspace header
+    // tricks (the defect that forced templates 1 and 4 above the floor), so
+    // margin/paper equal GLOBAL_DEFAULTS unchanged — recorded explicitly
+    // here anyway, the same documentation style as every other template in
+    // this table.
+    fontFamily: 'calibri',
+    fontSize: 11,
+    paper: 'letter',
+    margin: '0.75in',
+    lineSpacing: 1.15,
+    contactLayout: 'row'
   }
 }
 
@@ -293,6 +308,20 @@ export const HONOURED_DOCUMENT_FIELDS: Record<
     'fontSize',
     'margin',
     'accentColor',
+    'lineSpacing',
+    'sectionSpacing',
+    'bulletSpacing',
+    'contactLayout',
+    'linkStyle',
+    'fontFamily'
+  ],
+  // No accentColor: F3's variable table scopes it to templates 2, 3, 7, 9
+  // only. Otherwise identical to template1's list — plain article, no
+  // vendored-class quirks to carve out.
+  10: [
+    'paper',
+    'fontSize',
+    'margin',
     'lineSpacing',
     'sectionSpacing',
     'bulletSpacing',
