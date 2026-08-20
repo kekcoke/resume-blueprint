@@ -413,7 +413,8 @@ const CRITICAL = [
   /^skills\[\d+\]\.(name|keywords\[\d+\])$/,
   /^education\[\d+\]\.institution$/,
   /^projects\[\d+\]\.name$/,
-  /^awards\[\d+\]\.title$/
+  /^awards\[\d+\]\.title$/,
+  /^certificates\[\d+\]\.name$/
 ]
 
 function isCritical(path: string): boolean {
@@ -649,35 +650,36 @@ describe('a skill category and its keywords extract as one row', { skip: NO_POPP
 })
 
 // ---------------------------------------------------------------------------
-// Award records
+// Certificate records
 //
 // The external review's first concrete defect: a certifications grid whose
 // issuer and date break onto lines separate from the credential name, so a
-// parser reads three unrelated fragments instead of one record. `awards` is
-// where certifications live until F6 gives them a section of their own, and
-// `grid.json` shapes them as exactly name/issuer/date to match.
+// parser reads three unrelated fragments instead of one record. F6 gave
+// certifications their own flat `certificates` section; `grid.json` shapes
+// them as exactly name/issuer/date to match (migrated from a same-shaped
+// `awards` array that stood in for `certificates` before F6 existed).
 //
 // The measure is the line span in the parser's reading. Zero means the three
 // fields extract as one record; anything above zero is the reported defect,
 // and the number says how badly.
 // ---------------------------------------------------------------------------
 
-type AwardRecord = { title: string; awarder: string; date: string; needles: string[] }
+type CertificateRecord = { name: string; issuer: string; date: string; needles: string[] }
 
-function awardRecordsOf(blueprint: Record<string, unknown>): AwardRecord[] {
-  const awards = (blueprint.awards ?? []) as Array<{
-    title?: string
-    awarder?: string
+function certificateRecordsOf(blueprint: Record<string, unknown>): CertificateRecord[] {
+  const certificates = (blueprint.certificates ?? []) as Array<{
+    name?: string
+    issuer?: string
     date?: string
   }>
 
-  return awards
-    .filter((award) => award.title && award.awarder && award.date)
-    .map((award) => ({
-      title: award.title as string,
-      awarder: award.awarder as string,
-      date: award.date as string,
-      needles: [award.title, award.awarder, award.date].map((value) => squash(value as string))
+  return certificates
+    .filter((cert) => cert.name && cert.issuer && cert.date)
+    .map((cert) => ({
+      name: cert.name as string,
+      issuer: cert.issuer as string,
+      date: cert.date as string,
+      needles: [cert.name, cert.issuer, cert.date].map((value) => squash(value as string))
     }))
 }
 
@@ -699,26 +701,26 @@ function nearestLine(lines: string[], needle: string, anchor: number): number {
   return best
 }
 
-/** How many lines apart an award's three fields land. `-1` if one is absent. */
-function recordSpan(record: AwardRecord, lines: string[]): number {
-  const [title, awarder, date] = record.needles
-  const anchor = lines.findIndex((line) => line.includes(title))
+/** How many lines apart a certificate's three fields land. `-1` if one is absent. */
+function recordSpan(record: CertificateRecord, lines: string[]): number {
+  const [name, issuer, date] = record.needles
+  const anchor = lines.findIndex((line) => line.includes(name))
   if (anchor === -1) return -1
 
-  const at = [anchor, nearestLine(lines, awarder, anchor), nearestLine(lines, date, anchor)]
+  const at = [anchor, nearestLine(lines, issuer, anchor), nearestLine(lines, date, anchor)]
   if (at.includes(-1)) return -1
 
   return Math.max(...at) - Math.min(...at)
 }
 
-describe('an award extracts as one record, not three fragments', { skip: NO_POPPLER }, () => {
+describe('a certificate extracts as one record, not three fragments', { skip: NO_POPPLER }, () => {
   for (const profile of TEMPLATE_PROFILES) {
     test(`template${profile.id} cohesiveRecords is ${profile.cohesiveRecords}`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
-      // `grid.json` only. Its awards are exactly name/issuer/date, which is the
-      // shape the review asked for; dense.json's single award carries a prose
-      // summary that legitimately wraps, and measuring line spans across a
-      // wrapped paragraph would report the fixture rather than the template.
-      const records = awardRecordsOf(await fixtureFor('grid'))
+      // `grid.json` only. Its certificates are exactly name/issuer/date, which
+      // is the shape the review asked for; dense.json's single award carries a
+      // prose summary that legitimately wraps, and measuring line spans across
+      // a wrapped paragraph would report the fixture rather than the template.
+      const records = certificateRecordsOf(await fixtureFor('grid'))
       const perReading = lineReadings(await extractionFor('grid', profile.id))
 
       const reported: string[] = []
@@ -728,10 +730,10 @@ describe('an award extracts as one record, not three fragments', { skip: NO_POPP
         const best = spans.filter((span) => span >= 0).sort((a, b) => a - b)[0]
 
         if (best === undefined) {
-          reported.push(`    "${record.title}": one of title/awarder/date never reached the text layer`)
+          reported.push(`    "${record.name}": one of name/issuer/date never reached the text layer`)
         } else if (best > 0) {
           reported.push(
-            `    "${record.title}": title, "${record.awarder}", and ${record.date} span ${best + 1} extracted lines`
+            `    "${record.name}": name, "${record.issuer}", and ${record.date} span ${best + 1} extracted lines`
           )
         }
       }
@@ -740,8 +742,8 @@ describe('an award extracts as one record, not three fragments', { skip: NO_POPP
         reported.length === 0,
         profile.cohesiveRecords,
         profile.cohesiveRecords
-          ? `template${profile.id} is recorded as keeping award records whole but does not:\n${reported.join('\n')}`
-          : `template${profile.id} is recorded as splitting award records, but every record now extracts on one line — update TEMPLATE_PROFILES`
+          ? `template${profile.id} is recorded as keeping certificate records whole but does not:\n${reported.join('\n')}`
+          : `template${profile.id} is recorded as splitting certificate records, but every record now extracts on one line — update TEMPLATE_PROFILES`
       )
     })
   }

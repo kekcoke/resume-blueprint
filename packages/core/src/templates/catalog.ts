@@ -16,8 +16,9 @@ import { TEMPLATE_IDS } from '../schema.js'
  *
  * The four fields below it record defects the harness can now see but nothing
  * has yet fixed: margins under the 0.5in floor, skill categories that extract
- * apart from their keywords, award records that arrive as three fragments, and
- * bullets with no text after them. They deliberately do NOT feed `atsGrade`.
+ * apart from their keywords, certificate records that arrive as three
+ * fragments, and bullets with no text after them. They deliberately do NOT
+ * feed `atsGrade`.
  * Folding them in would shrink `ATS_TEMPLATE_IDS` for problems no one has
  * addressed; they are the evidence base for the layout work, not its verdict.
  */
@@ -61,11 +62,13 @@ export type TemplateProfile = {
   cohesiveSkillRows: boolean
 
   /**
-   * An award's title, awarder, and date extract onto one line.
+   * A certificate's name, issuer, and date extract onto one line.
    *
    * The external review's first concrete defect: a credential whose issuer and
    * year break away from its name, leaving a parser three fragments instead of
-   * one record. F6 gives certifications their own flat section.
+   * one record. F6 gave certifications their own flat `certificates` section,
+   * rendered as one atomic line per record (`name | issuer (date) | url`) in
+   * every template — measured cohesive on all nine.
    */
   cohesiveRecords: boolean
 
@@ -92,7 +95,10 @@ export const TEMPLATE_PROFILES: readonly TemplateProfile[] = [
     // F5 converted skillsSection's two-column tabular to one line per
     // category.
     cohesiveSkillRows: true,
-    cohesiveRecords: false,
+    // F6's certificatesSection renders each record as one atomic line
+    // (name | issuer (date) | url) rather than splitting it across two
+    // `\\`-separated lines the way awardsSection did — measured cohesive.
+    cohesiveRecords: true,
     orphanBullets: false
   },
   {
@@ -103,7 +109,10 @@ export const TEMPLATE_PROFILES: readonly TemplateProfile[] = [
     clearsMarginFloor: true,
     // F5 converted skillsSection's two-column tabular to a `cvitems` list.
     cohesiveSkillRows: true,
-    cohesiveRecords: false,
+    // F6's certificatesSection uses a plain itemize with one flat line per
+    // record instead of the class's own `\cvhonor` (which splits a record
+    // across separate positional args) — measured cohesive.
+    cohesiveRecords: true,
     orphanBullets: false
   },
   {
@@ -128,15 +137,12 @@ export const TEMPLATE_PROFILES: readonly TemplateProfile[] = [
     // F5 converted skillsSection's two-column tabular to one line per
     // category.
     cohesiveSkillRows: true,
-    // Regressed from true by the margin fix directly above: the wider
-    // margin narrows the text column (this template has one `margin` value
-    // for all four sides, not a per-side one), and "Distinguished
-    // Engineering Award" now wraps its award line across two extracted
-    // lines instead of one. A genuine trade-off, not an oversight — the
-    // alternative was leaving the page-bottom overrun unfixed. Deferred to
-    // F6, which owns the certificates/award-record schema work this
-    // regression falls under.
-    cohesiveRecords: false,
+    // Was false under awardsSection: the margin fix above narrows the text
+    // column enough that "Distinguished Engineering Award" wrapped its
+    // award line across two extracted lines. F6's certificatesSection
+    // renders the same content shorter — no `\descript{}` wrapper duplicating
+    // the `|` join — and measured cohesive against the same grid.json data.
+    cohesiveRecords: true,
     orphanBullets: false
   },
   {
@@ -158,7 +164,10 @@ export const TEMPLATE_PROFILES: readonly TemplateProfile[] = [
     iconLabeledContacts: false,
     clearsMarginFloor: true,
     cohesiveSkillRows: true,
-    cohesiveRecords: false,
+    // F6's certificatesSection uses a plain `newitemize` list with one flat
+    // line per record instead of the vendored `\award` macro's separate
+    // positional args — measured cohesive.
+    cohesiveRecords: true,
     orphanBullets: false
   },
   {
@@ -168,7 +177,10 @@ export const TEMPLATE_PROFILES: readonly TemplateProfile[] = [
     iconLabeledContacts: true,
     clearsMarginFloor: true,
     cohesiveSkillRows: true,
-    cohesiveRecords: false,
+    // F6's certificatesSection uses a plain itemize with one flat line per
+    // record instead of moderncv's `\cventry`, whose title/date/details land
+    // in separate positional args — measured cohesive.
+    cohesiveRecords: true,
     orphanBullets: false
   },
   {

@@ -104,58 +104,58 @@
       ]
     }
   ],
-  "awards": [
+  "certificates": [
     {
-      "title": "Distinguished Engineering Award",
+      "name": "Distinguished Engineering Award",
       "date": "2023",
-      "awarder": "Association for Computing Machinery"
+      "issuer": "Association for Computing Machinery"
     },
     {
-      "title": "Platform Reliability Prize",
+      "name": "Platform Reliability Prize",
       "date": "2022",
-      "awarder": "Usenix Association"
+      "issuer": "Usenix Association"
     },
     {
-      "title": "Open Source Contributor of the Year",
+      "name": "Open Source Contributor of the Year",
       "date": "2021",
-      "awarder": "Linux Foundation"
+      "issuer": "Linux Foundation"
     },
     {
-      "title": "Systems Research Commendation",
+      "name": "Systems Research Commendation",
       "date": "2020",
-      "awarder": "Internet Systems Consortium"
+      "issuer": "Internet Systems Consortium"
     },
     {
-      "title": "Best Paper, Distributed Storage Track",
+      "name": "Best Paper, Distributed Storage Track",
       "date": "2019",
-      "awarder": "VLDB Endowment"
+      "issuer": "VLDB Endowment"
     },
     {
-      "title": "Technical Leadership Citation",
+      "name": "Technical Leadership Citation",
       "date": "2018",
-      "awarder": "IEEE Computer Society"
+      "issuer": "IEEE Computer Society"
     },
     {
-      "title": "Innovation in Tooling Award",
+      "name": "Innovation in Tooling Award",
       "date": "2017",
-      "awarder": "Cloud Native Computing Foundation"
+      "issuer": "Cloud Native Computing Foundation"
     },
     {
-      "title": "Early Career Research Grant",
+      "name": "Early Career Research Grant",
       "date": "2016",
-      "awarder": "National Science Foundation"
+      "issuer": "National Science Foundation"
     }
   ],
   "headings": {
     "work": "Experience",
     "skills": "Skills",
-    "awards": "Certifications and Awards"
+    "certificates": "Certifications and Awards"
   },
   "sections": [
     "profile",
     "work",
     "skills",
-    "awards"
+    "certificates"
   ],
   "selectedTemplate": 1
 }
