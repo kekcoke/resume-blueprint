@@ -1,12 +1,24 @@
 import { test, describe, before } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { inflateSync } from 'node:zlib'
+import { execFile, execFileSync } from 'node:child_process'
+import { promisify } from 'node:util'
+import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
-import { dirname, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 
-import { blueprintToTex, renderBlueprint, TEMPLATE_IDS } from '../dist/index.js'
+import {
+  blueprintToTex,
+  renderBlueprint,
+  TEMPLATE_IDS,
+  TEMPLATE_PROFILES,
+  UNSUPPORTED_FONTS,
+  type FontFamily
+} from '../dist/index.js'
+
+const execFileAsync = promisify(execFile)
 
 const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'fixtures')
 const GOLDEN = resolve(FIXTURES, 'golden')
@@ -70,6 +82,50 @@ describe('TeX generation is stable across all templates', () => {
         texDoc,
         expected,
         `template${id} TeX output drifted. Re-run with UPDATE_GOLDEN=1 if intended.`
+      )
+    })
+  }
+})
+
+// F4 — font families. One representative combo per distinct mechanism, not
+// all 45 non-default combos (the matrix below covers breadth; these cover
+// the preamble text is actually right): template1×calibri and
+// template1×georgia exercise nfssFontPreamble's two branches (an NFSS
+// package swap, and the fontspec+Path= fallback on a template that never
+// loaded fontspec); template2×georgia and template6×georgia exercise the
+// \renewfontfamily-redefinition route; template4×georgia exercises the
+// indirection-macro route (plus its line-56 Path=fonts/raleway/ bug fix);
+// template8×calibri confirms it reuses the plain NFSS route rather than
+// needing its own special-cased override.
+describe('TeX generation is stable across font family overrides', () => {
+  const CASES: Array<{ id: number; fontFamily: FontFamily }> = [
+    { id: 1, fontFamily: 'calibri' },
+    { id: 1, fontFamily: 'georgia' },
+    { id: 2, fontFamily: 'georgia' },
+    { id: 4, fontFamily: 'georgia' },
+    { id: 6, fontFamily: 'georgia' },
+    { id: 8, fontFamily: 'calibri' }
+  ]
+
+  for (const { id, fontFamily } of CASES) {
+    test(`template${id} with fontFamily '${fontFamily}' matches its golden snapshot`, async () => {
+      const { texDoc } = blueprintToTex({
+        ...sample,
+        selectedTemplate: id,
+        document: { fontFamily }
+      })
+      const goldenPath = resolve(GOLDEN, `template${id}-${fontFamily}.tex`)
+
+      if (UPDATE_GOLDEN || !existsSync(goldenPath)) {
+        await writeFile(goldenPath, texDoc, 'utf8')
+        return
+      }
+
+      const expected = await readFile(goldenPath, 'utf8')
+      assert.equal(
+        texDoc,
+        expected,
+        `template${id}+${fontFamily} TeX output drifted. Re-run with UPDATE_GOLDEN=1 if intended.`
       )
     })
   }
@@ -224,4 +280,88 @@ describe('adversarial input still compiles safely', () => {
       assert.ok(!existsSync('/tmp/escape.txt'), 'file write executed')
     }
   )
+})
+
+// F4's exit criterion: every supported template x fontFamily combination
+// compiles and extracts clean, checked with a loop over the matrix rather
+// than one committed golden per combination (the golden-snapshot describe
+// above already covers preamble-text correctness for one combo per
+// mechanism). `fontFamily` is a closed 6-literal enum, never interpolated
+// as free text into any template (every call site in templates/fonts.ts and
+// templateN.ts switches on it through FONT_FAMILIES's fixed keys), so this
+// needs no companion entry in fixtures/injection.json — there is no new
+// free-text surface to probe.
+describe('font family overrides compile and extract clean', () => {
+  function hasBinary(name: string): boolean {
+    try {
+      execFileSync(name, ['-v'], { stdio: 'ignore' })
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  const POPPLER = hasBinary('pdftotext')
+  const FAMILIES: FontFamily[] = ['calibri', 'arial', 'helvetica', 'garamond', 'georgia']
+
+  for (const id of TEMPLATE_IDS) {
+    const families = FAMILIES.filter((f) => !UNSUPPORTED_FONTS[id]?.includes(f))
+
+    test(
+      `template${id} (${families.join(', ')})`,
+      {
+        timeout: COMPILE_TIMEOUT_MS * families.length + 30_000,
+        skip: !POPPLER && 'pdftotext not on PATH'
+      },
+      async () => {
+        for (const fontFamily of families) {
+          const pdf = await renderBlueprint(
+            { ...sample, selectedTemplate: id, document: { fontFamily } },
+            { timeoutMs: COMPILE_TIMEOUT_MS }
+          )
+          assert.equal(
+            pdf.subarray(0, 5).toString(),
+            '%PDF-',
+            `template${id}+${fontFamily}: missing PDF magic bytes`
+          )
+
+          const dir = await mkdtemp(join(tmpdir(), 'rb-fonts-'))
+          try {
+            const pdfPath = join(dir, `template${id}-${fontFamily}.pdf`)
+            await writeFile(pdfPath, pdf)
+            const { stdout: text } = await execFileAsync('pdftotext', [pdfPath, '-'], {
+              maxBuffer: 8 << 20
+            })
+
+            const PRIVATE_USE_AREA_RE = /[\uE000-\uF8FF]/
+            const iconLabeled = TEMPLATE_PROFILES.find((p) => p.id === id)?.iconLabeledContacts
+
+            // Private-use-area codepoints are how an icon font (template2's
+            // FontAwesome, template7's moderncv icons — see catalog.ts's
+            // iconLabeledContacts) leaks into the text layer, independent of
+            // the body/header font family -- confirmed by checking template2's
+            // *default* output separately, which already carries the same
+            // codepoints. Only a template not already known for this defect
+            // could have a font swap introduce it fresh.
+            if (!iconLabeled) {
+              assert.ok(
+                !PRIVATE_USE_AREA_RE.test(text),
+                `template${id}+${fontFamily}: private-use-area glyphs in extracted text`
+              )
+            }
+
+            // Case-insensitive: several templates (e.g. template6's \personal)
+            // uppercase the name for display, matching ats.test.ts's squash()
+            // convention rather than a defect a font override introduced.
+            assert.ok(
+              text.replace(/\s+/g, '').toLowerCase().includes('adalovelace'),
+              `template${id}+${fontFamily}: candidate name did not round-trip`
+            )
+          } finally {
+            await rm(dir, { recursive: true, force: true })
+          }
+        }
+      }
+    )
+  }
 })
