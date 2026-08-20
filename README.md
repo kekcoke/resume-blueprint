@@ -11,7 +11,7 @@ pure, UI-free package that agents and workflows can call.
 **Phase 1 and Phase 2 complete.** Core, CLI, the git-backed blueprint store, the MCP
 server, and the HTTP adapter all work end to end, over an unchanged core:
 
-- `packages/core` — schema, sanitizer, nine templates, Tectonic renderer
+- `packages/core` — schema, sanitizer, ten templates, Tectonic renderer
 - `packages/cli` — thin argv wrapper over core
 - `packages/store` — versioned, git-backed blueprint persistence
 - `packages/mcp` — stdio MCP server (15 tools) for local agents (Claude Code, Hermes)
@@ -150,13 +150,14 @@ blueprint up incrementally.
 | 7 | ModernCV (banking) | no | moderncv icon contact labels |
 | 8 | McDowell | yes | |
 | 9 | Contrast (article) | yes | |
+| 10 | Word-alike (article) | yes | Calibri/11pt/0.75in/1.15 spacing by default |
 
 **ATS-grade is measured, not asserted.** An applicant tracking system never sees the
 PDF's layout — it extracts the text layer and parses that. So the test suite renders a
 deliberately dense blueprint through every template, extracts the text back with
 `pdftotext`, and checks that nothing was clipped mid-string, that every critical field
 survived, that the sections come out in the order the blueprint declared, and that name,
-email, and phone stay close enough together to read as one contact block. All nine pass.
+email, and phone stay close enough together to read as one contact block. All ten pass.
 
 Templates 2 and 7 fall short on a fifth check. Both label their contact details with
 icon-font glyphs rather than words, and those glyphs land in the text layer: template 2's
@@ -291,7 +292,7 @@ survives into the generated TeX and that nothing executes during a real compile.
 npm test
 ```
 
-187 tests. Covers the sanitizer, golden `.tex` snapshots for all nine templates, a real
+187 tests. Covers the sanitizer, golden `.tex` snapshots for all ten templates, a real
 compile of each with page-count assertions, the adversarial fixture, and the
 parse-fidelity harness described under [Choosing a template](#choosing-a-template).
 After an intentional change to template output:
