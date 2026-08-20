@@ -167,23 +167,33 @@ export function accentColorToTeX(hex: string): string {
  * agent calling `resume_templates` can use this to know an override will do
  * something before spending a render on it, rather than guessing.
  *
- * `fontFamily`, `sectionSpacing`, `bulletSpacing`, and `contactLayout` are
- * resolved by every template (see `resolveDocumentConfig`) but consumed by
- * none yet — F3 threads them; F4 and F5 are what makes them do something.
- * `accentColor` only ever appears for 2, 3, 7, and 9, matching the doc's
- * variable table in docs/next-features.md.
+ * `fontFamily` is honoured by all nine as of F4, though not every value of
+ * it: templates 2, 4, and 6 only render a change for `'georgia'` — `carlito`/
+ * `arimo`/`tgheros`/`ebgaramond` can't be resolved by fontspec's name lookup
+ * where those three build their text from literal `\newfontfamily`/
+ * `\fontspec` calls rather than `\rmfamily`/`\sffamily` (see
+ * `templates/fonts.ts`'s `UNSUPPORTED_FONTS` and its header comment,
+ * finding 4). This list stays per-field, not per-value, matching every
+ * other entry here (`accentColor` is listed for 2/3/7/9 the same way even
+ * though it's a free hex value, not a fixed set).
+ *
+ * `sectionSpacing`, `bulletSpacing`, and `contactLayout` are resolved by
+ * every template (see `resolveDocumentConfig`) but consumed by none yet —
+ * F5 is what makes them do something. `accentColor` only ever appears for
+ * 2, 3, 7, and 9, matching the doc's variable table in
+ * docs/next-features.md.
  */
 export const HONOURED_DOCUMENT_FIELDS: Record<
   (typeof TEMPLATE_IDS)[number],
   ReadonlyArray<keyof ResolvedDocumentConfig>
 > = {
-  1: ['paper', 'fontSize', 'margin', 'lineSpacing', 'linkStyle'],
-  2: ['paper', 'margin', 'accentColor', 'lineSpacing', 'linkStyle'],
-  3: ['paper', 'fontSize', 'margin', 'accentColor', 'lineSpacing', 'linkStyle'],
-  4: ['margin', 'lineSpacing', 'linkStyle'],
-  5: ['paper', 'margin', 'lineSpacing', 'linkStyle'],
-  6: ['paper', 'fontSize', 'margin', 'lineSpacing', 'linkStyle'],
-  7: ['paper', 'fontSize', 'margin', 'accentColor', 'lineSpacing', 'linkStyle'],
-  8: ['paper', 'margin', 'lineSpacing', 'linkStyle'],
-  9: ['paper', 'fontSize', 'margin', 'accentColor', 'lineSpacing', 'linkStyle']
+  1: ['paper', 'fontSize', 'margin', 'lineSpacing', 'linkStyle', 'fontFamily'],
+  2: ['paper', 'margin', 'accentColor', 'lineSpacing', 'linkStyle', 'fontFamily'],
+  3: ['paper', 'fontSize', 'margin', 'accentColor', 'lineSpacing', 'linkStyle', 'fontFamily'],
+  4: ['margin', 'lineSpacing', 'linkStyle', 'fontFamily'],
+  5: ['paper', 'margin', 'lineSpacing', 'linkStyle', 'fontFamily'],
+  6: ['paper', 'fontSize', 'margin', 'lineSpacing', 'linkStyle', 'fontFamily'],
+  7: ['paper', 'fontSize', 'margin', 'accentColor', 'lineSpacing', 'linkStyle', 'fontFamily'],
+  8: ['paper', 'margin', 'lineSpacing', 'linkStyle', 'fontFamily'],
+  9: ['paper', 'fontSize', 'margin', 'accentColor', 'lineSpacing', 'linkStyle', 'fontFamily']
 }

@@ -19,6 +19,7 @@ import {
   TEMPLATE9
 } from './constants.js'
 import { resolveDocumentConfig } from './documentConfig.js'
+import { fontFiles } from './fonts.js'
 import { FormValues, TemplateData } from '../types.js'
 
 /**
@@ -41,7 +42,8 @@ export default function getTemplateData(data: FormValues): TemplateData {
       return {
         texDoc: template1(data, config),
         opts: {
-          cmd: 'pdflatex'
+          cmd: 'pdflatex',
+          fonts: [...fontFiles(config)]
         }
       }
 
@@ -73,7 +75,8 @@ export default function getTemplateData(data: FormValues): TemplateData {
             'template2/fonts/SourceSansPro-LightIt.otf',
             'template2/fonts/SourceSansPro-Regular.otf',
             'template2/fonts/SourceSansPro-Semibold.otf',
-            'template2/fonts/SourceSansPro-SemiboldIt.otf'
+            'template2/fonts/SourceSansPro-SemiboldIt.otf',
+            ...fontFiles(config)
           ]
         }
       }
@@ -82,7 +85,8 @@ export default function getTemplateData(data: FormValues): TemplateData {
       return {
         texDoc: template3(data, config),
         opts: {
-          cmd: 'pdflatex'
+          cmd: 'pdflatex',
+          fonts: [...fontFiles(config)]
         }
       }
 
@@ -101,7 +105,8 @@ export default function getTemplateData(data: FormValues): TemplateData {
             'template4/fonts/Raleway-Medium.otf',
             'template4/fonts/Raleway-Regular.otf',
             'template4/fonts/Raleway-SemiBold.otf',
-            'template4/fonts/Raleway-Thin.otf'
+            'template4/fonts/Raleway-Thin.otf',
+            ...fontFiles(config)
           ]
         }
       }
@@ -114,7 +119,8 @@ export default function getTemplateData(data: FormValues): TemplateData {
           inputs: [
             'template5/helvetica.sty',
             'template5/res.cls'
-          ]
+          ],
+          fonts: [...fontFiles(config)]
         }
       }
 
@@ -138,7 +144,8 @@ export default function getTemplateData(data: FormValues): TemplateData {
             'template6/fonts/CrimsonText-SemiBoldItalic.ttf',
             'template6/fonts/Montserrat-Bold.ttf',
             'template6/fonts/Montserrat-Light.otf',
-            'template6/fonts/Montserrat-Regular.ttf'
+            'template6/fonts/Montserrat-Regular.ttf',
+            ...fontFiles(config)
           ]
         }
       }
@@ -154,7 +161,8 @@ export default function getTemplateData(data: FormValues): TemplateData {
           // "Command \makecvtitlenamewidth already defined". Letting the bundle
           // supply moderncv in full keeps it self-consistent. The unstaged copies
           // are kept under assets/ for reference and license attribution.
-          inputs: ['template7/collection.sty', 'template7/tweaklist.sty']
+          inputs: ['template7/collection.sty', 'template7/tweaklist.sty'],
+          fonts: [...fontFiles(config)]
         }
       }
 
@@ -163,7 +171,8 @@ export default function getTemplateData(data: FormValues): TemplateData {
         texDoc: template8(data, config),
         opts: {
           cmd: 'xelatex',
-          inputs: ['template8/mcdowellcv.cls']
+          inputs: ['template8/mcdowellcv.cls'],
+          fonts: [...fontFiles(config)]
         }
       }
 
@@ -171,7 +180,8 @@ export default function getTemplateData(data: FormValues): TemplateData {
       return {
         texDoc: template9(data, config),
         opts: {
-          cmd: 'pdflatex'
+          cmd: 'pdflatex',
+          fonts: [...fontFiles(config)]
         }
       }
 
@@ -179,7 +189,8 @@ export default function getTemplateData(data: FormValues): TemplateData {
       return {
         texDoc: template1(data, config),
         opts: {
-          cmd: 'pdflatex'
+          cmd: 'pdflatex',
+          fonts: [...fontFiles(config)]
         }
       }
   }

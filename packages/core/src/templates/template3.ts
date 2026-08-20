@@ -2,6 +2,7 @@ import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
 import { accentColorToTeX } from './documentConfig.js'
+import { nfssFontPreamble } from './fonts.js'
 import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
@@ -249,7 +250,8 @@ const generator: Generator = {
 
     const extraLines = [
       config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+      nfssFontPreamble(3, config)
     ]
       .filter(Boolean)
       .join('\n')

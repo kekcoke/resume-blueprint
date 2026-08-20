@@ -1,6 +1,7 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
+import { nfssFontPreamble } from './fonts.js'
 import type { FormValues, GeneratorWithSummary, ResolvedDocumentConfig } from '../types.js'
 
 const generator: GeneratorWithSummary = {
@@ -300,7 +301,15 @@ function template8(values: FormValues, config: ResolvedDocumentConfig) {
   const extraLines = [
     ...geometryLines,
     config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-    config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+    config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+    // mcdowellcv.cls loads `fontspec` but never calls it (its `calibri`
+    // class option only ever redefined an unused \mainfontface macro) —
+    // confirmed by compiling: re-declaring `fontspec` here and adding
+    // `\usepackage{carlito}`/`\setmainfont{Gelasio}` is exactly as safe as
+    // on a template that never touched fontspec at all, so this reuses the
+    // same NFSS-route helper as templates 1/3/5/7/9 rather than a
+    // template-specific override.
+    nfssFontPreamble(8, config)
   ]
     .filter(Boolean)
     .join('\n')

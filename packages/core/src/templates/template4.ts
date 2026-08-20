@@ -1,6 +1,7 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
+import { isFontSupported, georgiaFileBasename } from './fonts.js'
 import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
@@ -53,7 +54,7 @@ const generator: Generator = {
         ${sectionHeader}
         \\centering{
           \\color{headings}
-          \\fontspec[Path = fonts/raleway/]{Raleway-Medium}
+          \\fontspec[Path = fonts/]{\\rbmedium}
           \\fontsize{11pt}{14pt}
           \\selectfont ${info}
         }
@@ -382,11 +383,33 @@ function template4(values: FormValues, config: ResolvedDocumentConfig) {
   // through `\geometry{...}` instead, which is safe regardless of whether
   // the class already loaded the package, plus a bare `\usepackage{geometry}`
   // first for the case where it did not.
+  // deedy-resume-openfont.cls hardcodes its font names as literal strings
+  // inside ~10 macro bodies, not through \rmfamily/\sffamily — F4 replaced
+  // each with one of three indirection macros (\rbextralight/\rbregular/
+  // \rbmedium, defined in the .cls) that a \renewcommand* here can retarget
+  // in one place. Each macro holds a bare font-file name, referenced inside
+  // an already-bracketed `\fontspec[Path=fonts/]{...}` call at every use
+  // site, so the override is a plain brace body (georgiaFileBasename), not
+  // georgiaFontspecTarget's bracket-plus-brace form — that would corrupt
+  // \renewcommand's own [n] optional-argument syntax. Only `georgia` is
+  // achievable (isFontSupported gates the other four — see fonts.ts finding
+  // 4); \rbmedium maps to Gelasio's bold file to keep some of the visual
+  // weight contrast the ExtraLight/Regular/Medium naming implied.
+  const fontLines =
+    config.fontFamily !== 'template' && isFontSupported(4, config.fontFamily)
+      ? [
+          `\\renewcommand*{\\rbextralight}{${georgiaFileBasename('regular')}}`,
+          `\\renewcommand*{\\rbregular}{${georgiaFileBasename('regular')}}`,
+          `\\renewcommand*{\\rbmedium}{${georgiaFileBasename('bold')}}`
+        ].join('\n')
+      : ''
+
   const extraLines = [
     '\\usepackage{geometry}',
     `\\geometry{margin=${config.margin}}`,
     config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-    config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+    config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+    fontLines
   ]
     .filter(Boolean)
     .join('\n')

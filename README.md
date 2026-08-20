@@ -328,6 +328,13 @@ The LaTeX templates come from resumake.io by Saad Quadri (MIT), which in turn cr
 Rensselaer CDC, Byungjin Park, Scott Clark, Debarghya Das, Xavier Danaux, Ratul Saha,
 Daniil Belyakov, and Frits Wenneker.
 
+### Fonts
+
+Georgia-style output (`document.fontFamily: "georgia"`) uses **Gelasio** by Google Fonts,
+licensed under the SIL Open Font License, Version 1.1 (https://openfontlicense.org).
+`calibri`/`arial`/`helvetica`/`garamond` resolve to Carlito, Arimo, TeX Gyre Heros, and
+EB Garamond from Tectonic's own bundled package set and need no separate credit here.
+
 ## License
 
 MIT
