@@ -2,6 +2,7 @@ import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
 import { accentColorToTeX } from './documentConfig.js'
+import { isFontSupported, georgiaFontspecTarget } from './fonts.js'
 import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
@@ -270,9 +271,33 @@ const generator: Generator = {
       ? `\\definecolor{awesome}{HTML}{${accentColorToTeX(config.accentColor)}}`
       : '\\colorlet{awesome}{awesome-red}'
 
+    // awesome-cv.cls builds every visible run of text from one of five
+    // \newfontfamily-declared commands, never \rmfamily/\sffamily — a
+    // package-level font swap (the route templates 1/3/5/7/9/8 use) changes
+    // nothing here. Only `georgia` is achievable (isFontSupported gates the
+    // other four — see fonts.ts finding 4): \renewfontfamily redefines each
+    // command in place, confirmed by compiling. This collapses the
+    // light/thin vs. regular/medium weight distinction the class originally
+    // drew between e.g. headerfont/headerfontlight — Gelasio has 4 weights,
+    // not the 10 Roboto ships, an accepted simplification.
+    const fontLines =
+      config.fontFamily !== 'template' && isFontSupported(2, config.fontFamily)
+        ? (() => {
+            const target = georgiaFontspecTarget()
+            return [
+              `\\renewfontfamily\\headerfont${target}`,
+              `\\renewfontfamily\\headerfontlight${target}`,
+              `\\renewfontfamily\\footerfont${target}`,
+              `\\renewfontfamily\\bodyfont${target}`,
+              `\\renewfontfamily\\bodyfontlight${target}`
+            ].join('\n')
+          })()
+        : ''
+
     const extraLines = [
       config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+      fontLines
     ]
       .filter(Boolean)
       .join('\n')

@@ -19,6 +19,19 @@
 % main font for the document
 \setmainfont[Path=fonts/, ItalicFont=CrimsonText-Italic]{CrimsonText-Regular}
 
+% F4: every plain `\fontspec[Path=fonts/]{...}` call below (as opposed to the
+% three family declarations just above, which a caller overrides wholesale
+% with \renewfontfamily/\setmainfont) names its font through one of these six
+% macros, so template6.ts's generator can retarget them all in one place with
+% a \renewcommand* after this package loads. Left at their original literal
+% values, they reproduce this file's original hardcoded output exactly.
+\newcommand*{\mtregular}{Montserrat-Regular}
+\newcommand*{\mtlight}{Montserrat-Light}
+\newcommand*{\mtbold}{Montserrat-Bold}
+\newcommand*{\ctregular}{CrimsonText-Regular}
+\newcommand*{\ctsemibold}{CrimsonText-SemiBold}
+\newcommand*{\ctitalic}{CrimsonText-Italic}
+
 % font sizes
 \newcommand{\sizeone}{1.618em}
 \newcommand{\sizetwo}{1.318em}
@@ -38,17 +51,17 @@
   \begin{center}
     % name
     {
-      \fontsize{\sizeone}{\sizeone}\fontspec[Path = fonts/,LetterSpace=15]{Montserrat-Regular}#1
+      \fontsize{\sizeone}{\sizeone}\fontspec[Path = fonts/,LetterSpace=15]{\mtregular}#1
     }\\
     % address
     \vspace{\sizethree}
     {
-      \fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/,LetterSpace= 10]{Montserrat-Light}#2
+      \fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/,LetterSpace= 10]{\mtlight}#2
     }\\
     % contact
     \vspace{\sizefive}
     {
-      \fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{Montserrat-Light}#3
+      \fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{\mtlight}#3
     }
   \end{center}
 }
@@ -60,7 +73,7 @@
   \vspace{\sizefive}
   \begin{addmargin}[\sizefive]{\sizefive}{
   {
-  \fontsize{\sizefour}{\sizefour}\fontspec[Path = fonts/,LetterSpace=10]{Montserrat-Bold}
+  \fontsize{\sizefour}{\sizefour}\fontspec[Path = fonts/,LetterSpace=10]{\mtbold}
   \textbf{#1}
   }
   \vspace{\sizefour}
@@ -71,39 +84,39 @@
 
 \newcommand{\subchap}[3]{
   \vspace{\sizefive}
-  {\fontsize{\sizetwo}{\sizetwo}\fontspec[Path = fonts/]{CrimsonText-SemiBold} #1} \hfill {\fontsize{\sizetwo}{\sizetwo}\fontspec[Path = fonts/]{CrimsonText-Regular} #2}
+  {\fontsize{\sizetwo}{\sizetwo}\fontspec[Path = fonts/]{\ctsemibold} #1} \hfill {\fontsize{\sizetwo}{\sizetwo}\fontspec[Path = fonts/]{\ctregular} #2}
   {#3}
   \vspace{\sizefive}
 }
 
 \newcommand{\school}[5]{
   \vspace{\sizefive}
-  {\fontsize{\sizetwo}{\sizetwo}\fontspec[Path = fonts/]{CrimsonText-SemiBold} #1} \hfill {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{CrimsonText-Regular} #2}
+  {\fontsize{\sizetwo}{\sizetwo}\fontspec[Path = fonts/]{\ctsemibold} #1} \hfill {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{\ctregular} #2}
 
-  {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{CrimsonText-Regular} #3}\hfill{\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{CrimsonText-Regular}#4}\\#5
+  {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{\ctregular} #3}\hfill{\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{\ctregular}#4}\\#5
   \vspace{\sizefive}
 }
 
 \newcommand{\job}[5]{
   \vspace{\sizefive}
-  {\fontsize{\sizetwo}{\sizetwo}\fontspec[Path = fonts/]{CrimsonText-SemiBold} #1} \hfill {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{CrimsonText-Regular} #2}
+  {\fontsize{\sizetwo}{\sizetwo}\fontspec[Path = fonts/]{\ctsemibold} #1} \hfill {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{\ctregular} #2}
 
-  {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{CrimsonText-Regular} #3} \hfill {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{CrimsonText-Regular} #4}
+  {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{\ctregular} #3} \hfill {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{\ctregular} #4}
   {#5}
   \vspace{\sizefive}
 }
 
 \newcommand{\project}[4]{
   \vspace{\sizefive}
-  {\fontsize{\sizetwo}{\sizetwo}\fontspec[Path = fonts/]{CrimsonText-SemiBold} #1} {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{CrimsonText-Regular} #2} \hfill {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{CrimsonText-Regular} #3}
+  {\fontsize{\sizetwo}{\sizetwo}\fontspec[Path = fonts/]{\ctsemibold} #1} {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{\ctregular} #2} \hfill {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{\ctregular} #3}
   \\#4
   \vspace{\sizefive}
 }
 
 \newcommand{\award}[4]{
   \vspace{\sizefive}
-  {\fontsize{\sizetwo}{\sizetwo}\fontspec[Path = fonts/]{CrimsonText-SemiBold} #1} \hfill {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{CrimsonText-Regular} #2}
+  {\fontsize{\sizetwo}{\sizetwo}\fontspec[Path = fonts/]{\ctsemibold} #1} \hfill {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{\ctregular} #2}
 
-  {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{CrimsonText-Regular} #3} \hfill {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{CrimsonText-Regular} #4}
+  {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{\ctregular} #3} \hfill {\fontsize{\sizethree}{\sizethree}\fontspec[Path = fonts/]{\ctregular} #4}
   \vspace{\sizefive}
 }

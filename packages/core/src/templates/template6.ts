@@ -1,6 +1,7 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
+import { isFontSupported, georgiaFontspecTarget, georgiaFileBasename } from './fonts.js'
 import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
@@ -30,7 +31,7 @@ const generator: Generator = {
     ].filter(Boolean)
 
     const labelLine = label
-      ? `\\vspace{2mm}\n{\\fontsize{1.1em}{1.1em}\\fontspec[Path = fonts/]{CrimsonText-Italic} ${label}}\\\\`
+      ? `\\vspace{2mm}\n{\\fontsize{1.1em}{1.1em}\\fontspec[Path = fonts/]{\\ctitalic} ${label}}\\\\`
       : ''
 
     const summaryBlock = summary ? `\n\\vspace{2mm}\n${summary}\\par` : ''
@@ -39,11 +40,11 @@ const generator: Generator = {
       \\begin{center}
       % Personal
       % -----------------------------------------------------
-      {\\fontsize{\\sizeone}{\\sizeone}\\fontspec[Path = fonts/,LetterSpace=15]{Montserrat-Regular} ${name.toUpperCase()}}
+      {\\fontsize{\\sizeone}{\\sizeone}\\fontspec[Path = fonts/,LetterSpace=15]{\\mtregular} ${name.toUpperCase()}}
       ${name && info.length > 1 ? '\\\\' : ''}
       \\vspace{2mm}
       ${labelLine}
-      {\\fontsize{1em}{1em}\\fontspec[Path = fonts/]{Montserrat-Light} ${info.join(
+      {\\fontsize{1em}{1em}\\fontspec[Path = fonts/]{\\mtlight} ${info.join(
         ' -- '
       )}}
       \\end{center}
@@ -257,9 +258,44 @@ const generator: Generator = {
   // — so it's wired additively in the outer `template6()` function, gated
   // on the raw `document` input rather than compared here.
   resumeHeader(config) {
+    // minimal-resume.sty (loaded above via \input{minimal-resume-config})
+    // builds every visible run of text from named \newfontfamily commands
+    // (\montserratfont, \crimsonfont, the main \setmainfont) or one of six
+    // indirection macros wrapping a plain \fontspec[Path=fonts/]{...} call
+    // — never \rmfamily/\sffamily, so a package-level swap changes nothing.
+    // Only `georgia` is achievable (isFontSupported gates the other four —
+    // see fonts.ts finding 4). The three named families get a full
+    // \renewfontfamily/\setmainfont redeclaration (georgiaFontspecTarget,
+    // same mechanism as template 2); the indirection macros get a plain
+    // \renewcommand* to a bare file basename (georgiaFileBasename, same
+    // mechanism as template 4 — a second `[...]` there would corrupt
+    // \renewcommand's own optional-argument syntax). Collapses onto one
+    // vendored family regardless of the original Montserrat/CrimsonText
+    // weight distinctions — the same trade-off already accepted elsewhere.
+    const fontLines =
+      config.fontFamily !== 'template' && isFontSupported(6, config.fontFamily)
+        ? (() => {
+            const target = georgiaFontspecTarget()
+            const regular = georgiaFileBasename('regular')
+            const bold = georgiaFileBasename('bold')
+            return [
+              `\\renewfontfamily\\montserratfont${target}`,
+              `\\renewfontfamily\\crimsonfont${target}`,
+              `\\setmainfont${target}`,
+              `\\renewcommand*{\\mtregular}{${regular}}`,
+              `\\renewcommand*{\\mtlight}{${regular}}`,
+              `\\renewcommand*{\\mtbold}{${bold}}`,
+              `\\renewcommand*{\\ctregular}{${regular}}`,
+              `\\renewcommand*{\\ctsemibold}{${bold}}`,
+              `\\renewcommand*{\\ctitalic}{${regular}}`
+            ].join('\n')
+          })()
+        : ''
+
     return [
       config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : ''
+      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+      fontLines
     ]
       .filter(Boolean)
       .join('\n')
