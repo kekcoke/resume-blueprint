@@ -1,6 +1,7 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks, joinContactInfo } from './profiles.js'
+import { certificateLine, defaultCertificatesSection } from './certificates.js'
 import { isFontSupported, georgiaFontspecTarget, georgiaFileBasename } from './fonts.js'
 import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
@@ -257,6 +258,25 @@ const generator: Generator = {
     `
   },
 
+  certificatesSection(certificates, heading, config) {
+    if (!certificates) {
+      return ''
+    }
+
+    return source`
+      % Chapter: Certificates
+      % ------------------------
+
+      \\vspace{${config.sectionSpacing}pt}
+      \\chap{${heading ? heading.toUpperCase() : 'CERTIFICATES'}}{
+      \\begin{newitemize}
+        \\setlength\\itemsep{${config.bulletSpacing}pt}
+        ${certificates.map((cert) => `\\item ${certificateLine(cert)}`)}
+      \\end{newitemize}
+      }
+    `
+  },
+
   // Page margin is unknown-native — set inside \input{minimal-resume-config}
   // — so it's wired additively in the outer `template6()` function, gated
   // on the raw `document` input rather than compared here.
@@ -363,6 +383,15 @@ function template6(values: FormValues, config: ResolvedDocumentConfig) {
 
           case 'awards':
             return generator.awardsSection(values.awards, headings.awards, config)
+
+          case 'certificates':
+            return (
+              generator.certificatesSection?.(
+                values.certificates,
+                headings.certificates,
+                config
+              ) ?? defaultCertificatesSection(values.certificates, headings.certificates, config)
+            )
 
           default:
             return ''

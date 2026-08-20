@@ -1,6 +1,7 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
+import { certificateLine, defaultCertificatesSection } from './certificates.js'
 import { nfssFontPreamble } from './fonts.js'
 import type { FormValues, GeneratorWithSummary, ResolvedDocumentConfig } from '../types.js'
 
@@ -279,6 +280,24 @@ const generator: GeneratorWithSummary = {
     `
   },
 
+  certificatesSection(certificates, heading, config) {
+    if (!certificates) {
+      return ''
+    }
+
+    return source`
+      \\vspace{${config.sectionSpacing}pt}
+      \\begin{cvsection}{${heading || 'Certificates'}}
+      \\begin{cvsubsection}{}{}{}
+      \\begin{itemize}
+      \\setlength\\itemsep{${config.bulletSpacing}pt}
+      ${certificates.map((cert) => `\\item ${certificateLine(cert)}`)}
+      \\end{itemize}
+      \\end{cvsubsection}
+      \\end{cvsection}
+    `
+  },
+
   resumeHeader() {
     return stripIndent`
       %% The MIT License (MIT)
@@ -388,6 +407,16 @@ function template8(values: FormValues, config: ResolvedDocumentConfig) {
 
             case 'awards':
               return generator.awardsSection(values.awards, headings.awards, config)
+
+            case 'certificates':
+              return (
+                generator.certificatesSection?.(
+                  values.certificates,
+                  headings.certificates,
+                  config
+                ) ??
+                defaultCertificatesSection(values.certificates, headings.certificates, config)
+              )
 
             default:
               return ''
