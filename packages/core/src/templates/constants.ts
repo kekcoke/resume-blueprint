@@ -18,7 +18,8 @@ export const TEMPLATES = [
   TEMPLATE6,
   TEMPLATE7,
   TEMPLATE8,
-  TEMPLATE9
+  TEMPLATE9,
+  TEMPLATE10
 ]
 
 export const NEWLINE = '\\\\'

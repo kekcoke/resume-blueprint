@@ -207,6 +207,23 @@ export const TEMPLATE_PROFILES: readonly TemplateProfile[] = [
     cohesiveSkillRows: true,
     cohesiveRecords: true,
     orphanBullets: false
+  },
+  {
+    id: 10,
+    name: 'Word-alike (article)',
+    atsGrade: true,
+    iconLabeledContacts: false,
+    // Plain article, geometry-only margins, no negative-vspace header pull —
+    // the defect that forced templates 1 and 4 above the floor at their
+    // literal margins. TEMPLATE_DEFAULTS[10].margin ('0.75in') is
+    // GLOBAL_DEFAULTS unchanged.
+    clearsMarginFloor: true,
+    // skillsSection is one row per category from the start (F7 postdates F5).
+    cohesiveSkillRows: true,
+    // certificatesSection renders certificateLine() directly, same flat
+    // shape as every other template.
+    cohesiveRecords: true,
+    orphanBullets: false
   }
 ]
 

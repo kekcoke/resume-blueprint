@@ -130,8 +130,8 @@ export const SECTION_NAMES = [
 
 export const SectionSchema = z.enum(SECTION_NAMES)
 
-/** Templates are numbered 1..9; `index.ts` falls back to 1 for anything else. */
-export const TEMPLATE_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const
+/** Templates are numbered 1..10; `index.ts` falls back to 1 for anything else. */
+export const TEMPLATE_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const
 
 /**
  * Clamps a number into `[min, max]` rather than rejecting it.
