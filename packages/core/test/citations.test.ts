@@ -65,8 +65,8 @@ describe('stripCitations', () => {
 
   test('handles the two marker families adjacent on one line', () => {
     assert.equal(
-      stripCitations('> Vancouver, BC | [cite_start][LinkedIn](https://example.com) [cite: 61-63]'),
-      '> Vancouver, BC | [LinkedIn](https://example.com)'
+      stripCitations('> London, UK | [cite_start][LinkedIn](https://example.com) [cite: 61-63]'),
+      '> London, UK | [LinkedIn](https://example.com)'
     )
   })
 

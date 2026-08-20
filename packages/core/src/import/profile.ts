@@ -114,7 +114,7 @@ const INSTITUTION_WORDS =
 const CREDENTIAL_WORDS =
   /\b(certificat|certified|credential|diploma|degree|bachelor|master'?s|doctora|phd|associate|bootcamp|course|training|nanodegree|b\.?sc|m\.?sc|b\.?a\b|m\.?a\b)/i
 
-/** A bare all-caps token like `BCIT` or `MIT`. Schools abbreviate to one of
+/** A bare all-caps token like `MIT` or `UCL`. Schools abbreviate to one of
  *  these; credentials ("Technical Diploma in Computer Systems Technology") do
  *  not. Only consulted when the other side is a multi-word phrase, so
  *  `AWS Certified Cloud Practitioner` vs `Amazon Web Services` -- where both
