@@ -77,5 +77,18 @@
       "summary": "Awarded for contributions to mechanical computation."
     }
   ],
+  "certificates": [
+    {
+      "name": "AWS Certified Cloud Practitioner",
+      "issuer": "Amazon Web Services",
+      "date": "2025",
+      "url": "https://example.com/verify/aws-ccp"
+    },
+    {
+      "name": "Certified Kubernetes Administrator",
+      "issuer": "Cloud Native Computing Foundation",
+      "date": "2023"
+    }
+  ],
   "selectedTemplate": 1
 }
