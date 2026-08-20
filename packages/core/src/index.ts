@@ -36,6 +36,7 @@ export {
 } from './templates/documentConfig.js'
 export { FONT_FAMILIES, UNSUPPORTED_FONTS, isFontSupported } from './templates/fonts.js'
 export type { FontFamily } from './templates/fonts.js'
+export { stripCitations, countCitations } from './import/citations.js'
 
 /**
  * Validates, sanitizes, and renders a blueprint to LaTeX source.
