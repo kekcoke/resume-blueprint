@@ -46,10 +46,21 @@ node packages/cli/dist/index.js render fixtures/sample.json -t 3 -o ada.pdf
 resume render <blueprint.json> [-t N] [-o out.pdf]   Render to PDF
 resume tex    <blueprint.json> [-t N] [-o out.tex]   Emit LaTeX source
 resume validate <blueprint.json>                     Validate, with readable errors
+resume import <profile.md> [--strict]                Markdown profile -> blueprint JSON
 resume list-templates                                List template IDs
 ```
 
 Pass `-` as the path to read the blueprint from stdin. Without `-o`, output goes to stdout.
+
+`import` writes the blueprint to stdout and its warnings to stderr, so it pipes:
+
+```bash
+resume import profile.md | resume validate -
+```
+
+Warnings are not noise — they name every line the parser could not map and every
+reading it had to assume (which side of `**A:** B` was the school, whether a `###`
+held the employer or the job title). `--strict` exits 1 when any were raised.
 
 ## Running the protocols
 
@@ -73,10 +84,14 @@ the equivalent entry is:
 }
 ```
 
-Fifteen tools: `resume_list`, `resume_get`, `resume_create`, `resume_patch`,
+Sixteen tools: `resume_list`, `resume_get`, `resume_create`, `resume_patch`,
 `resume_section_append`, `resume_section_update`, `resume_section_remove`,
 `resume_remove`, `resume_validate`, `resume_render`, `resume_tex`, `resume_history`,
-`resume_diff`, `resume_revert`, `resume_templates`.
+`resume_diff`, `resume_revert`, `resume_templates`, `resume_import`.
+
+`resume_import` takes the markdown itself, not a path — the agent already has file
+tools, and no tool on this server reads a caller-supplied path. It stores nothing;
+pass its `blueprint` to `resume_create` once its `warnings` look acceptable.
 
 **Dev loop: rebuild, then restart the server.** A running server holds
 `@resume-blueprint/core` in module memory, so after `npm run build` it keeps rendering
@@ -116,10 +131,19 @@ opt-in — treat the token as mandatory if you do.
 ## Library
 
 ```ts
-import { renderBlueprint, blueprintToTex, parseBlueprint } from '@resume-blueprint/core'
+import {
+  renderBlueprint,
+  blueprintToTex,
+  parseBlueprint,
+  profileToBlueprint
+} from '@resume-blueprint/core'
 
 const pdf = await renderBlueprint(blueprint)   // Buffer
 const { texDoc } = blueprintToTex(blueprint)   // LaTeX source
+
+// Markdown master profile in, blueprint out. Takes a string, not a path:
+// core does no I/O it was not handed.
+const { blueprint: imported, warnings } = profileToBlueprint(markdown)
 ```
 
 `renderBlueprint` and `blueprintToTex` both validate and sanitize before touching a
@@ -292,9 +316,10 @@ survives into the generated TeX and that nothing executes during a real compile.
 npm test
 ```
 
-187 tests. Covers the sanitizer, golden `.tex` snapshots for all ten templates, a real
-compile of each with page-count assertions, the adversarial fixture, and the
-parse-fidelity harness described under [Choosing a template](#choosing-a-template).
+499 tests. Covers the sanitizer, golden `.tex` snapshots for all ten templates, a real
+compile of each with page-count assertions, the adversarial fixture, the master-profile
+importer, and the parse-fidelity harness described under
+[Choosing a template](#choosing-a-template).
 After an intentional change to template output:
 
 ```bash
