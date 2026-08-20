@@ -5,7 +5,7 @@ import { nfssFontPreamble } from './fonts.js'
 import type { FormValues, GeneratorWithSummary, ResolvedDocumentConfig } from '../types.js'
 
 const generator: GeneratorWithSummary = {
-  profileSection(basics) {
+  profileSection(basics, config) {
     if (!basics) {
       return ''
     }
@@ -13,11 +13,17 @@ const generator: GeneratorWithSummary = {
     const { name, email, phone = '', location = {}, website, profiles } = basics
     const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
 
+    // mcdowellcv's \address/\contacts macros take one free-text argument
+    // each — the class doesn't stack the lines itself, this template's own
+    // `\linebreak` joins do. 'stacked' (the recorded default) keeps that;
+    // an explicit 'row' override switches the join separator instead.
+    const itemSeparator = config.contactLayout === 'row' ? ' | ' : ' \\linebreak '
+
     let addressLine = ''
     let contactsLine = ''
 
     if (location.address && phone) {
-      addressLine = `\\address{${location.address} \\linebreak ${phone}}`
+      addressLine = `\\address{${location.address}${itemSeparator}${phone}}`
     } else if (location.address || phone) {
       addressLine = `\\address{${location.address || phone}}`
     }
@@ -25,7 +31,7 @@ const generator: GeneratorWithSummary = {
     const contacts = [email, websiteLine, ...profileLinks(profiles)].filter(Boolean)
 
     if (contacts.length) {
-      contactsLine = `\\contacts{${contacts.join(' \\linebreak ')}}`
+      contactsLine = `\\contacts{${contacts.join(itemSeparator)}}`
     }
 
     return `
@@ -53,12 +59,13 @@ const generator: GeneratorWithSummary = {
     `
   },
 
-  educationSection(education, heading) {
+  educationSection(education, heading, config) {
     if (!education) {
       return ''
     }
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\begin{cvsection}{${heading || 'Education'}}
       ${education.map((school) => {
         const {
@@ -93,13 +100,23 @@ const generator: GeneratorWithSummary = {
           degreeLine += ` GPA: ${score}`
         }
 
+        // An entry with no studyType/area/score has an empty degreeLine —
+        // guarded here so `\item` is never emitted with nothing after it
+        // (fixtures/sparse.json's case; F5's orphan-bullet fix).
+        const degreeBlock = degreeLine
+          ? source`
+              \\begin{itemize}
+                \\setlength\\itemsep{${config.bulletSpacing}pt}
+                \\item ${degreeLine}
+              \\end{itemize}
+            `
+          : ''
+
         return stripIndent`
           \\begin{cvsubsection}{${location || ''}}{${institution || ''}}{${
           dateRange || ''
         }}
-            \\begin{itemize}
-              \\item ${degreeLine}
-            \\end{itemize}
+            ${degreeBlock}
           \\end{cvsubsection}
         `
       })}
@@ -107,12 +124,13 @@ const generator: GeneratorWithSummary = {
     `
   },
 
-  workSection(work, heading) {
+  workSection(work, heading, config) {
     if (!work) {
       return ''
     }
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\begin{cvsection}{${heading || 'Experience'}}
       ${work.map((job) => {
         const {
@@ -136,9 +154,10 @@ const generator: GeneratorWithSummary = {
           dateRange = endDate
         }
 
-        if (highlights) {
+        if (highlights?.length) {
           highlightLines = source`
             \\begin{itemize}%
+              \\setlength\\itemsep{${config.bulletSpacing}pt}
               ${highlights.map((highlight) => `\\item ${highlight}`)}
             \\end{itemize}
             `
@@ -158,15 +177,17 @@ const generator: GeneratorWithSummary = {
     `
   },
 
-  skillsSection(skills, heading) {
+  skillsSection(skills, heading, config) {
     if (!skills) {
       return ''
     }
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\begin{cvsection}{${heading || 'Skills'}}
       \\begin{cvsubsection}{}{}{}
       \\begin{itemize}
+      \\setlength\\itemsep{${config.bulletSpacing}pt}
       ${skills.map((skill) => {
         const { name, keywords = [] } = skill
         return `\\item ${name ? `${name}: ` : ''} ${keywords.join(', ') || ''}`
@@ -177,16 +198,17 @@ const generator: GeneratorWithSummary = {
     `
   },
 
-  projectsSection(projects, heading) {
+  projectsSection(projects, heading, config) {
     if (!projects) {
       return ''
     }
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\begin{cvsection}{${heading || 'Projects'}}
       \\begin{cvsubsection}{}{}{}
       \\begin{itemize}
-      \\setlength\\itemsep{3pt}
+      \\setlength\\itemsep{${config.bulletSpacing}pt}
       ${projects.map((project) => {
         const { name, description, keywords = [], url } = project
 
@@ -217,16 +239,17 @@ const generator: GeneratorWithSummary = {
     `
   },
 
-  awardsSection(awards, heading) {
+  awardsSection(awards, heading, config) {
     if (!awards) {
       return ''
     }
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\begin{cvsection}{${heading || 'Awards'}}
       \\begin{cvsubsection}{}{}{}
       \\begin{itemize}
-      \\setlength\\itemsep{3pt}
+      \\setlength\\itemsep{${config.bulletSpacing}pt}
       ${awards.map((award) => {
         const { title, summary, date, awarder } = award
 
@@ -334,35 +357,37 @@ function template8(values: FormValues, config: ResolvedDocumentConfig) {
     \\usepackage{amsmath}
     \\usepackage[hidelinks]{hyperref}
 
-    ${generator.profileSection(values.basics)}
+    ${generator.profileSection(values.basics, config)}
 
     \\begin{document}
       % Print the header
       \\makeheader
-      ${generator.summarySection(values.basics)}
+      ${generator.summarySection(values.basics, config)}
       ${values.sections
         .map((section) => {
           switch (section) {
             case 'education':
               return generator.educationSection(
                 values.education,
-                headings.education
+                headings.education,
+                config
               )
 
             case 'work':
-              return generator.workSection(values.work, headings.work)
+              return generator.workSection(values.work, headings.work, config)
 
             case 'skills':
-              return generator.skillsSection(values.skills, headings.skills)
+              return generator.skillsSection(values.skills, headings.skills, config)
 
             case 'projects':
               return generator.projectsSection(
                 values.projects,
-                headings.projects
+                headings.projects,
+                config
               )
 
             case 'awards':
-              return generator.awardsSection(values.awards, headings.awards)
+              return generator.awardsSection(values.awards, headings.awards, config)
 
             default:
               return ''

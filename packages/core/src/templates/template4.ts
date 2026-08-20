@@ -1,11 +1,11 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
-import { breakableUrl, profileLinks } from './profiles.js'
+import { breakableUrl, profileLinks, joinContactInfo } from './profiles.js'
 import { isFontSupported, georgiaFileBasename } from './fonts.js'
 import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
-  profileSection(profile) {
+  profileSection(profile, config) {
     if (!profile) {
       return '\\namesection{Your}{Name}{}'
     }
@@ -29,9 +29,11 @@ const generator: Generator = {
     }
 
     const websiteLine = website ? breakableUrl(website) : ''
-    const info = [email, phone, location.address, websiteLine, ...profileLinks(profiles)]
-      .filter(Boolean)
-      .join(' | ')
+    const info = joinContactInfo(
+      [email, phone, location.address, websiteLine, ...profileLinks(profiles)],
+      config.contactLayout,
+      ' | '
+    )
 
     // \namesection's third argument is a centered group, so a `\\` inside it
     // puts the job title on its own line above the contact run.
@@ -68,7 +70,7 @@ const generator: Generator = {
     `
   },
 
-  educationSection(education, heading) {
+  educationSection(education, heading, config) {
     if (!education) {
       return ''
     }
@@ -79,6 +81,7 @@ const generator: Generator = {
       %     Education
       %
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \\vspace{${config.sectionSpacing}pt}
       \\section{${heading || 'Education'}}
       \\raggedright
       ${education.map((school) => {
@@ -142,7 +145,7 @@ const generator: Generator = {
     `
   },
 
-  workSection(work, heading) {
+  workSection(work, heading, config) {
     if (!work) {
       return ''
     }
@@ -153,6 +156,7 @@ const generator: Generator = {
       %     Experience
       %
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \\vspace{${config.sectionSpacing}pt}
       \\section{${heading || 'Experience'}}
       ${work.map((job) => {
         const {
@@ -193,9 +197,10 @@ const generator: Generator = {
           line1 += `\\hfill \\location{${dateRange}}`
         }
 
-        if (highlights) {
+        if (highlights?.length) {
           highlightLines = source`
             \\begin{tightemize}
+              \\setlength\\itemsep{${config.bulletSpacing}pt}
               ${highlights.map((highlight) => `\\item ${highlight}`)}
             \\end{tightemize}
             `
@@ -211,31 +216,32 @@ const generator: Generator = {
     `
   },
 
-  skillsSection(skills, heading) {
+  skillsSection(skills, heading, config) {
     if (!skills) {
       return ''
     }
 
-    // p-columns rather than 'l': see template1's skillsSection.
+    // One row per category, category and keywords in the same run of text —
+    // the previous two-column `tabular` put the label and its values in
+    // separate cells, which a parser reads as two unrelated fragments (F5).
     return source`
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       %
       %     Skills
       %
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \\vspace{${config.sectionSpacing}pt}
       \\section{${heading || 'Skills'}}
       \\raggedright
-      \\begin{tabular}{@{}p{7em}@{\\hspace{1em}}p{\\dimexpr\\linewidth-8em\\relax}@{}}
       ${skills.map((skill) => {
         const { name = '', keywords = [] } = skill
-        return `\\descript{${name}} & {\\location{${keywords.join(', ')}}} \\\\`
+        return `\\descript{${name}:} {\\location{${keywords.join(', ')}}} \\\\`
       })}
-      \\end{tabular}
       \\sectionsep
     `
   },
 
-  projectsSection(projects, heading) {
+  projectsSection(projects, heading, config) {
     if (!projects) {
       return ''
     }
@@ -246,6 +252,7 @@ const generator: Generator = {
       %     Projects
       %
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \\vspace{${config.sectionSpacing}pt}
       \\section{${heading || 'Projects'}}
       \\raggedright
       ${projects.map((project) => {
@@ -285,7 +292,7 @@ const generator: Generator = {
     `
   },
 
-  awardsSection(awards, heading) {
+  awardsSection(awards, heading, config) {
     if (!awards) {
       return ''
     }
@@ -296,6 +303,7 @@ const generator: Generator = {
       %     Awards
       %
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+      \\vspace{${config.sectionSpacing}pt}
       \\section{${heading || 'Awards'}}
       ${awards.map((award) => {
         const { title, summary, date, awarder } = award
@@ -425,25 +433,26 @@ function template4(values: FormValues, config: ResolvedDocumentConfig) {
       .map((section) => {
         switch (section) {
           case 'profile':
-            return generator.profileSection(values.basics)
+            return generator.profileSection(values.basics, config)
 
           case 'education':
             return generator.educationSection(
               values.education,
-              headings.education
+              headings.education,
+              config
             )
 
           case 'work':
-            return generator.workSection(values.work, headings.work)
+            return generator.workSection(values.work, headings.work, config)
 
           case 'skills':
-            return generator.skillsSection(values.skills, headings.skills)
+            return generator.skillsSection(values.skills, headings.skills, config)
 
           case 'projects':
-            return generator.projectsSection(values.projects, headings.projects)
+            return generator.projectsSection(values.projects, headings.projects, config)
 
           case 'awards':
-            return generator.awardsSection(values.awards, headings.awards)
+            return generator.awardsSection(values.awards, headings.awards, config)
 
           default:
             return ''

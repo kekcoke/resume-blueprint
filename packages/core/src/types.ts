@@ -38,7 +38,19 @@ export type Generator = {
    * caller can never forget to resolve and pass it.
    */
   resumeHeader: (config: ResolvedDocumentConfig) => string
-  profileSection: (basics?: Basics) => string
+  /**
+   * `config` is required here too, and for every method below except the
+   * optional `summarySection` override on `GeneratorWithSummary` — F5 needed
+   * `contactLayout` inside the functions that build the contact block
+   * (`profileSection`/`summarySection`) and `bulletSpacing` inside every
+   * function that opens a list environment. An optional parameter would let a
+   * future template silently ignore `document` the same way `resumeHeader`'s
+   * comment already warns about; not every template's body of every method
+   * uses `config` (several route `sectionSpacing` through a macro defined in
+   * `resumeHeader` instead, and consume `config` here only for
+   * `bulletSpacing`, if at all), but the seam stays uniform across all nine.
+   */
+  profileSection: (basics: Basics | undefined, config: ResolvedDocumentConfig) => string
   /**
    * `basics.label` and `basics.summary` belong to the profile, but templates 5,
    * 7, and 8 emit their headers from the preamble through class-level macros
@@ -46,12 +58,32 @@ export type Generator = {
    * go. Those three implement this instead, and their body calls it directly
    * below the header. Every other template renders both inside `profileSection`.
    */
-  summarySection?: (basics?: Basics) => string
-  educationSection: (education?: Array<Education>, heading?: string) => string
-  workSection: (work?: Array<Work>, heading?: string) => string
-  skillsSection: (skills?: Array<Skill>, heading?: string) => string
-  projectsSection: (projects?: Array<Project>, heading?: string) => string
-  awardsSection: (awards?: Array<Award>, heading?: string) => string
+  summarySection?: (basics: Basics | undefined, config: ResolvedDocumentConfig) => string
+  educationSection: (
+    education: Array<Education> | undefined,
+    heading: string | undefined,
+    config: ResolvedDocumentConfig
+  ) => string
+  workSection: (
+    work: Array<Work> | undefined,
+    heading: string | undefined,
+    config: ResolvedDocumentConfig
+  ) => string
+  skillsSection: (
+    skills: Array<Skill> | undefined,
+    heading: string | undefined,
+    config: ResolvedDocumentConfig
+  ) => string
+  projectsSection: (
+    projects: Array<Project> | undefined,
+    heading: string | undefined,
+    config: ResolvedDocumentConfig
+  ) => string
+  awardsSection: (
+    awards: Array<Award> | undefined,
+    heading: string | undefined,
+    config: ResolvedDocumentConfig
+  ) => string
 }
 
 /**
@@ -80,7 +112,7 @@ export type LaTeXOpts = {
  * required for them while it stays optional for everyone else.
  */
 export type GeneratorWithSummary = Generator & {
-  summarySection: (basics?: Basics) => string
+  summarySection: (basics: Basics | undefined, config: ResolvedDocumentConfig) => string
 }
 
 export type TemplateData = {

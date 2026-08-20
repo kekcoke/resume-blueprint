@@ -1,13 +1,34 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
-import { profileLinks } from './profiles.js'
+import { breakableUrl, profileLinks } from './profiles.js'
 import { accentColorToTeX, GLOBAL_DEFAULTS } from './documentConfig.js'
 import { nfssFontPreamble } from './fonts.js'
 import type { FormValues, GeneratorWithSummary, ResolvedDocumentConfig } from '../types.js'
 
 const generator: GeneratorWithSummary = {
-  profileSection(basics = {}) {
+  profileSection(basics = {}, config) {
     const { name, label, email, phone, location = {}, website, profiles } = basics
+
+    // moderncv has no general-purpose "one line of contact info" slot — each
+    // kind (\address, \phone, \email, \homepage) is its own macro, and
+    // \makecvtitle stacks them one per line by class design. That's this
+    // template's recorded 'stacked' default (documentConfig.ts). An explicit
+    // 'row' override folds every field into \extrainfo instead — moderncv's
+    // one free-text line — since there's no per-kind macro that prints
+    // several fields on a shared line.
+    if (config.contactLayout === 'row') {
+      const websiteLine = website ? breakableUrl(website) : ''
+      const info = [location.address, phone, email, websiteLine, ...profileLinks(profiles)]
+        .filter(Boolean)
+        .join(' | ')
+
+      return stripIndent`
+      % Profile
+      \\name{${name || ''}}{}
+      ${label ? `\\title{${label}}` : ''}
+      ${info ? `\\extrainfo{${info}}` : ''}
+    `
+    }
 
     // moderncv has a macro per contact kind and no general-purpose slot, so the
     // profile links go in \extrainfo, which \makecvtitle prints under the rest.
@@ -46,12 +67,13 @@ const generator: GeneratorWithSummary = {
     `
   },
 
-  educationSection(education, heading) {
+  educationSection(education, heading, config) {
     if (!education) {
       return ''
     }
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\section{${heading || 'Education'}}
       ${education.map((school) => {
         const {
@@ -95,12 +117,13 @@ const generator: GeneratorWithSummary = {
     `
   },
 
-  workSection(work, heading) {
+  workSection(work, heading, config) {
     if (!work) {
       return ''
     }
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\section{${heading || 'Experience'}}
       ${work.map((job) => {
         const {
@@ -126,9 +149,10 @@ const generator: GeneratorWithSummary = {
           dateRange = endDate
         }
 
-        if (highlights) {
+        if (highlights?.length) {
           highlightLines = source`
             \\begin{itemize}%
+              \\setlength\\itemsep{${config.bulletSpacing}pt}
               ${highlights.map((highlight) => `\\item ${highlight}`)}
             \\end{itemize}
             `
@@ -147,12 +171,13 @@ const generator: GeneratorWithSummary = {
     `
   },
 
-  skillsSection(skills, heading) {
+  skillsSection(skills, heading, config) {
     if (!skills) {
       return ''
     }
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\section{${heading || 'Skills'}}
       ${skills.map((skill) => {
         const { name, keywords = [] } = skill
@@ -161,12 +186,13 @@ const generator: GeneratorWithSummary = {
     `
   },
 
-  projectsSection(projects, heading) {
+  projectsSection(projects, heading, config) {
     if (!projects) {
       return ''
     }
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\section{${heading || 'Projects'}}
       ${projects.map((project) => {
         const { name, description, keywords = [], url } = project
@@ -195,12 +221,13 @@ const generator: GeneratorWithSummary = {
     `
   },
 
-  awardsSection(awards, heading) {
+  awardsSection(awards, heading, config) {
     if (!awards) {
       return ''
     }
 
     return source`
+      \\vspace{${config.sectionSpacing}pt}
       \\section{${heading || 'Awards'}}
       ${awards.map((award) => {
         const { title, summary, date, awarder } = award
@@ -308,30 +335,31 @@ function template7(values: FormValues, config: ResolvedDocumentConfig) {
 
   return stripIndent`
     ${generator.resumeHeader(config)}
-    ${generator.profileSection(values.basics)}
+    ${generator.profileSection(values.basics, config)}
     \\begin{document}
     ${values.basics ? '\\makecvtitle' : ''}
-    ${generator.summarySection(values.basics)}
+    ${generator.summarySection(values.basics, config)}
     ${values.sections
       .map((section) => {
         switch (section) {
           case 'education':
             return generator.educationSection(
               values.education,
-              headings.education
+              headings.education,
+              config
             )
 
           case 'work':
-            return generator.workSection(values.work, headings.work)
+            return generator.workSection(values.work, headings.work, config)
 
           case 'skills':
-            return generator.skillsSection(values.skills, headings.skills)
+            return generator.skillsSection(values.skills, headings.skills, config)
 
           case 'projects':
-            return generator.projectsSection(values.projects, headings.projects)
+            return generator.projectsSection(values.projects, headings.projects, config)
 
           case 'awards':
-            return generator.awardsSection(values.awards, headings.awards)
+            return generator.awardsSection(values.awards, headings.awards, config)
 
           default:
             return ''

@@ -1,12 +1,12 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
-import { breakableUrl, profileLinks } from './profiles.js'
+import { breakableUrl, profileLinks, joinContactInfo } from './profiles.js'
 import { accentColorToTeX } from './documentConfig.js'
 import { nfssFontPreamble, isFontSupported } from './fonts.js'
 import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
-  profileSection(basics) {
+  profileSection(basics, config) {
     if (!basics) {
       return ''
     }
@@ -15,9 +15,11 @@ const generator: Generator = {
       basics
     const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
 
-    const info = [email, phone, location.address, websiteLine, ...profileLinks(profiles)]
-      .filter(Boolean)
-      .join(' | ')
+    const info = joinContactInfo(
+      [email, phone, location.address, websiteLine, ...profileLinks(profiles)],
+      config.contactLayout,
+      ' | '
+    )
 
     // \MySlogan is defined in this template's own preamble for exactly this and
     // has gone unused since the extraction.
@@ -95,7 +97,7 @@ const generator: Generator = {
     `
   },
 
-  workSection(work, heading) {
+  workSection(work, heading, config) {
     if (!work) {
       return ''
     }
@@ -131,9 +133,9 @@ const generator: Generator = {
           dateRange = endDate
         }
 
-        if (highlights) {
+        if (highlights?.length) {
           dutyLines = source`
-            \\begin{itemize} \\itemsep -1pt
+            \\begin{itemize} \\itemsep ${config.bulletSpacing}pt
               ${highlights.map((duty) => `\\item ${duty}`)}
             \\end{itemize}
           `
@@ -162,7 +164,7 @@ const generator: Generator = {
       \\NewPart{${heading || 'Skills'}}{}
       ${skills.map((skill) => {
         const { name, keywords = [] } = skill
-        return `\\SkillsEntry{${name || ''}}{${keywords.join(', ')}}`
+        return `\\SkillsEntry{${name ? `${name}:` : ''}}{${keywords.join(', ')}}`
       })}
     `
   },
@@ -314,7 +316,7 @@ const generator: Generator = {
           \\large \\usefont{${sectionFontEncoding}}{${sectionFontFamily}}{m}{n}\\hfill \\textit{#1}
           \\par \\normalsize \\normalfont}
 
-      \\newcommand{\\NewPart}[1]{\\section*{\\uppercase{#1}}}
+      \\newcommand{\\NewPart}[1]{\\vspace{${config.sectionSpacing}pt}\\section*{\\uppercase{#1}}}
 
       \\newcommand{\\PersonalEntry}[2]{
           \\noindent\\hangindent=2em\\hangafter=0 % Indentation
@@ -322,11 +324,13 @@ const generator: Generator = {
           \\textit{#1}}                      % Entry name (birth, address, etc.)
           \\hspace{1.5em} #2 \\par}              % Entry value
 
-      \\newcommand{\\SkillsEntry}[2]{                % Same as \\PersonalEntry
+      % Not \parbox{\spacebox}{...}-based like its \PersonalEntry/\AwardsEntry
+      % siblings: a fixed-width box puts the category label and its keywords
+      % in what a parser reads as two separate fragments, the same defect as
+      % a two-column tabular (F5). Single-line concatenation instead.
+      \\newcommand{\\SkillsEntry}[2]{
           \\noindent\\hangindent=2em\\hangafter=0 % Indentation
-          \\parbox{\\spacebox}{                  % Box to align text
-          \\textit{#1}}                    % Entry name (birth, address, etc.)
-          \\hspace{1.5em} #2 \\par}              % Entry value
+          \\textbf{#1} #2 \\par}                 % Entry name, then its value
 
       \\newcommand{\\AwardsEntry}[2]{                % Same as \\PersonalEntry
           \\noindent\\hangindent=2em\\hangafter=0 % Indentation
@@ -388,25 +392,26 @@ function template9(values: FormValues, config: ResolvedDocumentConfig) {
       .map((section) => {
         switch (section) {
           case 'profile':
-            return generator.profileSection(values.basics)
+            return generator.profileSection(values.basics, config)
 
           case 'education':
             return generator.educationSection(
               values.education,
-              headings.education
+              headings.education,
+              config
             )
 
           case 'work':
-            return generator.workSection(values.work, headings.work)
+            return generator.workSection(values.work, headings.work, config)
 
           case 'skills':
-            return generator.skillsSection(values.skills, headings.skills)
+            return generator.skillsSection(values.skills, headings.skills, config)
 
           case 'projects':
-            return generator.projectsSection(values.projects, headings.projects)
+            return generator.projectsSection(values.projects, headings.projects, config)
 
           case 'awards':
-            return generator.awardsSection(values.awards, headings.awards)
+            return generator.awardsSection(values.awards, headings.awards, config)
 
           default:
             return ''

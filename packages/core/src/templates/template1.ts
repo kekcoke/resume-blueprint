@@ -1,11 +1,11 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
-import { breakableUrl, profileLinks } from './profiles.js'
+import { breakableUrl, profileLinks, joinContactInfo } from './profiles.js'
 import { nfssFontPreamble } from './fonts.js'
 import { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
-  profileSection(basics) {
+  profileSection(basics, config) {
     if (!basics) {
       return ''
     }
@@ -21,9 +21,11 @@ const generator: Generator = {
     const lines = [
       name ? `{\\Huge \\scshape {${name}}}` : '',
       label ? `{\\large \\scshape ${label}}` : '',
-      [address, email, phone, websiteLine, ...profileLinks(profiles)]
-        .filter(Boolean)
-        .join(' $\\cdot$ ')
+      joinContactInfo(
+        [address, email, phone, websiteLine, ...profileLinks(profiles)],
+        config.contactLayout,
+        ' $\\cdot$ '
+      )
     ].filter(Boolean)
 
     const header = lines.join('\\\\\n  ') + (lines.length > 1 ? '\\\\' : '')
@@ -110,7 +112,7 @@ const generator: Generator = {
     `
   },
 
-  workSection(work, heading) {
+  workSection(work, heading, config) {
     if (!work) {
       return ''
     }
@@ -156,10 +158,10 @@ const generator: Generator = {
           summaryLine = `${summary}\\\\`
         }
 
-        if (highlights) {
+        if (highlights?.length) {
           highlightLines = source`
               \\vspace{-1mm}
-              \\begin{itemize} \\itemsep 1pt
+              \\begin{itemize} \\itemsep ${config.bulletSpacing}pt
                 ${highlights.map((highlight) => `\\item ${highlight}`)}
               \\end{itemize}
             `
@@ -180,17 +182,15 @@ const generator: Generator = {
       return ''
     }
 
-    // Both columns are p-columns so they wrap. An 'l' column typesets its cell on
-    // one unbreakable line, which for a real skill list means the tail runs off
-    // the right edge of the page and is simply gone — no warning, no error.
+    // One row per category, category and keywords in the same run of text —
+    // a two-column `tabular` put the label and its values in separate cells,
+    // which a parser reads as two unrelated fragments (F5).
     return source`
       \\header{${heading || 'Skills'}}
-      \\begin{tabular}{@{}p{7em}@{\\hspace{1em}}p{\\dimexpr\\linewidth-8em\\relax}@{}}
       ${skills.map((skill) => {
         const { name = 'Misc', keywords = [] } = skill
-        return `${name}: & ${keywords.join(', ')} \\\\`
+        return `\\textbf{${name}:} ${keywords.join(', ')} \\\\`
       })}
-      \\end{tabular}
       \\vspace{2mm}
     `
   },
@@ -278,7 +278,7 @@ const generator: Generator = {
     `
   },
 
-  resumeHeader() {
+  resumeHeader(config) {
     return stripIndent`
       %\\renewcommand{\\encodingdefault}{cg}
       %\\renewcommand{\\rmdefault}{lgrcmr}
@@ -300,8 +300,8 @@ const generator: Generator = {
       }
 
       \\newcommand{\\header} [1] {
-          {\\hspace*{-18pt}\\vspace*{6pt} \\textsc{#1}}
-          \\vspace*{-6pt} \\lineunder
+          {\\hspace*{-18pt}\\vspace*{${config.sectionSpacing}pt} \\textsc{#1}}
+          \\vspace*{-${config.sectionSpacing}pt} \\lineunder
       }
 
       \\newcommand{\\employer} [3] {
@@ -319,7 +319,7 @@ const generator: Generator = {
 
       \\newenvironment{achievements}{
           \\begin{list}
-              {$\\bullet$}{\\topsep 0pt \\itemsep -2pt}}{\\vspace*{4pt}
+              {$\\bullet$}{\\topsep 0pt \\itemsep ${config.bulletSpacing}pt}}{\\vspace*{4pt}
           \\end{list}
       }
 
@@ -394,25 +394,26 @@ function template1(values: FormValues, config: ResolvedDocumentConfig) {
       .map((section) => {
         switch (section) {
           case 'profile':
-            return generator.profileSection(values.basics)
+            return generator.profileSection(values.basics, config)
 
           case 'education':
             return generator.educationSection(
               values.education,
-              headings.education
+              headings.education,
+              config
             )
 
           case 'work':
-            return generator.workSection(values.work, headings.work)
+            return generator.workSection(values.work, headings.work, config)
 
           case 'skills':
-            return generator.skillsSection(values.skills, headings.skills)
+            return generator.skillsSection(values.skills, headings.skills, config)
 
           case 'projects':
-            return generator.projectsSection(values.projects, headings.projects)
+            return generator.projectsSection(values.projects, headings.projects, config)
 
           case 'awards':
-            return generator.awardsSection(values.awards, headings.awards)
+            return generator.awardsSection(values.awards, headings.awards, config)
 
           default:
             return ''

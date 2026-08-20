@@ -1,11 +1,11 @@
 import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
-import { breakableUrl, profileLinks } from './profiles.js'
+import { breakableUrl, profileLinks, joinContactInfo } from './profiles.js'
 import { isFontSupported, georgiaFontspecTarget, georgiaFileBasename } from './fonts.js'
 import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
-  profileSection(basics) {
+  profileSection(basics, config) {
     if (!basics) {
       return ''
     }
@@ -44,7 +44,9 @@ const generator: Generator = {
       ${name && info.length > 1 ? '\\\\' : ''}
       \\vspace{2mm}
       ${labelLine}
-      {\\fontsize{1em}{1em}\\fontspec[Path = fonts/]{\\mtlight} ${info.join(
+      {\\fontsize{1em}{1em}\\fontspec[Path = fonts/]{\\mtlight} ${joinContactInfo(
+        info,
+        config.contactLayout,
         ' -- '
       )}}
       \\end{center}
@@ -52,7 +54,7 @@ const generator: Generator = {
     `
   },
 
-  educationSection(education, heading) {
+  educationSection(education, heading, config) {
     if (!education) {
       return ''
     }
@@ -61,6 +63,7 @@ const generator: Generator = {
       % Chapter: Education
       % ------------------
 
+      \\vspace{${config.sectionSpacing}pt}
       \\chap{${heading ? heading.toUpperCase() : 'EDUCATION'}}{
 
       ${education.map((school) => {
@@ -94,6 +97,7 @@ const generator: Generator = {
               {${
                 score
                   ? `\\begin{newitemize}
+                  \\setlength\\itemsep{${config.bulletSpacing}pt}
                   \\item ${score ? `GPA: ${score}` : ''}
                 \\end{newitemize}`
                   : ''
@@ -105,7 +109,7 @@ const generator: Generator = {
     `
   },
 
-  workSection(work, heading) {
+  workSection(work, heading, config) {
     if (!work) {
       return ''
     }
@@ -113,6 +117,7 @@ const generator: Generator = {
     return source`
       % Chapter: Work Experience
       % ------------------------
+      \\vspace{${config.sectionSpacing}pt}
       \\chap{${heading ? heading.toUpperCase() : 'EXPERIENCE'}}{
 
       ${work.map((job) => {
@@ -143,6 +148,7 @@ const generator: Generator = {
         if (highlights.length) {
           dutyLines = source`
             \\begin{newitemize}
+              \\setlength\\itemsep{${config.bulletSpacing}pt}
               ${highlights.map((duty) => `\\item {${duty}}`)}
             \\end{newitemize}
             `
@@ -161,7 +167,7 @@ const generator: Generator = {
     `
   },
 
-  skillsSection(skills, heading) {
+  skillsSection(skills, heading, config) {
     if (!skills) {
       return ''
     }
@@ -170,20 +176,15 @@ const generator: Generator = {
       % Chapter: Skills
       % ------------------------
 
+      \\vspace{${config.sectionSpacing}pt}
       \\chap{${heading ? heading.toUpperCase() : 'SKILLS'}}{
       \\begin{newitemize}
+        \\setlength\\itemsep{${config.bulletSpacing}pt}
         ${skills.map((skill) => {
           const { name = '', keywords = [] } = skill
+          const keywordsLine = keywords.join(', ')
 
-          let item = ''
-
-          if (name) {
-            item += `${name}: `
-          }
-
-          if (keywords.length > 0) {
-            item += keywords.join(', ')
-          }
+          const item = name && keywordsLine ? `${name}: ${keywordsLine}` : name || keywordsLine
 
           return `\\item ${item}`
         })}
@@ -192,7 +193,7 @@ const generator: Generator = {
     `
   },
 
-  projectsSection(projects, heading) {
+  projectsSection(projects, heading, config) {
     if (!projects) {
       return ''
     }
@@ -201,6 +202,7 @@ const generator: Generator = {
       % Chapter: Projects
       % ------------------------
 
+      \\vspace{${config.sectionSpacing}pt}
       \\chap{${heading ? heading.toUpperCase() : 'PROJECTS'}}{
 
         ${projects.map((project) => {
@@ -228,7 +230,7 @@ const generator: Generator = {
     `
   },
 
-  awardsSection(awards, heading) {
+  awardsSection(awards, heading, config) {
     if (!awards) {
       return ''
     }
@@ -237,6 +239,7 @@ const generator: Generator = {
       % Chapter: Awards
       % ------------------------
 
+      \\vspace{${config.sectionSpacing}pt}
       \\chap{${heading ? heading.toUpperCase() : 'AWARDS'}}{
 
         ${awards.map((award) => {
@@ -340,25 +343,26 @@ function template6(values: FormValues, config: ResolvedDocumentConfig) {
       .map((section) => {
         switch (section) {
           case 'profile':
-            return generator.profileSection(values.basics)
+            return generator.profileSection(values.basics, config)
 
           case 'education':
             return generator.educationSection(
               values.education,
-              headings.education
+              headings.education,
+              config
             )
 
           case 'work':
-            return generator.workSection(values.work, headings.work)
+            return generator.workSection(values.work, headings.work, config)
 
           case 'skills':
-            return generator.skillsSection(values.skills, headings.skills)
+            return generator.skillsSection(values.skills, headings.skills, config)
 
           case 'projects':
-            return generator.projectsSection(values.projects, headings.projects)
+            return generator.projectsSection(values.projects, headings.projects, config)
 
           case 'awards':
-            return generator.awardsSection(values.awards, headings.awards)
+            return generator.awardsSection(values.awards, headings.awards, config)
 
           default:
             return ''
