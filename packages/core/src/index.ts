@@ -36,7 +36,8 @@ export {
 } from './templates/documentConfig.js'
 export { FONT_FAMILIES, UNSUPPORTED_FONTS, isFontSupported } from './templates/fonts.js'
 export type { FontFamily } from './templates/fonts.js'
-export { stripCitations, countCitations } from './import/citations.js'
+export { stripCitations, countCitations, findCitations, citationWarnings } from './import/citations.js'
+export type { CitationSite } from './import/citations.js'
 export { profileToBlueprint, ProfileParseError } from './import/profile.js'
 export type { ProfileImportResult } from './import/profile.js'
 
