@@ -405,6 +405,25 @@ normalizer, not an escape step, and must not violate invariant 1.
 
 **Conflicts.** Needs the schema stable — run after F6. Otherwise isolated.
 
+**Addendum, written while implementing.** Two corrections to the paragraph above, from
+measuring the corpus rather than trusting this note: it is **98** `[cite: …]` markers
+across the three profiles, not 92 (that was a line count), and **`[cite_start]` appears
+in none of them** — only in `external_feedback.md`. Refs also include hyphenated ranges
+(`[cite: 121, 127-129, 137-139]`). Both marker families are handled regardless, since the
+files share an upstream generator.
+
+The stripper guards **only the import path**, by design — stripping is content
+normalization, not escaping, and doing it at render time would make the PDF silently
+disagree with the stored blueprint. So a blueprint that acquires markers another way (an
+agent assembling JSON by hand rather than calling `resume_import`) typesets them
+verbatim. `findCitations`/`citationWarnings` is the guard for that: `validate`, `render`,
+and `tex` report the sites on both CLI and MCP, and never rewrite anything.
+
+Detection runs on the blueprint, never on generated TeX — `[cite: 1, 2, 3]` survives
+`escapeLatex` byte-identical but `[cite_start]` becomes `[cite\_start]`, so a scan of the
+output would find only one family. `packages/http` has no guard: it has no validate route
+and both render routes return raw PDF bytes with no slot for a warning.
+
 ---
 
 ## F9 — `blueprintToText` · P3 · small

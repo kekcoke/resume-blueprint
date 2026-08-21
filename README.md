@@ -62,6 +62,22 @@ Warnings are not noise — they name every line the parser could not map and eve
 reading it had to assume (which side of `**A:** B` was the school, whether a `###`
 held the employer or the job title). `--strict` exits 1 when any were raised.
 
+`validate`, `tex`, and `render` warn separately about leftover `[cite: 1, 2, 3]`
+placeholders anywhere in a blueprint:
+
+```
+$ resume validate blueprint.json
+blueprint is valid
+warning: citation artifacts at 2 sites; these typeset as literal text
+  basics.summary carries 1 citation artifact
+  work[0].highlights[0] carries 1 citation artifact
+```
+
+The importer strips these, so an imported blueprint is clean. This catches the ones
+that arrive another way — hand-edited JSON, or an agent that parsed a profile itself
+instead of calling `import`. Nothing is rewritten: a placeholder is legal content, so
+the blueprint stays valid and `--strict` is what turns the warning into a gate.
+
 ## Running the protocols
 
 Both adapters read and write the same store, `$RESUME_BLUEPRINT_HOME` (default
@@ -92,6 +108,11 @@ Sixteen tools: `resume_list`, `resume_get`, `resume_create`, `resume_patch`,
 `resume_import` takes the markdown itself, not a path — the agent already has file
 tools, and no tool on this server reads a caller-supplied path. It stores nothing;
 pass its `blueprint` to `resume_create` once its `warnings` look acceptable.
+
+`resume_validate`, `resume_render`, and `resume_tex` carry an optional `warnings`
+array reporting leftover `[cite: …]` placeholders in the content, present only when
+there are any. `resume_validate` still returns `valid: true` — a placeholder is legal
+content, not a schema violation.
 
 **Dev loop: rebuild, then restart the server.** A running server holds
 `@resume-blueprint/core` in module memory, so after `npm run build` it keeps rendering
@@ -316,7 +337,7 @@ survives into the generated TeX and that nothing executes during a real compile.
 npm test
 ```
 
-499 tests. Covers the sanitizer, golden `.tex` snapshots for all ten templates, a real
+519 tests. Covers the sanitizer, golden `.tex` snapshots for all ten templates, a real
 compile of each with page-count assertions, the adversarial fixture, the master-profile
 importer, and the parse-fidelity harness described under
 [Choosing a template](#choosing-a-template).
