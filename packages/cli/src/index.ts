@@ -12,7 +12,8 @@ import {
   TectonicError,
   TEMPLATE_PROFILES,
   profileToBlueprint,
-  ProfileParseError
+  ProfileParseError,
+  citationWarnings
 } from '@resume-blueprint/core'
 
 const USAGE = `resume — render and validate resume blueprints
@@ -37,7 +38,7 @@ Options:
       --font-size <pt>   10, 11, or 12. Merges into document.
       --margin <length>  e.g. "0.75in", "2cm"; clamped to a 0.5in floor. Merges into document.
       --line-spacing <n> 1.0-1.15; clamped. Merges into document.
-      --strict           import only: exit 1 if the parse raised any warning.
+      --strict           exit 1 if anything warned (import, validate, tex, render).
   -h, --help             Show this help.
 
 Examples:
@@ -112,6 +113,42 @@ function parseNumberFlag(name: string, raw: string): number {
   const n = Number(raw)
   if (!Number.isFinite(n)) throw new CliError(`${name} must be a number, got "${raw}"`)
   return n
+}
+
+/**
+ * Citation artifacts that will typeset into the output, as warning lines.
+ *
+ * Detected on the PARSED blueprint, never on the generated .tex: the two marker
+ * families survive escaping differently -- `[cite: 1, 2, 3]` passes through
+ * byte-identical while `[cite_start]` becomes `[cite\\_start]` -- so a scan of
+ * the output would find only one of them. Re-parsing costs nothing on a
+ * document this size and keeps detection on exactly what renders.
+ *
+ * Returns nothing for input that does not parse; the caller is about to report
+ * the validation failure, and a citation warning on top of it is noise.
+ */
+function citationsIn(blueprint: unknown): string[] {
+  const parsed = BlueprintSchema.safeParse(blueprint)
+  return parsed.success ? citationWarnings(parsed.data) : []
+}
+
+/**
+ * Warnings go to stderr, never stdout: stdout is the data channel, and
+ * `resume tex x.json > out.tex` must not pick up chatter.
+ *
+ * The wording is about the BLUEPRINT, not about this particular output file,
+ * and the same on every command. A site in an unrendered corner -- a heading
+ * override for a section with no content -- does not reach today's PDF but is
+ * still contamination waiting for that section to be filled in. Claiming
+ * "typeset into this document" would have been false for exactly that case.
+ */
+function reportCitations(warnings: string[]): void {
+  if (!warnings.length) return
+  const n = warnings.length
+  process.stderr.write(
+    `warning: citation artifacts at ${n} site${n === 1 ? '' : 's'}; these typeset as literal text\n`
+  )
+  for (const warning of warnings) process.stderr.write(`  ${warning}\n`)
 }
 
 async function emit(data: Buffer | string, output?: string): Promise<void> {
@@ -202,13 +239,22 @@ async function main(argv: string[]): Promise<number> {
         return 1
       }
       process.stderr.write('blueprint is valid\n')
-      return 0
+
+      // Not a validation failure -- a citation artifact is legal content that
+      // happens to be a leftover placeholder, so `valid` stands and this is a
+      // warning. --strict is what turns it into a gate.
+      const warnings = citationWarnings(result.data)
+      reportCitations(warnings)
+      return values.strict && warnings.length ? 1 : 0
     }
 
     case 'tex': {
       const { texDoc } = blueprintToTex(blueprint)
       await emit(texDoc, values.output)
-      return 0
+
+      const warnings = citationsIn(blueprint)
+      reportCitations(warnings)
+      return values.strict && warnings.length ? 1 : 0
     }
 
     case 'render': {
@@ -217,7 +263,10 @@ async function main(argv: string[]): Promise<number> {
         keepTempDir: values['keep-temp']
       })
       await emit(pdf, values.output)
-      return 0
+
+      const warnings = citationsIn(blueprint)
+      reportCitations(warnings)
+      return values.strict && warnings.length ? 1 : 0
     }
 
     default:

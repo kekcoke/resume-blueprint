@@ -352,3 +352,75 @@ describe('import', () => {
     assert.match(stdout, /resume import <profile\.md>/)
   })
 })
+
+describe('citation warnings', () => {
+  /** Written to a temp file per test rather than piped, so the `-o` and
+   *  redirect paths are both exercised the way a user hits them. */
+  const DIRTY = JSON.stringify({
+    basics: { name: 'Ada[cite: 1, 2, 3]', summary: '[cite_start]Led the group.' },
+    headings: { work: 'Experience[cite: 5]' }
+  })
+
+  const validateDirty = () => invoke(process.execPath, [BIN, 'validate', '-'], DIRTY)
+
+  test('validate reports artifacts on stderr while still calling the blueprint valid', async () => {
+    // A leftover placeholder is legal content, not a schema violation, so
+    // `valid` stands and this is a warning rather than an error.
+    const { code, stdout, stderr } = await validateDirty()
+
+    assert.equal(code, 0)
+    assert.match(stderr, /blueprint is valid/)
+    assert.match(stderr, /citation artifacts at 3 sites/)
+    assert.match(stderr, /basics\.name carries 1 citation artifact/)
+    assert.match(stderr, /headings\.work carries 1 citation artifact/)
+    assert.equal(stdout, '')
+  })
+
+  test('tex keeps stdout pure TeX, warnings on stderr', async () => {
+    // `resume tex x.json > out.tex` must not weld status chatter into the
+    // document. This is the case that decides warnings go to stderr.
+    const { code, stdout, stderr } = await invoke(process.execPath, [BIN, 'tex', '-'], DIRTY)
+
+    assert.equal(code, 0)
+    assert.match(stderr, /citation artifacts at 3 sites/)
+    assert.doesNotMatch(stdout, /warning:/)
+    assert.match(stdout, /documentclass/)
+  })
+
+  test('--strict turns citation warnings into a non-zero exit', async () => {
+    const lenient = await validateDirty()
+    const strict = await invoke(process.execPath, [BIN, 'validate', '-', '--strict'], DIRTY)
+
+    assert.equal(lenient.code, 0)
+    assert.equal(strict.code, 1)
+    // Still reported as valid -- --strict is a gate for the caller's script,
+    // not a reclassification of the blueprint.
+    assert.match(strict.stderr, /blueprint is valid/)
+  })
+
+  test('a clean blueprint says nothing at all', async () => {
+    const { code, stderr } = await cli('validate', SAMPLE)
+
+    assert.equal(code, 0)
+    assert.doesNotMatch(stderr, /citation/)
+  })
+
+  test('--strict on a clean blueprint still exits 0', async () => {
+    const { code } = await cli('validate', SAMPLE, '--strict')
+    assert.equal(code, 0)
+  })
+
+  test('a schema-invalid blueprint reports the error without piling on', async () => {
+    // The caller is about to go fix a type error; a citation warning stacked on
+    // top of it is noise, and `citationsIn` returns nothing when parsing fails.
+    const { code, stderr } = await invoke(
+      process.execPath,
+      [BIN, 'validate', '-'],
+      JSON.stringify({ basics: { name: 123 }, work: [{ summary: 'x[cite: 1]' }] })
+    )
+
+    assert.equal(code, 1)
+    assert.match(stderr, /invalid blueprint:/)
+    assert.doesNotMatch(stderr, /citation/)
+  })
+})
