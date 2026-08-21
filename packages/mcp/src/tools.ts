@@ -13,6 +13,7 @@ import {
   HONOURED_DOCUMENT_FIELDS,
   resolveDocumentConfig,
   profileToBlueprint,
+  citationWarnings,
   type DocumentConfig
 } from '@resume-blueprint/core'
 import { CORE_BUILD } from './buildStamp.js'
@@ -98,6 +99,29 @@ function withOverrides(
     result.document = { ...(blueprint.document as object | undefined), ...document }
   }
   return result
+}
+
+/**
+ * Folds citation warnings into a tool result, or leaves it untouched.
+ *
+ * Detected on the blueprint rather than on generated TeX: `[cite: 1, 2, 3]`
+ * survives escapeLatex byte-identical but `[cite_start]` becomes
+ * `[cite\_start]`, so a scan of the output would find only one family.
+ *
+ * The text channel gets them too. `structuredContent` is what a schema-aware
+ * client reads, but the text is what an agent actually looks at -- same
+ * reasoning as resume_import.
+ */
+function withCitationWarnings(
+  blueprint: unknown,
+  text: string
+): { text: string; warnings?: string[] } {
+  const warnings = citationWarnings(blueprint)
+  if (!warnings.length) return { text }
+
+  const n = warnings.length
+  const lead = `warning: citation artifacts at ${n} site${n === 1 ? '' : 's'}; these typeset as literal text`
+  return { text: `${text}\n\n${lead}\n${warnings.map((w) => `  ${w}`).join('\n')}`, warnings }
 }
 
 export function registerTools(server: McpServer): void {
@@ -300,8 +324,9 @@ export function registerTools(server: McpServer): void {
     // false either way. Only a non-validation error (unexpected) propagates
     // out to the SDK's own catch-all.
     async ({ blueprint }) => {
+      let parsed
       try {
-        parseBlueprint(blueprint)
+        parsed = parseBlueprint(blueprint)
       } catch (error) {
         if (!isValidationError(error)) throw error
         const errors = formatValidationError(error)
@@ -311,9 +336,12 @@ export function registerTools(server: McpServer): void {
           isError: false
         }
       }
+      // `valid` stands: a leftover placeholder is legal content, not a schema
+      // violation. It is reported alongside the pass, not instead of it.
+      const { text, warnings } = withCitationWarnings(parsed, 'blueprint is valid')
       return {
-        content: [{ type: 'text', text: 'blueprint is valid' }],
-        structuredContent: { valid: true }
+        content: [{ type: 'text', text }],
+        structuredContent: { valid: true, ...(warnings && { warnings }) }
       }
     }
   )
@@ -359,14 +387,20 @@ export function registerTools(server: McpServer): void {
         const byteSize = pdf.length
         const kb = Math.round(byteSize / 1024)
 
+        const { text, warnings } = withCitationWarnings(
+          blueprint,
+          `${pageCount} page${pageCount === 1 ? '' : 's'}, ${kb}KB, at ${path} (${CORE_BUILD})`
+        )
+
         return {
-          content: [
-            {
-              type: 'text',
-              text: `${pageCount} page${pageCount === 1 ? '' : 's'}, ${kb}KB, at ${path} (${CORE_BUILD})`
-            }
-          ],
-          structuredContent: { path, pageCount, byteSize, coreBuild: CORE_BUILD }
+          content: [{ type: 'text', text }],
+          structuredContent: {
+            path,
+            pageCount,
+            byteSize,
+            coreBuild: CORE_BUILD,
+            ...(warnings && { warnings })
+          }
         }
       } catch (error) {
         return toToolError(error)
@@ -388,9 +422,13 @@ export function registerTools(server: McpServer): void {
         const { blueprint } = await store.get(id)
         const input = withOverrides(blueprint as Record<string, unknown>, template, document)
         const { texDoc } = blueprintToTex(input)
+        // The TeX itself goes in the text channel, so warnings ride only in
+        // structuredContent here -- appending them to a document the caller is
+        // about to write to disk would corrupt it.
+        const warnings = citationWarnings(blueprint)
         return {
           content: [{ type: 'text', text: texDoc }],
-          structuredContent: { texDoc }
+          structuredContent: { texDoc, ...(warnings.length && { warnings }) }
         }
       } catch (error) {
         return toToolError(error)

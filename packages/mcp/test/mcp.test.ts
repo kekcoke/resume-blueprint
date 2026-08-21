@@ -189,6 +189,69 @@ describe('invalid tool args', () => {
   })
 })
 
+describe('citation warnings', () => {
+  const DIRTY = {
+    basics: { name: 'Ada[cite: 1, 2, 3]', summary: '[cite_start]Led the group.' },
+    work: [{ name: 'Analytical Engine Works', position: 'Engineer', highlights: ['Shipped it.'] }],
+    headings: { work: 'Experience[cite: 5]' }
+  }
+
+  test('resume_validate reports artifacts while still returning valid: true', async () => {
+    // A leftover placeholder is legal content, not a schema violation.
+    const result = await client.callTool({ name: 'resume_validate', arguments: { blueprint: DIRTY } })
+
+    const structured = result.structuredContent as { valid: boolean; warnings?: string[] }
+    assert.equal(structured.valid, true)
+    assert.deepEqual(structured.warnings, [
+      'basics.name carries 1 citation artifact',
+      'basics.summary carries 1 citation artifact',
+      'headings.work carries 1 citation artifact'
+    ])
+
+    // The text channel carries them too -- structuredContent is what a
+    // schema-aware client reads, the text is what an agent looks at.
+    const text = (result.content as Array<{ text: string }>)[0]!.text
+    assert.match(text, /blueprint is valid/)
+    assert.match(text, /citation artifacts at 3 sites/)
+  })
+
+  test('a clean blueprint omits the field entirely rather than sending []', async () => {
+    // `warnings` is optional on the output schema on purpose: the SDK enforces
+    // these schemas, and a required field would reject every clean response
+    // unless each handler remembered to emit an empty array.
+    const result = await client.callTool({
+      name: 'resume_validate',
+      arguments: { blueprint: { basics: { name: 'Ada Lovelace' } } }
+    })
+
+    const structured = result.structuredContent as { valid: boolean; warnings?: string[] }
+    assert.deepEqual(structured, { valid: true })
+  })
+
+  test('resume_tex carries warnings in structuredContent but never in the TeX', async () => {
+    // The text channel IS the document here. Appending a warning to it would
+    // corrupt the file the caller is about to write to disk.
+    await client.callTool({ name: 'resume_create', arguments: { id: 'dirty-tex', blueprint: DIRTY } })
+    const result = await client.callTool({ name: 'resume_tex', arguments: { id: 'dirty-tex' } })
+
+    const { texDoc, warnings } = result.structuredContent as { texDoc: string; warnings?: string[] }
+    assert.ok(warnings && warnings.length === 3)
+    assert.ok(!texDoc.includes('warning:'), 'the TeX document must stay uncontaminated')
+    assert.equal((result.content as Array<{ text: string }>)[0]!.text, texDoc)
+  })
+
+  test('an invalid blueprint reports the schema error without piling on', async () => {
+    const result = await client.callTool({
+      name: 'resume_validate',
+      arguments: { blueprint: { basics: { name: 123 }, work: [{ summary: 'x[cite: 1]' }] } }
+    })
+
+    const structured = result.structuredContent as { valid: boolean; warnings?: string[] }
+    assert.equal(structured.valid, false)
+    assert.equal(structured.warnings, undefined)
+  })
+})
+
 describe('resume_import', () => {
   const PROFILE = [
     '# Master Profile: Numerical Analyst',

@@ -162,9 +162,16 @@ export const ResumeSectionRemoveOutput = z.object(IdRevOutput)
 export const ResumeRemoveOutput = z.object(IdRevOutput)
 export const ResumeRevertOutput = z.object(IdRevOutput)
 
+/** Citation artifacts left in the content by a profile generator. Present only
+ *  when there are any, never an empty array: these output schemas are enforced
+ *  by the SDK's validateToolOutput, and a required field would reject every
+ *  clean response unless each handler remembered to emit `[]`. */
+const CitationWarnings = { warnings: z.array(z.string()).optional() }
+
 export const ResumeValidateOutput = z.object({
   valid: z.boolean(),
-  errors: z.string().optional()
+  errors: z.string().optional(),
+  ...CitationWarnings
 })
 
 export const ResumeRenderOutput = z.object({
@@ -172,11 +179,13 @@ export const ResumeRenderOutput = z.object({
   pageCount: z.number().int().nonnegative(),
   byteSize: z.number().int().nonnegative(),
   /** Which core build produced this PDF. See buildStamp.ts. */
-  coreBuild: z.string()
+  coreBuild: z.string(),
+  ...CitationWarnings
 })
 
 export const ResumeTexOutput = z.object({
-  texDoc: z.string()
+  texDoc: z.string(),
+  ...CitationWarnings
 })
 
 export const ResumeHistoryOutput = z.object({
