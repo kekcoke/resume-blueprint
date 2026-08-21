@@ -5,6 +5,7 @@ import * as store from '@resume-blueprint/store'
 import {
   parseBlueprint,
   blueprintToTex,
+  blueprintToText,
   renderBlueprint,
   isValidationError,
   formatValidationError,
@@ -30,6 +31,7 @@ import {
   ResumeValidateInput,
   ResumeRenderInput,
   ResumeTexInput,
+  ResumeTextInput,
   ResumeHistoryInput,
   ResumeDiffInput,
   ResumeRevertInput,
@@ -46,6 +48,7 @@ import {
   ResumeValidateOutput,
   ResumeRenderOutput,
   ResumeTexOutput,
+  ResumeTextOutput,
   ResumeHistoryOutput,
   ResumeDiffOutput,
   ResumeRevertOutput,
@@ -429,6 +432,34 @@ export function registerTools(server: McpServer): void {
         return {
           content: [{ type: 'text', text: texDoc }],
           structuredContent: { texDoc, ...(warnings.length && { warnings }) }
+        }
+      } catch (error) {
+        return toToolError(error)
+      }
+    }
+  )
+
+  server.registerTool(
+    'resume_text',
+    {
+      title: 'Get plain-text resume',
+      description:
+        'Renders a stored blueprint to plain text, honouring sections and headings. No LaTeX escaping -- ' +
+        'plain text is not TeX.',
+      inputSchema: ResumeTextInput,
+      outputSchema: ResumeTextOutput,
+      annotations: { readOnlyHint: true }
+    },
+    async ({ id }) => {
+      try {
+        const { blueprint } = await store.get(id)
+        // No template/document override to merge -- unlike resume_tex, this
+        // has no ResolvedDocumentConfig in its call path to receive one.
+        const text = blueprintToText(blueprint)
+        const warnings = citationWarnings(blueprint)
+        return {
+          content: [{ type: 'text', text }],
+          structuredContent: { text, ...(warnings.length && { warnings }) }
         }
       } catch (error) {
         return toToolError(error)
