@@ -1,7 +1,13 @@
 import { test, describe } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { stripCitations, countCitations } from '../dist/import/citations.js'
+import {
+  stripCitations,
+  countCitations,
+  findCitations,
+  citationWarnings
+} from '../dist/import/citations.js'
+import { parseBlueprint } from '../dist/schema.js'
 import { escapeLatex } from '../dist/sanitize.js'
 
 /**
@@ -140,5 +146,96 @@ describe('countCitations', () => {
     assert.equal(countCitations(text), 2)
     assert.equal(stripCitations(text), 'a b')
     assert.equal(countCitations(text), 2)
+  })
+})
+
+describe('findCitations', () => {
+  /** Parsed, because that is what the adapters detect on -- and it is what
+   *  actually reaches a template. */
+  const dirty = () =>
+    parseBlueprint({
+      basics: { name: 'Ada[cite: 1, 2, 3]', summary: '[cite_start]Led the group.' },
+      work: [{ name: 'Clean Co', highlights: ['a[cite: 5]', 'clean', 'b[cite: 1][cite: 2]'] }],
+      headings: { work: 'Experience[cite: 5]' },
+      document: { margin: '0.75in', accentColor: '#4A90D9' }
+    })
+
+  test('reports a path per contaminated string, with array indices in brackets', () => {
+    assert.deepEqual(findCitations(dirty()), [
+      { path: 'basics.name', count: 1 },
+      { path: 'basics.summary', count: 1 },
+      { path: 'work[0].highlights[0]', count: 1 },
+      { path: 'work[0].highlights[2]', count: 2 },
+      { path: 'headings.work', count: 1 }
+    ])
+  })
+
+  test('walks headings, which the ATS harness skips', () => {
+    // Heading overrides are free user text that renders into the document, so
+    // they are the one control-adjacent key worth checking.
+    const sites = findCitations(parseBlueprint({ headings: { work: 'Experience[cite: 5]' } }))
+    assert.deepEqual(sites, [{ path: 'headings.work', count: 1 }])
+  })
+
+  test('skips sections, selectedTemplate, and document', () => {
+    // Routing enums and validated config: no free text, so nothing to find.
+    // Walking them would be harmless but is pointless, and the skip documents
+    // which fields are closed by construction.
+    const sites = findCitations(
+      parseBlueprint({ selectedTemplate: 3, document: { margin: '0.75in', accentColor: '#4A90D9' } })
+    )
+    assert.deepEqual(sites, [])
+  })
+
+  test('skips those keys only at the root', () => {
+    // A nested key that happens to be named `document` is ordinary content.
+    const sites = findCitations({ work: [{ document: 'Spec sheet[cite: 5]' }] })
+    assert.deepEqual(sites, [{ path: 'work[0].document', count: 1 }])
+  })
+
+  test('returns nothing for a clean blueprint', () => {
+    assert.deepEqual(findCitations(parseBlueprint({ basics: { name: 'Ada Lovelace' } })), [])
+  })
+
+  test('tolerates non-object input rather than throwing', () => {
+    // Callers include MCP handlers whose try/catch would turn an exception into
+    // a tool error rather than a warning.
+    for (const value of [undefined, null, 42, 'a string[cite: 1]', [], {}]) {
+      assert.doesNotThrow(() => findCitations(value))
+    }
+    assert.deepEqual(findCitations(null), [])
+  })
+
+  test('agrees with stripCitations: everything it reports is removable', () => {
+    // The property that makes the warning actionable. A detector with its own,
+    // broader regex would flag things the stripper leaves alone -- an
+    // unterminated `see [cite: 1, 2` -- and the user could do nothing about it.
+    const blueprint = dirty()
+    for (const { path } of findCitations(blueprint)) {
+      const value = path
+        .split(/\.|\[(\d+)\]/)
+        .filter(Boolean)
+        .reduce<any>((node, step) => node[step], blueprint)
+      assert.notEqual(stripCitations(value), value, `${path} was reported but is not strippable`)
+      assert.equal(countCitations(stripCitations(value)), 0)
+    }
+  })
+
+  test('does not report what stripCitations deliberately leaves alone', () => {
+    assert.deepEqual(findCitations({ basics: { summary: 'see [cite: 1, 2' } }), [])
+    assert.deepEqual(findCitations({ basics: { summary: 'a [citation] needed' } }), [])
+  })
+})
+
+describe('citationWarnings', () => {
+  test('renders one sentence per site, singular and plural', () => {
+    assert.deepEqual(
+      citationWarnings({ basics: { name: 'Ada[cite: 1]' }, work: [{ summary: 'x[cite: 1][cite: 2]' }] }),
+      ['basics.name carries 1 citation artifact', 'work[0].summary carries 2 citation artifacts']
+    )
+  })
+
+  test('is empty for clean content, so callers can branch on length', () => {
+    assert.deepEqual(citationWarnings({ basics: { name: 'Ada Lovelace' } }), [])
   })
 })
