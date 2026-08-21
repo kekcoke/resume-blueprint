@@ -16,6 +16,7 @@ import {
   resolveDocumentConfig,
   profileToBlueprint,
   citationWarnings,
+  countPages,
   type CoverageReport,
   type DocumentConfig
 } from '@resume-blueprint/core'
@@ -60,14 +61,7 @@ import {
   ResumeImportOutput
 } from './schemas.js'
 import { toToolError } from './errors.js'
-import {
-  renderDir,
-  renderPath,
-  writeRenderFile,
-  pruneOldRenders,
-  countPages,
-  withRenderLock
-} from './render.js'
+import { renderDir, renderPath, writeRenderFile, pruneOldRenders, withRenderLock } from './render.js'
 import { assertReasonableDepth } from './validate.js'
 
 /** Actor recorded on every commit this server makes. */

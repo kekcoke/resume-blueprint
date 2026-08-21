@@ -339,6 +339,13 @@ const generator: Generator = {
     `
   },
 
+  // The %-comment block below is vendored verbatim from the upstream
+  // Deedy-Resume template and is emitted into every generated .tex file
+  // as-is (comments only, no logic) -- same stance as why template7's
+  // vendored moderncv is deliberately unstaged: preserve upstream history
+  // rather than editing it out. Its "Known Issues #1" (column overflow onto
+  // a second page) is not stale history -- it's a live constraint that F2's
+  // parse-fidelity/page-count gates actually catch.
   resumeHeader() {
     return stripIndent`
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

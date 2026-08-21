@@ -61,8 +61,7 @@ export async function readJsonBody(req: IncomingMessage, maxBytes = 5 * 1024 * 1
  * BEFORE `parseBlueprint` validates anything. `packages/store` is out of
  * scope for this gate, so — same as Gate 2 — the guard is applied at the
  * adapter boundary instead. A shared package for one 8-line helper is
- * disproportionate machinery (same reasoning as `countPages`'s duplication
- * in packages/mcp/src/render.ts), so it's copied by hand into each adapter.
+ * disproportionate machinery, so it's copied by hand into each adapter.
  *
  * The one deliberate adaptation from the MCP original: the thrown error is
  * tagged with `.httpStatus = 400` so it's picked up by the *first* check in

@@ -1,36 +1,6 @@
 import { mkdir, writeFile, readdir, stat, unlink } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { inflateSync } from 'node:zlib'
-
-/**
- * Duplicated from packages/core/test/render.test.ts's countPages(). Core's diff
- * must stay empty through Gate 2 (see docs/phase-2-plan-b.md), so this can't be
- * promoted to a shared export — keep the two in sync by hand if Tectonic's PDF
- * output shape ever changes.
- */
-export function countPages(pdf: Buffer): number {
-  const haystacks: string[] = [pdf.toString('latin1')]
-
-  const raw = pdf.toString('latin1')
-  const streamRe = /stream\r?\n/g
-  let match: RegExpExecArray | null
-
-  while ((match = streamRe.exec(raw)) !== null) {
-    const start = match.index + match[0].length
-    const end = raw.indexOf('endstream', start)
-    if (end === -1) continue
-    try {
-      haystacks.push(inflateSync(pdf.subarray(start, end)).toString('latin1'))
-    } catch {
-      // Not a zlib stream (fonts, images); nothing to read here.
-    }
-  }
-
-  const combined = haystacks.join('\n')
-  const pages = combined.match(/\/Type\s*\/Page(?![s])/g)
-  return pages ? pages.length : 0
-}
 
 /** `renders/`, sibling to `blueprints/`, under the store's home directory. */
 export function renderDir(home: string): string {

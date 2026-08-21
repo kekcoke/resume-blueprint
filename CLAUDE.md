@@ -4,19 +4,15 @@ Local-first resume service: a validated JSON Resume blueprint in, a typeset PDF 
 Built for local agents (Claude Code, Hermes) and workflows (n8n) to create and update
 resume blueprints over time.
 
-**Phase 1 is complete** (core + CLI, 44 tests green). Phase 2 is the store, MCP server,
-and HTTP adapter.
+**Phase 1 and Phase 2 are both complete** — core, CLI, the git-backed store, the MCP
+server, and the HTTP adapter all work end to end. Phase 2 took `docs/phase-2-plan-b.md`
+(Plan B): `@modelcontextprotocol/sdk` ^1.30.0 for MCP, core stayed on zod 3
+(`^3.23.8`) rather than migrating to 4. `docs/phase-2-plan.md` (Plan A, the zod-4 route)
+was not taken; both plan docs stay in the repo as historical reference, not a live
+decision — see F13 in `docs/next-features.md` for if/when the zod 4 migration happens.
 
-**Two mutually exclusive Phase 2 plans exist. Confirm which one is in play before writing
-any code** — they diverge on the first gate, so starting from the wrong one wastes work.
-
-| Plan | MCP SDK | zod | First gate |
-|---|---|---|---|
-| `docs/phase-2-plan.md` (A) | `@modelcontextprotocol/server` v2 | core migrated to 4.x | Gate 0: zod 4 migration |
-| `docs/phase-2-plan-b.md` (B) | `@modelcontextprotocol/sdk` 1.30.0 | core stays at 3.25.76 | Gate 1: the store |
-
-Gates 1 and 3 are identical in both. Only the MCP wiring and the zod decision differ.
-If the choice has not been stated, ask rather than guessing.
+Work has continued past Phase 2 since; `docs/next-features.md` is the current ordered
+backlog and the place to check what's in flight.
 
 ## Commands
 
@@ -81,7 +77,7 @@ This project was built across sessions, so rationale is deliberately durable:
 - **`git log`** — commit messages carry the reasoning for non-obvious decisions
 - **Source comments** — e.g. why `template9` uses `700bp` not `700px`, why template7's
   vendored moderncv is deliberately unstaged
-- **`README.md`** — setup, security model, and known gaps
+- **`README.md`** — setup, the CLI/MCP/HTTP surfaces, and the security model
 - **`docs/phase-2-plan.md`** / **`docs/phase-2-plan-b.md`** — the two Phase 2 plans; each
   is self-contained, with TDD sequences and validation gates
 

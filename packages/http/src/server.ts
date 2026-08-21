@@ -80,7 +80,13 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
   await match.route.handler(req, res, match.params)
 }
 
-/** Builds the HTTP server. `config` is currently unused here (consumed by index.ts for listen/bind) but kept for signature parity and future request-scoped config. */
+/**
+ * Builds the HTTP server. `config` is unused in the body today -- `index.ts`
+ * consumes it for listen/bind -- but the parameter stays for signature parity
+ * with the other adapters' constructors and for request-scoped config if that's
+ * ever needed. Reviewed under F12 (docs/next-features.md): kept deliberately,
+ * not dead weight.
+ */
 export function createServer(_config: Config): Server {
   return createHttpServer((req, res) => {
     // Defensive no-ops: without a listener, an 'error' event on either

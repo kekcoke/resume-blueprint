@@ -19,6 +19,7 @@ export type { Blueprint, BlueprintInput, DocumentConfig, SectionName } from './s
 export { escapeLatex, sanitizeUrl, sanitizeBlueprint } from './sanitize.js'
 export { compileTex, assetRoot, TectonicError } from './render/tectonic.js'
 export type { CompileOptions } from './render/tectonic.js'
+export { countPages } from './render/pageCount.js'
 export type {
   FormValues,
   Generator,
