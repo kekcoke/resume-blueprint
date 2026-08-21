@@ -471,6 +471,37 @@ trigger has already fired.** This is the only unmitigated correctness bug outsta
 Needs filesystem-level locking (git's `index.lock`, or `flock`). Touches only
 `packages/store`; no template or schema overlap.
 
+**Addendum, written while implementing.** Neither literal candidate mechanism named
+above was used. `flock` is a Linux util-linux CLI tool, not present on macOS (confirmed
+absent on the dev machine), and `flock(2)` has no Node binding without a native addon.
+Reusing git's actual `.git/index.lock` was also rejected — `commitFile()`'s own `git
+add`/`git commit` calls already touch that exact path, so locking there would race
+git's internal locking rather than avoid it. The mechanism actually used is the same
+*primitive* git's `index.lock` is built on: an atomic exclusive-create,
+`open(path, 'wx')` (`O_CREAT|O_EXCL`), against a distinct file, `<home>/.store.lock`.
+
+`withLock` (`packages/store/src/lock.ts`) now composes two layers: the original
+in-process FIFO queue, unchanged, plus this cross-process file lock underneath it.
+Every existing call site — `mutate`, `create`, `remove`, `revert`, `get`,
+`ensureRepoLocked` — already went through `withLock`, so the upgrade needed no changes
+to `index.ts`'s logic.
+
+Contention waits with capped exponential backoff (20ms → 200ms) up to a 35s timeout
+(chosen with ~5s margin over `git.ts`'s own 30s per-subprocess timeout), then throws
+the new `LockTimeoutError`, mapped to HTTP 503 and reported by name over MCP. Stale-lock
+recovery is deliberately fail-fast with no auto-recovery — no PID-liveness check, no
+mtime-based steal — matching git's own `index.lock` UX exactly: a lock orphaned by a
+killed process makes every later caller wait out the timeout and then get a clear error
+naming the file to inspect and delete. A best-effort `process.on('exit', ...)` hook
+covers graceful termination (e.g. Ctrl-C mid-commit) but not `SIGKILL` or a crash.
+
+Proven with a real cross-process test (`packages/store/test/cross-process-lock.test.ts`),
+not just an in-process one: two genuinely separate OS processes racing a conflicting
+patch resolve to exactly one winner, and eight processes racing unconstrained appends
+(no `expectedRev` at all) land all eight with zero losses — the case that actually
+distinguishes real serialization from processes that happened not to overlap. Test
+count 571 → 579.
+
 ### F12 — Doc drift and small cleanups · P2 · small
 
 - `CLAUDE.md:6-18` still says Phase 1 is complete and instructs the reader to stop and

@@ -394,7 +394,7 @@ survives into the generated TeX and that nothing executes during a real compile.
 npm test
 ```
 
-571 tests. Covers the sanitizer, golden `.tex` snapshots for all ten templates, a real
+579 tests. Covers the sanitizer, golden `.tex` snapshots for all ten templates, a real
 compile of each with page-count assertions, the adversarial fixture, the master-profile
 importer, job-description coverage, and the parse-fidelity harness described under
 [Choosing a template](#choosing-a-template).
