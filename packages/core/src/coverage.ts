@@ -375,22 +375,28 @@ function candidates(text: string, tokens: Token[]): Map<string, Candidate> {
 }
 
 /**
- * Drops any candidate that is fully contained in a longer one it always
- * co-occurs with.
+ * Drops any PHRASE fully contained in a longer phrase it always co-occurs with.
  *
- * `machine` appearing exactly as often as `machine learning` tells the reader
- * nothing the phrase did not already, and reporting both spends two of the
- * caller's `maxTerms` slots on one fact. A `machine` that also appears alone has
- * the higher count and survives.
+ * `machine learning` appearing exactly as often as `applied machine learning`
+ * tells the reader nothing the longer phrase did not already, and reporting
+ * both spends two of the caller's `maxTerms` slots on one fact.
+ *
+ * Single words are deliberately exempt, and that exemption was bought with a
+ * failing test. Suppressing them too meant a posting that said `Kubernetes
+ * clusters` exactly once reported `Kubernetes clusters` as missing from a
+ * resume that says `Ran Kubernetes in production` -- technically true, and it
+ * buried the fact the reader needed, which is that Kubernetes itself is
+ * covered. A bare technology name is the atom an applicant lists under skills;
+ * it is the most actionable row in the report and it stays.
  */
 function dropRedundant(found: Map<string, Candidate>): Candidate[] {
   const redundant = new Set<string>()
 
   for (const candidate of found.values()) {
-    if (candidate.n < 2) continue
+    if (candidate.n < 3) continue
     const parts = candidate.key.split(' ')
 
-    for (let n = 1; n < candidate.n; n += 1) {
+    for (let n = 2; n < candidate.n; n += 1) {
       for (let i = 0; i + n <= parts.length; i += 1) {
         const sub = parts.slice(i, i + n).join(' ')
         const inner = found.get(sub)
