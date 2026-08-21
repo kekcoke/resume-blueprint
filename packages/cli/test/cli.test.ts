@@ -243,6 +243,53 @@ describe('tex', () => {
   })
 })
 
+describe('text', () => {
+  test('emits plain text on stdout, honouring sections and headings', async () => {
+    const { code, stdout } = await cli('text', SAMPLE)
+
+    assert.equal(code, 0)
+    assert.doesNotMatch(stdout, /\\documentclass/)
+    assert.match(stdout, /^Ada Lovelace$/m)
+    assert.match(stdout, /^EDUCATION$/m)
+  })
+
+  test('--output writes to the given path and keeps stdout clean', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'resume-blueprint-cli-test-'))
+    try {
+      const out = join(dir, 'resume.txt')
+      const { code, stdout, stderr } = await cli('text', SAMPLE, '-o', out)
+
+      assert.equal(code, 0)
+      assert.equal(stdout, '')
+      assert.match(stderr, /wrote /)
+      assert.match(await readFile(out, 'utf8'), /^Ada Lovelace$/m)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  test('is unaffected by --template and --font: plain text has no template or document config', async () => {
+    const plain = await cli('text', SAMPLE)
+    const overridden = await cli('text', SAMPLE, '-t', '3', '--font', 'calibri')
+
+    assert.equal(overridden.code, 0)
+    assert.equal(overridden.stdout, plain.stdout)
+  })
+
+  test('reads from stdin via "-"', async () => {
+    const raw = await readFile(SAMPLE, 'utf8')
+    const { code, stdout } = await invoke(process.execPath, [BIN, 'text', '-'], raw)
+
+    assert.equal(code, 0)
+    assert.match(stdout, /^Ada Lovelace$/m)
+  })
+
+  test('text appears in the usage text', async () => {
+    const { stdout } = await cli('--help')
+    assert.match(stdout, /resume text <blueprint\.json>/)
+  })
+})
+
 describe('document flags', () => {
   test('--font-size merges into document and reaches the TeX source', async () => {
     const { code, stdout } = await cli('tex', SAMPLE, '-t', '3', '--font-size', '12')
@@ -385,6 +432,15 @@ describe('citation warnings', () => {
     assert.match(stderr, /citation artifacts at 3 sites/)
     assert.doesNotMatch(stdout, /warning:/)
     assert.match(stdout, /documentclass/)
+  })
+
+  test('text keeps stdout pure plain text, warnings on stderr', async () => {
+    const { code, stdout, stderr } = await invoke(process.execPath, [BIN, 'text', '-'], DIRTY)
+
+    assert.equal(code, 0)
+    assert.match(stderr, /citation artifacts at 3 sites/)
+    assert.doesNotMatch(stdout, /warning:/)
+    assert.match(stdout, /Ada\[cite: 1, 2, 3\]/)
   })
 
   test('--strict turns citation warnings into a non-zero exit', async () => {

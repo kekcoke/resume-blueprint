@@ -6,6 +6,7 @@ import {
   BlueprintSchema,
   TEMPLATE_IDS,
   blueprintToTex,
+  blueprintToText,
   formatValidationError,
   isValidationError,
   renderBlueprint,
@@ -22,6 +23,7 @@ Usage:
   resume render <blueprint.json> [options]
   resume validate <blueprint.json>
   resume tex <blueprint.json> [options]
+  resume text <blueprint.json> [options]
   resume import <profile.md> [options]
   resume list-templates
 
@@ -38,7 +40,7 @@ Options:
       --font-size <pt>   10, 11, or 12. Merges into document.
       --margin <length>  e.g. "0.75in", "2cm"; clamped to a 0.5in floor. Merges into document.
       --line-spacing <n> 1.0-1.15; clamped. Merges into document.
-      --strict           exit 1 if anything warned (import, validate, tex, render).
+      --strict           exit 1 if anything warned (import, validate, tex, text, render).
   -h, --help             Show this help.
 
 Examples:
@@ -251,6 +253,15 @@ async function main(argv: string[]): Promise<number> {
     case 'tex': {
       const { texDoc } = blueprintToTex(blueprint)
       await emit(texDoc, values.output)
+
+      const warnings = citationsIn(blueprint)
+      reportCitations(warnings)
+      return values.strict && warnings.length ? 1 : 0
+    }
+
+    case 'text': {
+      const text = blueprintToText(blueprint)
+      await emit(text, values.output)
 
       const warnings = citationsIn(blueprint)
       reportCitations(warnings)
