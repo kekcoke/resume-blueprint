@@ -31,6 +31,7 @@ const BIN = resolve(HERE, '..', 'dist', 'index.js')
 const FIXTURES = resolve(HERE, '..', '..', '..', 'fixtures')
 const SAMPLE = resolve(FIXTURES, 'sample.json')
 const PROFILE = resolve(FIXTURES, 'profile.md')
+const JOB = resolve(FIXTURES, 'job-description.md')
 
 interface Run {
   code: number
@@ -287,6 +288,65 @@ describe('text', () => {
   test('text appears in the usage text', async () => {
     const { stdout } = await cli('--help')
     assert.match(stdout, /resume text <blueprint\.json>/)
+  })
+})
+
+describe('target', () => {
+  test('prints a coverage table with missing terms and where each would go', async () => {
+    const { code, stdout } = await cli('target', SAMPLE, '--jd', JOB)
+
+    assert.equal(code, 0)
+    assert.match(stdout, /^coverage \d+%\s+\(\d+ of \d+ terms present\)$/m)
+    assert.match(stdout, /^missing, most prominent first:$/m)
+    assert.match(stdout, /Kubernetes clusters\s+\d+x\s+-> work/)
+  })
+
+  test('--json emits the report itself', async () => {
+    const { code, stdout } = await cli('target', SAMPLE, '--jd', JOB, '--json')
+    assert.equal(code, 0)
+
+    const report = JSON.parse(stdout)
+    assert.ok(typeof report.coverage === 'number')
+    assert.ok(Array.isArray(report.missing) && report.missing.length > 0)
+    assert.ok(report.missing[0].suggestions.length > 0)
+    // Ranked highest first.
+    const scores = report.missing.map((t: { prominence: number }) => t.prominence)
+    assert.deepEqual(scores, [...scores].sort((a: number, b: number) => b - a))
+  })
+
+  test('--max-terms caps the report', async () => {
+    const { code, stdout } = await cli('target', SAMPLE, '--jd', JOB, '--max-terms', '5', '--json')
+    const report = JSON.parse(stdout)
+
+    assert.equal(code, 0)
+    assert.equal(report.matched.length + report.missing.length, 5)
+  })
+
+  test('reads the posting from stdin via "-"', async () => {
+    const jd = await readFile(JOB, 'utf8')
+    const { code, stdout } = await invoke(process.execPath, [BIN, 'target', SAMPLE, '--jd', '-'], jd)
+
+    assert.equal(code, 0)
+    assert.match(stdout, /^coverage /m)
+  })
+
+  test('refuses to read both the blueprint and the posting from stdin', async () => {
+    const { code, stderr } = await invoke(process.execPath, [BIN, 'target', '-', '--jd', '-'], '{}')
+
+    assert.equal(code, 1)
+    assert.match(stderr, /only one of/)
+  })
+
+  test('without --jd it says so rather than analyzing nothing', async () => {
+    const { code, stderr } = await cli('target', SAMPLE)
+
+    assert.equal(code, 1)
+    assert.match(stderr, /--jd/)
+  })
+
+  test('target appears in the usage text', async () => {
+    const { stdout } = await cli('--help')
+    assert.match(stdout, /resume target <blueprint\.json> --jd/)
   })
 })
 
