@@ -79,6 +79,13 @@ export const ResumeTexInput = z.object({
   document: DocumentConfigSchema.optional()
 })
 
+/** No `template`/`document` here, unlike `ResumeTexInput` — `blueprintToText`
+ * doesn't consume `ResolvedDocumentConfig` at all, so there is nothing for
+ * either override to change. */
+export const ResumeTextInput = z.object({
+  id: z.string()
+})
+
 // Capped for the same reason as timeoutMs above: an unbounded `limit` lets a
 // caller force an arbitrarily large `git log` read.
 const MAX_HISTORY_LIMIT = 500
@@ -185,6 +192,11 @@ export const ResumeRenderOutput = z.object({
 
 export const ResumeTexOutput = z.object({
   texDoc: z.string(),
+  ...CitationWarnings
+})
+
+export const ResumeTextOutput = z.object({
+  text: z.string(),
   ...CitationWarnings
 })
 

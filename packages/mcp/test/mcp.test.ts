@@ -29,6 +29,7 @@ const READ_ONLY_HINTS: Record<string, boolean> = {
   resume_validate: true,
   resume_render: false,
   resume_tex: true,
+  resume_text: true,
   resume_history: true,
   resume_diff: true,
   resume_revert: false,
@@ -77,7 +78,7 @@ describe('handshake', () => {
 const TOOLS_WITHOUT_OUTPUT_SCHEMA = new Set<string>() // every tool has one now
 
 describe('tools/list', () => {
-  test('lists all 16 tools with descriptions and matching readOnlyHint', async () => {
+  test('lists all 17 tools with descriptions and matching readOnlyHint', async () => {
     const { tools } = await client.listTools()
     const names = tools.map((t) => t.name).sort()
     assert.deepEqual(names, Object.keys(READ_ONLY_HINTS).sort())
@@ -181,6 +182,35 @@ describe('document override', () => {
   })
 })
 
+describe('resume_text', () => {
+  test('renders a stored blueprint to plain text, honouring headings, with no LaTeX escaping', async () => {
+    const create = await client.callTool({
+      name: 'resume_create',
+      arguments: {
+        id: 'plain-text',
+        blueprint: {
+          basics: { name: 'Ada Lovelace', label: 'R&D Lead' },
+          headings: { work: 'Employment' },
+          work: [{ name: 'Acme', position: 'Engineer', summary: 'Shipped things.' }],
+          sections: ['profile', 'work']
+        }
+      }
+    })
+    assert.equal(create.isError, undefined)
+
+    const result = await client.callTool({ name: 'resume_text', arguments: { id: 'plain-text' } })
+    assert.equal(result.isError, undefined)
+
+    const structured = result.structuredContent as { text: string }
+    assert.match(structured.text, /^Ada Lovelace$/m)
+    // Unescaped, unlike resume_tex -- "R&D" would come back "R\&D" over there.
+    assert.match(structured.text, /R&D Lead/)
+    assert.match(structured.text, /^EMPLOYMENT$/m)
+    assert.doesNotMatch(structured.text, /EXPERIENCE/)
+    assert.match(structured.text, /Shipped things\./)
+  })
+})
+
 describe('invalid tool args', () => {
   test('resume_get with no id produces a structured error, not a crash', async () => {
     const result = await client.callTool({ name: 'resume_get', arguments: {} })
@@ -238,6 +268,19 @@ describe('citation warnings', () => {
     assert.ok(warnings && warnings.length === 3)
     assert.ok(!texDoc.includes('warning:'), 'the TeX document must stay uncontaminated')
     assert.equal((result.content as Array<{ text: string }>)[0]!.text, texDoc)
+  })
+
+  test('resume_text carries warnings in structuredContent but never in the text', async () => {
+    await client.callTool({ name: 'resume_create', arguments: { id: 'dirty-text', blueprint: DIRTY } })
+    const result = await client.callTool({ name: 'resume_text', arguments: { id: 'dirty-text' } })
+
+    const { text, warnings } = result.structuredContent as { text: string; warnings?: string[] }
+    assert.ok(warnings && warnings.length === 3)
+    assert.ok(!text.includes('warning:'), 'the rendered text must stay uncontaminated')
+    // Unlike resume_tex, the markers themselves are neither stripped nor
+    // escaped -- they typeset (or here, print) as literal text either way.
+    assert.match(text, /\[cite: 1, 2, 3\]/)
+    assert.equal((result.content as Array<{ text: string }>)[0]!.text, text)
   })
 
   test('an invalid blueprint reports the schema error without piling on', async () => {
