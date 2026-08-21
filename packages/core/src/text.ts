@@ -223,45 +223,72 @@ function formatCertificates(certificates: Array<Certificate> | undefined): strin
   return lines.filter(Boolean).join('\n')
 }
 
+/** One section's rendered body, without its heading. */
+export interface SectionBody {
+  section: SectionName
+  text: string
+}
+
+/**
+ * Renders each section of a blueprint to its body text, in `sections` order,
+ * dropping the ones that came back empty.
+ *
+ * Split out of `renderText` for `coverage.ts`, which needs to know WHICH
+ * section a term was found in — "add Kubernetes to skills" is the useful half
+ * of a placement suggestion, and the flattened string `renderText` returns has
+ * thrown that away by the time a caller sees it.
+ *
+ * Headings are deliberately excluded. They are formatting, not content: a
+ * coverage analysis that matched the JD's "experience" against the literal
+ * heading `EXPERIENCE` would report a term as covered on the strength of a
+ * label the applicant never wrote.
+ */
+export function sectionBodies(blueprint: Blueprint): SectionBody[] {
+  const bodies = blueprint.sections.map((section): SectionBody => {
+    switch (section) {
+      case 'profile':
+        return { section, text: formatProfile(blueprint.basics) }
+
+      case 'education':
+        return { section, text: formatEducation(blueprint.education) }
+
+      case 'work':
+        return { section, text: formatWork(blueprint.work) }
+
+      case 'skills':
+        return { section, text: formatSkills(blueprint.skills) }
+
+      case 'projects':
+        return { section, text: formatProjects(blueprint.projects) }
+
+      case 'awards':
+        return { section, text: formatAwards(blueprint.awards) }
+
+      case 'certificates':
+        return { section, text: formatCertificates(blueprint.certificates) }
+
+      default:
+        return { section, text: '' }
+    }
+  })
+
+  return bodies.filter(({ text }) => text)
+}
+
 /**
  * Renders a validated blueprint to plain text, honouring `sections` (order
  * and inclusion) and `headings` (per-section overrides) — the same two
  * control fields every TeX template dispatches on.
+ *
+ * `profile` alone gets no heading, matching every template; see
+ * `formatProfile`.
  */
 export function renderText(blueprint: Blueprint): string {
   const { headings } = blueprint
 
-  const blocks = blueprint.sections.map((section) => {
-    switch (section) {
-      case 'profile':
-        return formatProfile(blueprint.basics)
-
-      case 'education':
-        return withHeading(formatEducation(blueprint.education), headings.education, DEFAULT_HEADINGS.education!)
-
-      case 'work':
-        return withHeading(formatWork(blueprint.work), headings.work, DEFAULT_HEADINGS.work!)
-
-      case 'skills':
-        return withHeading(formatSkills(blueprint.skills), headings.skills, DEFAULT_HEADINGS.skills!)
-
-      case 'projects':
-        return withHeading(formatProjects(blueprint.projects), headings.projects, DEFAULT_HEADINGS.projects!)
-
-      case 'awards':
-        return withHeading(formatAwards(blueprint.awards), headings.awards, DEFAULT_HEADINGS.awards!)
-
-      case 'certificates':
-        return withHeading(
-          formatCertificates(blueprint.certificates),
-          headings.certificates,
-          DEFAULT_HEADINGS.certificates!
-        )
-
-      default:
-        return ''
-    }
-  })
+  const blocks = sectionBodies(blueprint).map(({ section, text }) =>
+    section === 'profile' ? text : withHeading(text, headings[section], DEFAULT_HEADINGS[section]!)
+  )
 
   return blocks.filter(Boolean).join('\n\n')
 }
