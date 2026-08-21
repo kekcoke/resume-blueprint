@@ -7,6 +7,7 @@ import {
   TEMPLATE_IDS,
   blueprintToTex,
   blueprintToText,
+  analyzeCoverage,
   formatValidationError,
   isValidationError,
   renderBlueprint,
@@ -14,7 +15,8 @@ import {
   TEMPLATE_PROFILES,
   profileToBlueprint,
   ProfileParseError,
-  citationWarnings
+  citationWarnings,
+  type CoverageReport
 } from '@resume-blueprint/core'
 
 const USAGE = `resume — render and validate resume blueprints
@@ -24,12 +26,14 @@ Usage:
   resume validate <blueprint.json>
   resume tex <blueprint.json> [options]
   resume text <blueprint.json> [options]
+  resume target <blueprint.json> --jd <job.txt> [options]
   resume import <profile.md> [options]
   resume list-templates
 
 Arguments:
   <blueprint.json>     Path to a JSON Resume blueprint, or "-" to read stdin.
   <profile.md>         Path to a master-profile markdown document, or "-" for stdin.
+  <job.txt>            Path to a job description, or "-" to read it from stdin.
 
 Options:
   -t, --template <n>     Template ${TEMPLATE_IDS[0]}-${TEMPLATE_IDS[TEMPLATE_IDS.length - 1]}; overrides the blueprint's selectedTemplate.
@@ -40,6 +44,9 @@ Options:
       --font-size <pt>   10, 11, or 12. Merges into document.
       --margin <length>  e.g. "0.75in", "2cm"; clamped to a 0.5in floor. Merges into document.
       --line-spacing <n> 1.0-1.15; clamped. Merges into document.
+      --jd <path>        Job description for "target"; "-" reads stdin.
+      --max-terms <n>    Terms to report for "target" (default 40, clamped 1-200).
+      --json             Emit the "target" report as JSON instead of a table.
       --strict           exit 1 if anything warned (import, validate, tex, text, render).
   -h, --help             Show this help.
 
@@ -49,6 +56,7 @@ Examples:
   resume validate fixtures/sample.json
   resume render fixtures/sample.json --font calibri --margin 1in -o ada.pdf
   resume import profile.md | resume validate -
+  resume target fixtures/sample.json --jd job.md
 `
 
 async function readStdin(): Promise<string> {
@@ -81,6 +89,47 @@ async function readInput(path: string): Promise<unknown> {
 }
 
 class CliError extends Error {}
+
+/**
+ * Renders a coverage report as a table for a human reading a terminal.
+ *
+ * `--json` is the machine path; this one optimizes for the question someone
+ * actually asks -- what is missing, and where would it go. Suggestions are
+ * collapsed to the first, because that is the recommendation; the rest are in
+ * the JSON.
+ */
+function formatCoverage(report: CoverageReport): string {
+  const total = report.matched.length + report.missing.length
+  if (!total) return `${report.notes.map((note) => `note: ${note}`).join('\n')}\n`
+
+  const lines = [
+    `coverage ${Math.round(report.coverage * 100)}%  (${report.matched.length} of ${total} terms present)`,
+    ''
+  ]
+
+  if (report.missing.length) {
+    const width = Math.max(...report.missing.map((t) => t.term.length))
+    lines.push('missing, most prominent first:')
+    for (const term of report.missing) {
+      const where = term.suggestions[0]?.section ?? '-'
+      lines.push(`  ${term.term.padEnd(width)}  ${String(term.count).padStart(2)}x  -> ${where}`)
+    }
+  } else {
+    lines.push('every reported term already appears in the resume.')
+  }
+
+  if (report.matched.length) {
+    lines.push('', 'present:')
+    for (const term of report.matched) {
+      const as = term.matchedAs ? ` (as "${term.matchedAs}")` : ''
+      lines.push(`  ${term.term}${as} -- ${term.sections.join(', ')}`)
+    }
+  }
+
+  if (report.notes.length) lines.push('', ...report.notes.map((note) => `note: ${note}`))
+
+  return `${lines.join('\n')}\n`
+}
 
 /** Applies the --template override on top of whatever the blueprint declared. */
 function withTemplate(blueprint: unknown, template?: number): unknown {
@@ -175,6 +224,9 @@ async function main(argv: string[]): Promise<number> {
       'font-size': { type: 'string' },
       margin: { type: 'string' },
       'line-spacing': { type: 'string' },
+      jd: { type: 'string' },
+      'max-terms': { type: 'string' },
+      json: { type: 'boolean' },
       strict: { type: 'boolean' },
       help: { type: 'boolean', short: 'h' }
     }
@@ -262,6 +314,26 @@ async function main(argv: string[]): Promise<number> {
     case 'text': {
       const text = blueprintToText(blueprint)
       await emit(text, values.output)
+
+      const warnings = citationsIn(blueprint)
+      reportCitations(warnings)
+      return values.strict && warnings.length ? 1 : 0
+    }
+
+    case 'target': {
+      if (!values.jd) throw new CliError('target needs --jd <path> (or "-" to read the posting from stdin)')
+      // Only one of the two can be stdin, and silently picking a winner would
+      // hand the analysis half a document.
+      if (values.jd === '-' && path === '-') {
+        throw new CliError('only one of <blueprint.json> and --jd can be "-"')
+      }
+
+      const maxTerms = values['max-terms'] === undefined
+        ? undefined
+        : parseNumberFlag('--max-terms', values['max-terms'])
+
+      const report = analyzeCoverage(blueprint, await readRaw(values.jd), { maxTerms })
+      await emit(values.json ? `${JSON.stringify(report, null, 2)}\n` : formatCoverage(report), values.output)
 
       const warnings = citationsIn(blueprint)
       reportCitations(warnings)

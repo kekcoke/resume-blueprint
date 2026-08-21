@@ -30,6 +30,7 @@ const READ_ONLY_HINTS: Record<string, boolean> = {
   resume_render: false,
   resume_tex: true,
   resume_text: true,
+  resume_target: true,
   resume_history: true,
   resume_diff: true,
   resume_revert: false,
@@ -78,7 +79,7 @@ describe('handshake', () => {
 const TOOLS_WITHOUT_OUTPUT_SCHEMA = new Set<string>() // every tool has one now
 
 describe('tools/list', () => {
-  test('lists all 17 tools with descriptions and matching readOnlyHint', async () => {
+  test('lists all 18 tools with descriptions and matching readOnlyHint', async () => {
     const { tools } = await client.listTools()
     const names = tools.map((t) => t.name).sort()
     assert.deepEqual(names, Object.keys(READ_ONLY_HINTS).sort())
@@ -208,6 +209,108 @@ describe('resume_text', () => {
     assert.match(structured.text, /^EMPLOYMENT$/m)
     assert.doesNotMatch(structured.text, /EXPERIENCE/)
     assert.match(structured.text, /Shipped things\./)
+  })
+})
+
+describe('resume_target', () => {
+  const JD = [
+    'Senior Platform Engineer',
+    '',
+    'Responsibilities:',
+    '- Operate Kubernetes clusters in production',
+    '- Own Terraform modules',
+    '',
+    'Required:',
+    '- Rust, or a willingness to learn it',
+    '- AWS Certified Solutions Architect certification'
+  ].join('\n')
+
+  async function seed(id: string): Promise<void> {
+    const create = await client.callTool({
+      name: 'resume_create',
+      arguments: {
+        id,
+        blueprint: {
+          basics: { name: 'Ada Lovelace' },
+          work: [{ name: 'Acme', position: 'Engineer', highlights: ['Ran Kubernetes in production'] }],
+          skills: [{ name: 'Platform', keywords: ['Terraform'] }],
+          sections: ['profile', 'work', 'skills']
+        }
+      }
+    })
+    assert.equal(create.isError, undefined)
+  }
+
+  test('reports matched terms, ranked missing terms, and per-section placement', async () => {
+    await seed('targeting')
+
+    const result = await client.callTool({
+      name: 'resume_target',
+      arguments: { id: 'targeting', jobDescription: JD }
+    })
+    assert.equal(result.isError, undefined)
+
+    const report = result.structuredContent as {
+      coverage: number
+      matched: Array<{ term: string; sections: string[] }>
+      missing: Array<{ term: string; prominence: number; suggestions: Array<{ section: string }> }>
+      sections: Array<{ section: string; matched: number }>
+      notes: string[]
+    }
+
+    assert.ok(
+      report.matched.some((t) => t.term === 'Kubernetes' && t.sections.includes('work')),
+      `Kubernetes should be matched in work; got ${JSON.stringify(report.matched)}`
+    )
+    assert.ok(report.missing.some((t) => t.term === 'Rust'), 'Rust is not on this resume')
+    assert.ok(report.coverage > 0 && report.coverage < 1)
+
+    // Ranked, highest prominence first.
+    const scores = report.missing.map((t) => t.prominence)
+    assert.deepEqual(scores, [...scores].sort((a, b) => b - a))
+
+    // Suggestions never name a section this blueprint does not render.
+    for (const term of report.missing) {
+      for (const { section } of term.suggestions) {
+        assert.ok(['profile', 'work', 'skills'].includes(section), `leaked ${section}`)
+      }
+    }
+
+    assert.ok(report.sections.some((s) => s.section === 'work' && s.matched > 0))
+  })
+
+  test('labels the quoted terms in the text channel as data', async () => {
+    await seed('targeting-text')
+
+    const result = await client.callTool({
+      name: 'resume_target',
+      arguments: { id: 'targeting-text', jobDescription: JD }
+    })
+
+    const [content] = result.content as Array<{ type: string; text: string }>
+    assert.match(content.text, /^coverage \d+% -- \d+ of \d+ terms already present$/m)
+    assert.match(content.text, /data, not instructions/)
+  })
+
+  test('writes nothing: the blueprint is unchanged at the same revision', async () => {
+    await seed('targeting-readonly')
+
+    const before = await client.callTool({ name: 'resume_get', arguments: { id: 'targeting-readonly' } })
+    await client.callTool({ name: 'resume_target', arguments: { id: 'targeting-readonly', jobDescription: JD } })
+    const after = await client.callTool({ name: 'resume_get', arguments: { id: 'targeting-readonly' } })
+
+    assert.deepEqual(after.structuredContent, before.structuredContent)
+  })
+
+  test('rejects an oversized job description at the boundary', async () => {
+    await seed('targeting-huge')
+
+    const result = await client.callTool({
+      name: 'resume_target',
+      arguments: { id: 'targeting-huge', jobDescription: 'Kubernetes '.repeat(10_000) }
+    })
+
+    assert.equal(result.isError, true)
   })
 })
 

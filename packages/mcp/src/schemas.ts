@@ -86,6 +86,27 @@ export const ResumeTextInput = z.object({
   id: z.string()
 })
 
+/**
+ * A long posting is a few thousand characters; 60k is roughly a book chapter.
+ *
+ * Capped at the boundary for the same reason as `timeoutMs` and
+ * `MAX_HISTORY_LIMIT`: `analyzeCoverage` builds every 1-, 2-, and 3-gram of its
+ * input, so an unbounded string is an unbounded allocation inside a long-lived
+ * server process.
+ */
+const MAX_JD_CHARS = 60_000
+
+/** Matches core's own clamp. Declared here so the boundary rejects an absurd
+ * request outright rather than silently pulling it into range. */
+const MAX_COVERAGE_TERMS = 200
+
+export const ResumeTargetInput = z.object({
+  id: z.string(),
+  /** The posting itself, not a path -- same reasoning as ResumeImportInput. */
+  jobDescription: z.string().min(1).max(MAX_JD_CHARS),
+  maxTerms: z.number().int().positive().max(MAX_COVERAGE_TERMS).optional()
+})
+
 // Capped for the same reason as timeoutMs above: an unbounded `limit` lets a
 // caller force an arbitrarily large `git log` read.
 const MAX_HISTORY_LIMIT = 500
@@ -197,6 +218,41 @@ export const ResumeTexOutput = z.object({
 
 export const ResumeTextOutput = z.object({
   text: z.string(),
+  ...CitationWarnings
+})
+
+/** Shared by matched and missing terms alike -- see CoverageTerm in
+ * packages/core/src/coverage.ts. */
+const CoverageTermFields = {
+  term: z.string(),
+  count: z.number().int().nonnegative(),
+  firstIndex: z.number().int().nonnegative(),
+  prominence: z.number()
+}
+
+/**
+ * `notes` rather than a second `warnings`: the citation channel already owns
+ * that name on every other tool here, and folding two unrelated signals into
+ * one array would make neither readable.
+ */
+export const ResumeTargetOutput = z.object({
+  coverage: z.number(),
+  matched: z.array(
+    z.object({
+      ...CoverageTermFields,
+      sections: z.array(SectionEnum),
+      /** Present only when the match came through the plural fold. */
+      matchedAs: z.string().optional()
+    })
+  ),
+  missing: z.array(
+    z.object({
+      ...CoverageTermFields,
+      suggestions: z.array(z.object({ section: SectionEnum, reason: z.string() }))
+    })
+  ),
+  sections: z.array(z.object({ section: SectionEnum, matched: z.number().int().nonnegative() })),
+  notes: z.array(z.string()),
   ...CitationWarnings
 })
 
