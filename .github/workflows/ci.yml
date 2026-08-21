@@ -25,6 +25,14 @@ jobs:
 
     strategy:
       fail-fast: false
+      # Serialized on purpose. Both jobs share one Tectonic package cache, and
+      # on a cold key they were racing to download the same bundle at the same
+      # moment -- which the upstream relay answers with 429 Too Many Requests,
+      # failing a different arbitrary subset of templates in each job. Running
+      # them in sequence lets the first populate the cache and the second
+      # restore it. Costs wall-clock only on a cold key; the warm path is
+      # unchanged.
+      max-parallel: 1
       matrix:
         # Not Node 20: the suite runs `.ts` files directly through Node's type
         # stripping, which is unflagged only from 22.6. A Node 20 job fails on
