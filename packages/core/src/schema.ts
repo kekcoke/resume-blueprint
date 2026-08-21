@@ -188,17 +188,30 @@ export const BlueprintSchema = z.object({
   awards: z.array(AwardSchema).optional(),
   certificates: z.array(CertificateSchema).optional(),
 
-  /** Per-section heading overrides, e.g. `{ work: 'Experience' }`. */
-  headings: z.record(SectionSchema, z.string()).default({}),
+  /** Per-section heading overrides, e.g. `{ work: 'Experience' }`.
+   *
+   * `partialRecord`, not `record`: zod 4's `z.record` with an enum key is
+   * exhaustive, which would demand all seven sections on every blueprint. */
+  headings: z.partialRecord(SectionSchema, z.string()).default(() => ({})),
 
-  /** Section render order. Defaults to the full set so agents need not supply it. */
-  sections: z.array(SectionSchema).default([...SECTION_NAMES]),
+  /** Section render order. Defaults to the full set so agents need not supply it.
+   *
+   * A factory, not a literal: zod 4's `.default()` short-circuits parsing and
+   * returns the value it was given, so a literal array would be shared by every
+   * parsed blueprint. See the note on `document` below — same reason. */
+  sections: z.array(SectionSchema).default(() => [...SECTION_NAMES]),
 
+  /**
+   * `z.literal` over the tuple rather than `.number().int().refine(...)`: zod 4's
+   * `.refine` returns `this` and no longer narrows through a type predicate, so
+   * the refine form would widen this field — and the exported `Blueprint` type —
+   * from `1|...|10` to `number`. The literal form keeps the union, keeps the
+   * message, still rejects fractional ids, and publishes a real `enum` to MCP
+   * clients instead of an opaque `{ type: 'integer' }`.
+   */
   selectedTemplate: z
-    .number()
-    .int()
-    .refine((n): n is (typeof TEMPLATE_IDS)[number] => TEMPLATE_IDS.includes(n as never), {
-      message: `selectedTemplate must be one of ${TEMPLATE_IDS.join(', ')}`
+    .literal(TEMPLATE_IDS, {
+      error: `selectedTemplate must be one of ${TEMPLATE_IDS.join(', ')}`
     })
     .default(1),
 
@@ -208,8 +221,12 @@ export const BlueprintSchema = z.object({
    * `.optional()` with no field-level default, so `resolveDocumentConfig` can
    * tell "the caller omitted this" from "the caller chose the global default"
    * — the distinction that makes per-template defaults possible at all.
+   *
+   * The default is a factory because zod 4's `.default()` short-circuits: a
+   * literal `{}` would be the *same object* on every parse, and the store
+   * persists what `parseBlueprint` returns.
    */
-  document: DocumentConfigSchema.default({})
+  document: DocumentConfigSchema.default(() => ({}))
 })
 
 export type Location = z.infer<typeof LocationSchema>
