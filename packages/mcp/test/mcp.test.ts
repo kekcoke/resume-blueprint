@@ -102,6 +102,45 @@ describe('tools/list', () => {
       assert.equal(tool.outputSchema?.type, 'object', `${tool.name}'s outputSchema should describe an object`)
     }
   })
+
+  // The published input schemas are what an agent actually reads, and they are
+  // produced by the SDK converting our zod schemas. `resume_render` is the
+  // demanding case: `document` reaches the converter as a transform-bearing
+  // schema (regex + clamp), and `blueprint`-shaped fields reach it as open
+  // records. Pinned here so the F13 zod 4 migration cannot quietly reshape the
+  // agent-facing contract.
+  test('resume_render publishes a document override with its margin constraint intact', async () => {
+    const { tools } = await client.listTools()
+    const render = tools.find((t) => t.name === 'resume_render')
+    assert.ok(render, 'resume_render should be listed')
+
+    const props = render.inputSchema.properties as Record<string, Record<string, unknown>>
+    assert.equal(props.id?.type, 'string')
+
+    const document = props.document as { type?: string; properties?: Record<string, { type?: string; pattern?: string }> }
+    assert.equal(document?.type, 'object', 'document should survive as an object, not collapse to a bare transform')
+    assert.equal(document.properties?.margin?.type, 'string')
+    assert.ok(
+      document.properties?.margin?.pattern,
+      'margin keeps its LENGTH_PATTERN regex — the input side of the clamp transform'
+    )
+    assert.equal(document.properties?.lineSpacing?.type, 'number')
+  })
+
+  test('tools taking a whole blueprint publish it as an open object', async () => {
+    const { tools } = await client.listTools()
+    for (const [name, field] of [
+      ['resume_create', 'blueprint'],
+      ['resume_patch', 'patch'],
+      ['resume_validate', 'blueprint'],
+      ['resume_section_append', 'item']
+    ] as const) {
+      const tool = tools.find((t) => t.name === name)
+      assert.ok(tool, `${name} should be listed`)
+      const prop = (tool.inputSchema.properties as Record<string, { type?: string }>)[field]
+      assert.equal(prop?.type, 'object', `${name}.${field} should publish as an object`)
+    }
+  })
 })
 
 describe('create -> patch -> get -> remove round-trip', () => {
