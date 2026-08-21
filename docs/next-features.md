@@ -511,7 +511,7 @@ count 571 → 579.
   was settled two PRs ago.
 - `CLAUDE.md:84` says README documents "known gaps" — README has no such section.
 - `countPages` is duplicated (`packages/mcp/src/render.ts:6-11` vs
-  `packages/core/test/render.test.ts:34`), with a comment citing a core-diff freeze that
+  `packages/core/test/render.test.ts:46`), with a comment citing a core-diff freeze that
   ended at Gate 2. Promote it to a core export and delete the stale rationale.
 - `basics.profiles[].username` never renders on its own (PR #5 item 3). Nothing is lost —
   it rides along in the link text — but a profile with a username and no valid URL renders
@@ -520,8 +520,9 @@ count 571 → 579.
 - Template 7's `\moderncvstyle{classic}` → `{banking}` change (commit `46bf555`) was never
   eyeballed. Correct trade, but an unreviewed visual regression.
 - Vendored upstream `TODO:` / `Known Issues:` comments ship into every generated `.tex`
-  (`templates/template4.ts:337-360`). Upstream inheritance rather than this project's debt,
-  but the column-overflow note is a live constraint worth surfacing properly.
+  (`templates/template4.ts:342-393`, inside `resumeHeader()`). Upstream inheritance rather
+  than this project's debt, but the column-overflow note (`:386-389`) is a live constraint
+  worth surfacing properly.
 
 ### F13 — zod 4 migration · DEFERRED
 
