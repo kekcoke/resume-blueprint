@@ -181,9 +181,10 @@ const STOPWORDS = new Set([
   'had', 'has', 'have', 'having', 'he', 'her', 'here', 'hers', 'him', 'his', 'how',
   'however', 'i', 'if', 'in', 'include', 'includes', 'including', 'into', 'is', 'it',
   'its', 'itself', 'just', 'keep', 'like', 'made', 'make', 'makes', 'making', 'many',
-  'may', 'me', 'might', 'more', 'most', 'much', 'must', 'my', 'need', 'needs', 'neither',
+  'may', 'me', 'might', 'more', 'most', 'much', 'multiple', 'must', 'my', 'need', 'needs',
+  'neither',
   'never', 'new', 'no', 'nor', 'not', 'of', 'off', 'often', 'on', 'once', 'one', 'only',
-  'or', 'other', 'others', 'our', 'ours', 'out', 'over', 'own', 'per', 'perhaps',
+  'or', 'other', 'others', 'our', 'ours', 'out', 'over', 'per', 'perhaps',
   'please', 'same', 'shall', 'she', 'should', 'since', 'so', 'some', 'such', 'take',
   'than', 'that', 'the', 'their', 'theirs', 'them', 'then', 'there', 'these', 'they',
   'this', 'those', 'though', 'through', 'to', 'together', 'too', 'toward', 'towards',
@@ -213,7 +214,23 @@ const JD_BOILERPLATE = new Set([
   'position', 'preferred', 'qualification', 'qualifications', 'qualified', 'range',
   'relevant', 'requirement', 'requirements', 'required', 'responsibilities',
   'responsibility', 'role', 'salary', 'skill', 'skills', 'strong', 'successful', 'team',
-  'teams', 'us', 'work', 'working', 'year', 'years'
+  'teams', 'us', 'work', 'working', 'year', 'years',
+
+  // Verbs and nouns every posting reaches for regardless of the role. Dropping
+  // them cleans up the report twice over: the bare verb stops occupying a row,
+  // AND the phrase it led loses its dead first word, because a candidate cannot
+  // start or end on a stopword. `Operate Kubernetes clusters` becomes
+  // `Kubernetes clusters`; `Deep familiarity` disappears in favour of what it
+  // was introducing.
+  //
+  // `design`, `develop`, and `architecture` are deliberately absent despite
+  // being just as common -- `system design` and `design systems` are terms an
+  // applicant is genuinely measured on, and edge-stopword rejection would take
+  // them out with the noise.
+  'background', 'build', 'building', 'built', 'collaborate', 'comfort', 'contribute',
+  'deliver', 'drive', 'ensure', 'expertise', 'familiarity', 'help', 'hire', 'hiring',
+  'knowledge', 'lead', 'maintain', 'manage', 'mindset', 'operate', 'own', 'passion',
+  'proficiency', 'provide', 'review', 'ship', 'support', 'understanding', 'write'
 ])
 
 function isStopword(normalized: string): boolean {
