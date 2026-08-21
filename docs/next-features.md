@@ -6,6 +6,7 @@ register that keeps those sessions from colliding.
 
 **Status when written:** Phase 1 and Phase 2 complete — core, CLI, store, MCP (15 tools),
 HTTP (8 routes), 187 tests. `feat/scope-next-features` at parity with `main`.
+*(As of F13: MCP is 18 tools and the suite is 584 tests.)*
 
 ---
 
@@ -95,8 +96,7 @@ F10 JD keyword targeting
 PARALLEL TRACK — packages/store and repo meta only, never collides with templates:
 F11 Cross-process store lock
 F12 Doc drift + small cleanups
-DEFERRED:
-F13 zod 4 migration
+F13 zod 4 migration ─────────────────────────► needed F8 landed first; done alone
 ```
 
 **The single hard rule: F3 before F4, F5, and F7.**
@@ -524,12 +524,75 @@ count 571 → 579.
   than this project's debt, but the column-overflow note (`:386-389`) is a live constraint
   worth surfacing properly.
 
-### F13 — zod 4 migration · DEFERRED
+### F13 — zod 4 migration · DONE
 
 `docs/phase-2-plan-b.md:87-88` explicitly deferred it, designating Plan A as the migration
 path later. `schema.ts:136` still uses `z.record(SectionSchema, z.string()).default({})` —
 the exact construct Plan A's Gate 0 rewrites. **Conflicts with F3, F6, and F8, i.e. every
 schema-touching feature.** Do not attempt until F8 lands, then do it alone.
+
+**Addendum, written while implementing.** Four corrections to the paragraph above, and two
+hazards no plan document anticipated.
+
+The line reference is stale — the `z.record` construct had moved to `schema.ts:192` by the
+time this ran, having been pushed down by F3's `document` block and F6's `certificates`.
+The conflict note is also spent: F3, F6 and F8 have all landed, so C7 resolved itself by
+waiting rather than by coordination.
+
+**The migration was never coupled to the MCP SDK.** Both plan documents treat zod 4 as a
+prerequisite for moving to the V2 SDK, and Plan B's entire premise is that declining zod 4
+means staying on V1. Neither holds. The already-installed
+`@modelcontextprotocol/sdk@1.30.0` declares `peerDependencies: { zod: "^3.25 || ^4.0" }`
+and ships a genuine dual-major compat layer — `server/zod-compat.js` detects v4 schemas by
+the presence of `_zod` and branches `safeParse`/`getObjectShape`/`normalizeObjectSchema`,
+while `server/zod-json-schema-compat.js` routes v4 to zod's own `toJSONSchema` and v3 to
+the vendored `zod-to-json-schema`. zod@4.4.3 still exports the `./v3`, `./v4-mini` and
+`./v4/core` subpaths that layer imports, so nothing breaks on load. **The SDK stayed at
+`^1.30.0` and was not touched.**
+
+**Plan A's Gate 0 could not be executed literally**, for a second reason beyond its wrong
+premise: it scopes itself to `packages/core/src/schema.ts` and `packages/core/package.json`,
+because it predates `packages/mcp/src/schemas.ts`. That file holds seven single-argument
+`z.record(z.unknown())` calls — a hard removal in v4 — and it cannot be split from core
+into a separate commit. `mcp/src/schemas.ts:2` imports core's `DocumentConfigSchema` and
+nests it inside its own `z.object()`; a mixed-major tree there is not merely untyped, the
+SDK's `objectFromShape` throws `Mixed Zod versions detected in object shape.` outright.
+Core and mcp migrate atomically or not at all.
+
+**Hazard 1 — `.default()` now returns a shared instance.** Under v3, `.default(v)` re-parses
+the default, so `parse({}).sections !== parse({}).sections`. v4 short-circuits and hands
+back the very object it was given, so the two are identical — and `store/src/index.ts:199`
+persists exactly what `parseBlueprint` returns. Nothing in the repo mutates `sections`,
+`headings` or `document` today, so this was latent rather than live, but the faithful port
+is a factory default (`.default(() => [...SECTION_NAMES])`), not a literal. Guarded by a
+`notStrictEqual` assertion written before the migration.
+
+**Hazard 2 — `.refine()` no longer narrows.** v4's signature is
+`refine(check: (arg) => unknown, params?): this`. It returns `this`, so the type predicate
+on `selectedTemplate` stopped narrowing and the exported `Blueprint['selectedTemplate']`
+would have silently widened from `1|...|10` to `number` — a public type regression with no
+runtime symptom and no failing test. Replaced with `z.literal(TEMPLATE_IDS, { error })`,
+which keeps the literal union and the custom message, still rejects fractional ids, and
+improves what MCP clients see from `{"type":"integer"}` to
+`{"type":"number","enum":[1,...,10]}`.
+
+**What turned out to be a non-event.** The transform-bearing `DocumentConfigSchema` — the
+piece most at risk, since `.regex().transform().optional()` inside a `.partial()` object is
+fed straight to the SDK's JSON Schema converter — survives intact: the SDK passes
+`io: 'input'`, so `margin` publishes with its `LENGTH_PATTERN` and clamping still works.
+`{ message: ... }` is still honoured in v4 as a deprecated alias, so Plan A's "breaking
+change 2" was a cleanup. `isValidationError` and `formatValidationError` needed no change
+at all — `instanceof z.ZodError`, `error.issues`, `issue.path` and `issue.message` all
+survive, which is why store, cli and http needed no change despite carrying every
+user-facing validation message. And the repo has zero exposure to v4's biggest break, the
+top-level string-format move, because every text field is a bare `z.string()` by design.
+
+**One user-visible change**: zod reworded its default messages, so validation output now
+reads `Invalid input: expected string, received number` where it read `Expected string,
+received number`. Issue *paths* are unchanged, which is why no assertion needed editing.
+
+584 tests, none edited to accommodate the migration — the exit criterion Plan A's Gate 0
+set, and the one part of it that transferred cleanly.
 
 ---
 
@@ -545,7 +608,7 @@ Reviewed before starting. Each row is a real collision, not a hypothetical.
 | C4 | F2's 0.5in geometry gate vs. templates whose current hardcoded margin is smaller | Record failures in F2, decide per-template in F3's `TEMPLATE_DEFAULTS`. **Golden output will change for those templates** — the one place F3's byte-identical guarantee is knowingly broken |
 | C5 | F5's certifications fix vs. F6's `certificates` schema | Certifications excluded from F5 by design; all of it lands in F6. Doing it twice is the waste this ordering exists to prevent |
 | C6 | F7 widens `TEMPLATE_IDS` | Ripples to `packages/mcp/src/schemas.ts` `TemplateId` and the README template table |
-| C7 | F13 (zod 4) vs. every schema feature | Deferred until after F8, then done alone |
+| C7 | F13 (zod 4) vs. every schema feature | ~~Deferred until after F8, then done alone~~ **Resolved** — F13 landed after F8 with the tree otherwise quiet, exactly as this row prescribed |
 | C8 | F3's `document` block vs. the ATS harness's `collectLeaves()` | Exclude `document` alongside `sections`/`headings`/`selectedTemplate`, or config values get hunted for in the PDF text layer |
 
 **Non-conflicting by construction.** F0, F1, F11, and F12 touch no template file and no

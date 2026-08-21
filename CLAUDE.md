@@ -6,10 +6,12 @@ resume blueprints over time.
 
 **Phase 1 and Phase 2 are both complete** — core, CLI, the git-backed store, the MCP
 server, and the HTTP adapter all work end to end. Phase 2 took `docs/phase-2-plan-b.md`
-(Plan B): `@modelcontextprotocol/sdk` ^1.30.0 for MCP, core stayed on zod 3
-(`^3.23.8`) rather than migrating to 4. `docs/phase-2-plan.md` (Plan A, the zod-4 route)
-was not taken; both plan docs stay in the repo as historical reference, not a live
-decision — see F13 in `docs/next-features.md` for if/when the zod 4 migration happens.
+(Plan B): `@modelcontextprotocol/sdk` ^1.30.0 for MCP, with core deferring the zod 4
+migration. That migration has since landed as F13 — **core and mcp are both on
+`zod ^4.4.3`, and the SDK stayed at `^1.30.0`**, because 1.30.0 accepts either zod major
+and ships a compat layer for both. Both plan docs stay in the repo as historical
+reference, not a live decision; their zod-3 statements and the "zod 4 requires SDK V2"
+premise are both out of date, and each is annotated to say so.
 
 Work has continued past Phase 2 since; `docs/next-features.md` is the current ordered
 backlog and the place to check what's in flight.

@@ -87,6 +87,13 @@ runtime risk, but it is real and it is the price.
 is contained to `packages/mcp` *plus* the zod 4 migration deferred here — Plan A becomes
 the migration path, later, with the store and HTTP adapter already proven.
 
+> **Half of this debt is now settled, and the two halves turned out to be unrelated.** F13
+> migrated core and mcp to zod 4 with **no SDK change at all**: 1.30.0 declares
+> `zod: "^3.25 || ^4.0"` and ships `server/zod-compat.js`, which detects v4 schemas by
+> `_zod` and routes JSON Schema generation to zod's own `toJSONSchema`. The zod migration
+> was never gated on the SDK move, and the SDK move — if it ever happens — is now a
+> self-contained `packages/mcp` change.
+
 **Do not** let express arriving transitively tempt Gate 3 into using it. `packages/http`
 stays on `node:http` so it remains independently installable without the MCP package.
 
@@ -305,10 +312,21 @@ A second zod major in the tree means something pulled in a zod-4 dependency and 
 central assumption has silently failed. Core changing means Phase 1 is no longer untouched
 — which may be legitimate, but needs its own commit and its own justification.
 
+> **Both gates above expired at the end of Phase 2. Do not run them as written.**
+>
+> The `git diff --stat 2e7fd8e -- packages/core` gate scoped Phase 2's promise not to
+> touch Phase 1's core. F3, F6, F8, F9 and F10 have all rewritten core since; that diff is
+> now enormous and expected to be.
+>
+> The `npm ls zod` gate survives, inverted: F13 migrated core and mcp to zod 4, so the
+> assertion is now **exactly one entry, `zod@4.4.x`**. The reasoning is unchanged and still
+> load-bearing — mcp nests core's `DocumentConfigSchema` inside its own `z.object()`, and a
+> split tree makes the SDK throw `Mixed Zod versions detected in object shape.`
+
 Per-gate checklist:
 
 - [ ] Tests were written **before** the implementation and observed failing for the right reason
-- [ ] `npm ls zod` shows a single zod 3 entry
+- [ ] `npm ls zod` shows a single zod entry (zod 3 when written; zod 4 since F13)
 - [ ] No new dependency in core — `npm ls --workspace @resume-blueprint/core --omit=dev`
 - [ ] Prior gates' tests pass **unmodified**; a changed old test means changed behavior, which needs a decision
 - [ ] The injection fixture is exercised through the new surface

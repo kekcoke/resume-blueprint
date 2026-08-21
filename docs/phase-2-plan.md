@@ -59,6 +59,19 @@ characters of base64, spent conveying a document the agent cannot read. Return
 
 ## Gate 0 — Migrate core to zod 4
 
+> **Superseded. This gate was executed as F13, but not as written — read the addendum in
+> `docs/next-features.md` rather than following the steps below.** Three corrections:
+>
+> 1. Its premise is wrong. zod 4 was never a prerequisite for anything: the shipped
+>    `@modelcontextprotocol/sdk@1.30.0` accepts `zod ^3.25 || ^4.0` and handles both
+>    majors at runtime, so core migrated with the SDK left untouched.
+> 2. Its scope is too narrow. It names only `packages/core`, because it predates
+>    `packages/mcp/src/schemas.ts` — which holds seven single-argument `z.record()` calls,
+>    a hard break in v4, and which must migrate in the *same commit* as core.
+> 3. Breaking change 2 below is not a break at all — `{ message }` still works in v4 as a
+>    deprecated alias. Two genuine breaks it misses are `.refine()` no longer narrowing
+>    through a type predicate, and `.default()` now returning a shared instance.
+
 Prerequisite for the V2 MCP SDK, which requires `zod ^4.2.0` (current 4.4.3). Core is on
 zod 3.25.76.
 

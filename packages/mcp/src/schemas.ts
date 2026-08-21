@@ -3,12 +3,11 @@ import { DocumentConfigSchema, SECTION_NAMES, TEMPLATE_IDS } from '@resume-bluep
 
 export const SectionEnum = z.enum(SECTION_NAMES)
 
-export const TemplateId = z
-  .number()
-  .int()
-  .refine((n) => (TEMPLATE_IDS as readonly number[]).includes(n), {
-    message: `template must be one of ${TEMPLATE_IDS.join(', ')}`
-  })
+/** Mirrors core's `selectedTemplate` construct — see the note there on why this
+ * is `z.literal` over the tuple rather than a refined number under zod 4. */
+export const TemplateId = z.literal(TEMPLATE_IDS, {
+  error: `template must be one of ${TEMPLATE_IDS.join(', ')}`
+})
 
 export const RevOpt = { expectedRev: z.string().optional() }
 
@@ -18,19 +17,19 @@ export const ResumeGetInput = z.object({ id: z.string() })
 
 export const ResumeCreateInput = z.object({
   id: z.string(),
-  blueprint: z.record(z.unknown()).optional()
+  blueprint: z.record(z.string(), z.unknown()).optional()
 })
 
 export const ResumePatchInput = z.object({
   id: z.string(),
-  patch: z.record(z.unknown()),
+  patch: z.record(z.string(), z.unknown()),
   ...RevOpt
 })
 
 export const ResumeSectionAppendInput = z.object({
   id: z.string(),
   section: SectionEnum,
-  item: z.record(z.unknown()),
+  item: z.record(z.string(), z.unknown()),
   ...RevOpt
 })
 
@@ -38,7 +37,7 @@ export const ResumeSectionUpdateInput = z.object({
   id: z.string(),
   section: SectionEnum,
   index: z.number().int().nonnegative(),
-  item: z.record(z.unknown()),
+  item: z.record(z.string(), z.unknown()),
   ...RevOpt
 })
 
@@ -55,7 +54,7 @@ export const ResumeRemoveInput = z.object({
 })
 
 export const ResumeValidateInput = z.object({
-  blueprint: z.record(z.unknown())
+  blueprint: z.record(z.string(), z.unknown())
 })
 
 // 300_000ms (5 minutes) is generous enough for a cold-cache first Tectonic
@@ -151,7 +150,7 @@ export const ResumeImportInput = z.object({
 // rather than being a no-op (see docs/phase-2-plan-b.md's Gate 3 note and
 // Gate 2 MCP review, finding 7). Kept as loose as the underlying data itself
 // is loosely-typed, matching the philosophy already used for input schemas
-// above — a blueprint's shape is `z.record(z.unknown())` on the way in, so
+// above — a blueprint's shape is `z.record(z.string(), z.unknown())` on the way in, so
 // it stays that way on the way out too.
 
 /** Shared by every mutation tool that returns just the new `{ id, rev }`. */
@@ -169,7 +168,7 @@ export const ResumeListOutput = z.object({
 })
 
 export const ResumeGetOutput = z.object({
-  blueprint: z.record(z.unknown()),
+  blueprint: z.record(z.string(), z.unknown()),
   rev: z.string()
 })
 
@@ -178,7 +177,7 @@ export const ResumeGetOutput = z.object({
  *  could not map and every reading it had to assume, and an agent that ignores
  *  it will store a blueprint with a job title in the employer field. */
 export const ResumeImportOutput = z.object({
-  blueprint: z.record(z.unknown()),
+  blueprint: z.record(z.string(), z.unknown()),
   warnings: z.array(z.string())
 })
 

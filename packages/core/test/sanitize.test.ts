@@ -5,7 +5,14 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
 import { escapeLatex, sanitizeUrl, sanitizeBlueprint } from '../dist/sanitize.js'
-import { BlueprintSchema, parseBlueprint, isValidationError } from '../dist/schema.js'
+import {
+  BlueprintSchema,
+  parseBlueprint,
+  isValidationError,
+  formatValidationError,
+  SECTION_NAMES,
+  TEMPLATE_IDS
+} from '../dist/schema.js'
 import { blueprintToTex } from '../dist/index.js'
 
 const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'fixtures')
@@ -308,5 +315,49 @@ describe('document clamping', () => {
         .bulletSpacing,
       12
     )
+  })
+})
+
+// The zod 4 migration (F13) rewrites four constructs in schema.ts. These pin the
+// behavior each one has today, so the migration is judged against assertions
+// written before it rather than against whatever it happens to produce.
+describe('schema contracts the zod 4 migration must preserve', () => {
+  test('headings accepts a partial record, not every section key', () => {
+    // zod 4 makes z.record(enum, value) exhaustive; z.partialRecord is what
+    // keeps `{ work: 'Experience' }` — the documented usage — legal.
+    const blueprint = parseBlueprint({ headings: { work: 'Experience' } })
+    assert.deepEqual(blueprint.headings, { work: 'Experience' })
+    assert.deepEqual(parseBlueprint({}).headings, {})
+  })
+
+  test('defaulted containers are a fresh instance per parse, never shared', () => {
+    // zod 4's .default() short-circuits and hands back the *same* object on
+    // every parse unless the default is a factory. The store persists the
+    // parsed blueprint, so a shared instance would let one caller's mutation
+    // reach every later parse.
+    const a = parseBlueprint({})
+    const b = parseBlueprint({})
+
+    assert.notStrictEqual(a.sections, b.sections)
+    assert.notStrictEqual(a.headings, b.headings)
+    assert.notStrictEqual(a.document, b.document)
+
+    a.sections.push('work')
+    assert.deepEqual(parseBlueprint({}).sections, [...SECTION_NAMES])
+  })
+
+  test('selectedTemplate rejects out-of-range and non-integer ids with its own message', () => {
+    for (const bad of [0, TEMPLATE_IDS.length + 1, 1.5]) {
+      const result = BlueprintSchema.safeParse({ selectedTemplate: bad })
+      assert.equal(result.success, false, `expected ${bad} to be rejected`)
+      assert.match(
+        formatValidationError(result.error),
+        new RegExp(`selectedTemplate must be one of ${TEMPLATE_IDS.join(', ')}`)
+      )
+    }
+
+    for (const id of TEMPLATE_IDS) {
+      assert.equal(parseBlueprint({ selectedTemplate: id }).selectedTemplate, id)
+    }
   })
 })
