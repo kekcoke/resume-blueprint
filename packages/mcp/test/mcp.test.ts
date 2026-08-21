@@ -32,7 +32,8 @@ const READ_ONLY_HINTS: Record<string, boolean> = {
   resume_history: true,
   resume_diff: true,
   resume_revert: false,
-  resume_templates: true
+  resume_templates: true,
+  resume_import: true
 }
 
 /** Harness A: SDK client/transport, for everything except stdout purity. */
@@ -76,7 +77,7 @@ describe('handshake', () => {
 const TOOLS_WITHOUT_OUTPUT_SCHEMA = new Set<string>() // every tool has one now
 
 describe('tools/list', () => {
-  test('lists all 15 tools with descriptions and matching readOnlyHint', async () => {
+  test('lists all 16 tools with descriptions and matching readOnlyHint', async () => {
     const { tools } = await client.listTools()
     const names = tools.map((t) => t.name).sort()
     assert.deepEqual(names, Object.keys(READ_ONLY_HINTS).sort())
@@ -185,6 +186,144 @@ describe('invalid tool args', () => {
     const result = await client.callTool({ name: 'resume_get', arguments: {} })
     assert.equal(result.isError, true)
     assert.ok(Array.isArray(result.content) && result.content.length > 0)
+  })
+})
+
+describe('citation warnings', () => {
+  const DIRTY = {
+    basics: { name: 'Ada[cite: 1, 2, 3]', summary: '[cite_start]Led the group.' },
+    work: [{ name: 'Analytical Engine Works', position: 'Engineer', highlights: ['Shipped it.'] }],
+    headings: { work: 'Experience[cite: 5]' }
+  }
+
+  test('resume_validate reports artifacts while still returning valid: true', async () => {
+    // A leftover placeholder is legal content, not a schema violation.
+    const result = await client.callTool({ name: 'resume_validate', arguments: { blueprint: DIRTY } })
+
+    const structured = result.structuredContent as { valid: boolean; warnings?: string[] }
+    assert.equal(structured.valid, true)
+    assert.deepEqual(structured.warnings, [
+      'basics.name carries 1 citation artifact',
+      'basics.summary carries 1 citation artifact',
+      'headings.work carries 1 citation artifact'
+    ])
+
+    // The text channel carries them too -- structuredContent is what a
+    // schema-aware client reads, the text is what an agent looks at.
+    const text = (result.content as Array<{ text: string }>)[0]!.text
+    assert.match(text, /blueprint is valid/)
+    assert.match(text, /citation artifacts at 3 sites/)
+  })
+
+  test('a clean blueprint omits the field entirely rather than sending []', async () => {
+    // `warnings` is optional on the output schema on purpose: the SDK enforces
+    // these schemas, and a required field would reject every clean response
+    // unless each handler remembered to emit an empty array.
+    const result = await client.callTool({
+      name: 'resume_validate',
+      arguments: { blueprint: { basics: { name: 'Ada Lovelace' } } }
+    })
+
+    const structured = result.structuredContent as { valid: boolean; warnings?: string[] }
+    assert.deepEqual(structured, { valid: true })
+  })
+
+  test('resume_tex carries warnings in structuredContent but never in the TeX', async () => {
+    // The text channel IS the document here. Appending a warning to it would
+    // corrupt the file the caller is about to write to disk.
+    await client.callTool({ name: 'resume_create', arguments: { id: 'dirty-tex', blueprint: DIRTY } })
+    const result = await client.callTool({ name: 'resume_tex', arguments: { id: 'dirty-tex' } })
+
+    const { texDoc, warnings } = result.structuredContent as { texDoc: string; warnings?: string[] }
+    assert.ok(warnings && warnings.length === 3)
+    assert.ok(!texDoc.includes('warning:'), 'the TeX document must stay uncontaminated')
+    assert.equal((result.content as Array<{ text: string }>)[0]!.text, texDoc)
+  })
+
+  test('an invalid blueprint reports the schema error without piling on', async () => {
+    const result = await client.callTool({
+      name: 'resume_validate',
+      arguments: { blueprint: { basics: { name: 123 }, work: [{ summary: 'x[cite: 1]' }] } }
+    })
+
+    const structured = result.structuredContent as { valid: boolean; warnings?: string[] }
+    assert.equal(structured.valid, false)
+    assert.equal(structured.warnings, undefined)
+  })
+})
+
+describe('resume_import', () => {
+  const PROFILE = [
+    '# Master Profile: Numerical Analyst',
+    '',
+    '## Candidate Metadata',
+    '- **Name:** Ada Lovelace[cite: 1, 2, 3]',
+    '- **LinkedIn:** linkedin.com/in/ada-lovelace[cite: 1, 2]',
+    '',
+    '## Professional Experience',
+    '',
+    '### Analytical Engine Works — London, UK',
+    '**Principal Engineer** *(January 2019 – Present)*[cite: 1, 2, 3]',
+    '- Designed the first published algorithm for a computing machine[cite: 1, 2, 3].',
+    '',
+    '## Volunteer Work',
+    '- Tutored students in the calculus of finite differences[cite: 5]'
+  ].join('\n')
+
+  test('parses a profile and returns it without storing anything', async () => {
+    const result = await client.callTool({ name: 'resume_import', arguments: { markdown: PROFILE } })
+    assert.equal(result.isError, undefined)
+
+    const { blueprint } = result.structuredContent as { blueprint: Record<string, any> }
+    assert.equal(blueprint.basics.name, 'Ada Lovelace')
+    assert.equal(blueprint.work[0].name, 'Analytical Engine Works')
+    assert.equal(blueprint.work[0].endDate, 'Present')
+
+    // readOnlyHint is not decoration: nothing may have appeared in the store.
+    const list = await client.callTool({ name: 'resume_list', arguments: {} })
+    assert.deepEqual((list.structuredContent as { blueprints: unknown[] }).blueprints, [])
+  })
+
+  test('strips citation artifacts before they can reach a document', async () => {
+    const result = await client.callTool({ name: 'resume_import', arguments: { markdown: PROFILE } })
+    assert.ok(!JSON.stringify(result.structuredContent).includes('[cite'))
+  })
+
+  test('reports a section the schema has no home for', async () => {
+    // BlueprintSchema has no `volunteer`, and zod objects are non-strict, so
+    // without the warning this content vanishes with no error anywhere.
+    const result = await client.callTool({ name: 'resume_import', arguments: { markdown: PROFILE } })
+    const { warnings } = result.structuredContent as { warnings: string[] }
+    assert.ok(warnings.some((w) => /unrecognized section "Volunteer Work"/.test(w)))
+    // And the warnings must be readable in the text channel too — an agent that
+    // only reads `content` should still see them.
+    const text = (result.content as Array<{ text: string }>)[0]!.text
+    assert.match(text, /Volunteer Work/)
+  })
+
+  test('the imported blueprint is valid input for resume_create', async () => {
+    const imported = await client.callTool({ name: 'resume_import', arguments: { markdown: PROFILE } })
+    const { blueprint } = imported.structuredContent as { blueprint: Record<string, unknown> }
+
+    const created = await client.callTool({
+      name: 'resume_create',
+      arguments: { id: 'imported-ada', blueprint }
+    })
+    assert.equal(created.isError, undefined)
+  })
+
+  test('unparseable markdown is a readable error, not an "unexpected" one', async () => {
+    // ProfileParseError has its own case in toToolError; without it this falls
+    // to the catch-all, which dumps a stack to stderr and tells the caller to
+    // go looking for a server bug.
+    const result = await client.callTool({
+      name: 'resume_import',
+      arguments: { markdown: 'just prose, no headings anywhere' }
+    })
+    assert.equal(result.isError, true)
+    const text = (result.content as Array<{ text: string }>)[0]!.text
+    assert.match(text, /Could not parse the profile/)
+    assert.ok(!/Unexpected error/.test(text))
   })
 })
 

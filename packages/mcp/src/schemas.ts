@@ -102,6 +102,21 @@ export const ResumeRevertInput = z.object({
 
 export const ResumeTemplatesInput = z.object({})
 
+/**
+ * Takes the markdown itself, not a path.
+ *
+ * No other tool on this server reads a caller-supplied path, and adding one
+ * would hand an agent an arbitrary local-file read through a resume tool --
+ * a capability class this server does not otherwise have, and one nothing
+ * here is positioned to guard (store's `ID_PATTERN` is the only traversal
+ * defense in the repo, and it guards generated filenames, not user input).
+ * The agent already has file-reading tools; the CLI is the adapter that reads
+ * from a path.
+ */
+export const ResumeImportInput = z.object({
+  markdown: z.string()
+})
+
 // --- Output schemas -----------------------------------------------------
 //
 // Declared so the SDK's validateToolOutput actually checks structuredContent
@@ -130,6 +145,15 @@ export const ResumeGetOutput = z.object({
   rev: z.string()
 })
 
+/** Deliberately does not include an `id` or `rev`: this tool writes nothing.
+ *  `warnings` is the load-bearing half -- the parser reports every section it
+ *  could not map and every reading it had to assume, and an agent that ignores
+ *  it will store a blueprint with a job title in the employer field. */
+export const ResumeImportOutput = z.object({
+  blueprint: z.record(z.unknown()),
+  warnings: z.array(z.string())
+})
+
 export const ResumeCreateOutput = z.object(IdRevOutput)
 export const ResumePatchOutput = z.object(IdRevOutput)
 export const ResumeSectionAppendOutput = z.object(IdRevOutput)
@@ -138,9 +162,16 @@ export const ResumeSectionRemoveOutput = z.object(IdRevOutput)
 export const ResumeRemoveOutput = z.object(IdRevOutput)
 export const ResumeRevertOutput = z.object(IdRevOutput)
 
+/** Citation artifacts left in the content by a profile generator. Present only
+ *  when there are any, never an empty array: these output schemas are enforced
+ *  by the SDK's validateToolOutput, and a required field would reject every
+ *  clean response unless each handler remembered to emit `[]`. */
+const CitationWarnings = { warnings: z.array(z.string()).optional() }
+
 export const ResumeValidateOutput = z.object({
   valid: z.boolean(),
-  errors: z.string().optional()
+  errors: z.string().optional(),
+  ...CitationWarnings
 })
 
 export const ResumeRenderOutput = z.object({
@@ -148,11 +179,13 @@ export const ResumeRenderOutput = z.object({
   pageCount: z.number().int().nonnegative(),
   byteSize: z.number().int().nonnegative(),
   /** Which core build produced this PDF. See buildStamp.ts. */
-  coreBuild: z.string()
+  coreBuild: z.string(),
+  ...CitationWarnings
 })
 
 export const ResumeTexOutput = z.object({
-  texDoc: z.string()
+  texDoc: z.string(),
+  ...CitationWarnings
 })
 
 export const ResumeHistoryOutput = z.object({

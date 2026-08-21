@@ -12,6 +12,8 @@ import {
   TEMPLATE_PROFILES,
   HONOURED_DOCUMENT_FIELDS,
   resolveDocumentConfig,
+  profileToBlueprint,
+  citationWarnings,
   type DocumentConfig
 } from '@resume-blueprint/core'
 import { CORE_BUILD } from './buildStamp.js'
@@ -32,6 +34,7 @@ import {
   ResumeDiffInput,
   ResumeRevertInput,
   ResumeTemplatesInput,
+  ResumeImportInput,
   ResumeListOutput,
   ResumeGetOutput,
   ResumeCreateOutput,
@@ -46,7 +49,8 @@ import {
   ResumeHistoryOutput,
   ResumeDiffOutput,
   ResumeRevertOutput,
-  ResumeTemplatesOutput
+  ResumeTemplatesOutput,
+  ResumeImportOutput
 } from './schemas.js'
 import { toToolError } from './errors.js'
 import {
@@ -95,6 +99,29 @@ function withOverrides(
     result.document = { ...(blueprint.document as object | undefined), ...document }
   }
   return result
+}
+
+/**
+ * Folds citation warnings into a tool result, or leaves it untouched.
+ *
+ * Detected on the blueprint rather than on generated TeX: `[cite: 1, 2, 3]`
+ * survives escapeLatex byte-identical but `[cite_start]` becomes
+ * `[cite\_start]`, so a scan of the output would find only one family.
+ *
+ * The text channel gets them too. `structuredContent` is what a schema-aware
+ * client reads, but the text is what an agent actually looks at -- same
+ * reasoning as resume_import.
+ */
+function withCitationWarnings(
+  blueprint: unknown,
+  text: string
+): { text: string; warnings?: string[] } {
+  const warnings = citationWarnings(blueprint)
+  if (!warnings.length) return { text }
+
+  const n = warnings.length
+  const lead = `warning: citation artifacts at ${n} site${n === 1 ? '' : 's'}; these typeset as literal text`
+  return { text: `${text}\n\n${lead}\n${warnings.map((w) => `  ${w}`).join('\n')}`, warnings }
 }
 
 export function registerTools(server: McpServer): void {
@@ -297,8 +324,9 @@ export function registerTools(server: McpServer): void {
     // false either way. Only a non-validation error (unexpected) propagates
     // out to the SDK's own catch-all.
     async ({ blueprint }) => {
+      let parsed
       try {
-        parseBlueprint(blueprint)
+        parsed = parseBlueprint(blueprint)
       } catch (error) {
         if (!isValidationError(error)) throw error
         const errors = formatValidationError(error)
@@ -308,9 +336,12 @@ export function registerTools(server: McpServer): void {
           isError: false
         }
       }
+      // `valid` stands: a leftover placeholder is legal content, not a schema
+      // violation. It is reported alongside the pass, not instead of it.
+      const { text, warnings } = withCitationWarnings(parsed, 'blueprint is valid')
       return {
-        content: [{ type: 'text', text: 'blueprint is valid' }],
-        structuredContent: { valid: true }
+        content: [{ type: 'text', text }],
+        structuredContent: { valid: true, ...(warnings && { warnings }) }
       }
     }
   )
@@ -356,14 +387,20 @@ export function registerTools(server: McpServer): void {
         const byteSize = pdf.length
         const kb = Math.round(byteSize / 1024)
 
+        const { text, warnings } = withCitationWarnings(
+          blueprint,
+          `${pageCount} page${pageCount === 1 ? '' : 's'}, ${kb}KB, at ${path} (${CORE_BUILD})`
+        )
+
         return {
-          content: [
-            {
-              type: 'text',
-              text: `${pageCount} page${pageCount === 1 ? '' : 's'}, ${kb}KB, at ${path} (${CORE_BUILD})`
-            }
-          ],
-          structuredContent: { path, pageCount, byteSize, coreBuild: CORE_BUILD }
+          content: [{ type: 'text', text }],
+          structuredContent: {
+            path,
+            pageCount,
+            byteSize,
+            coreBuild: CORE_BUILD,
+            ...(warnings && { warnings })
+          }
         }
       } catch (error) {
         return toToolError(error)
@@ -385,9 +422,13 @@ export function registerTools(server: McpServer): void {
         const { blueprint } = await store.get(id)
         const input = withOverrides(blueprint as Record<string, unknown>, template, document)
         const { texDoc } = blueprintToTex(input)
+        // The TeX itself goes in the text channel, so warnings ride only in
+        // structuredContent here -- appending them to a document the caller is
+        // about to write to disk would corrupt it.
+        const warnings = citationWarnings(blueprint)
         return {
           content: [{ type: 'text', text: texDoc }],
-          structuredContent: { texDoc }
+          structuredContent: { texDoc, ...(warnings.length && { warnings }) }
         }
       } catch (error) {
         return toToolError(error)
@@ -496,6 +537,49 @@ export function registerTools(server: McpServer): void {
         return {
           content: [{ type: 'text', text }],
           structuredContent: { templates }
+        }
+      } catch (error) {
+        return toToolError(error)
+      }
+    }
+  )
+
+  server.registerTool(
+    'resume_import',
+    {
+      title: 'Import a master profile',
+      description:
+        'Parses a master-profile markdown document into a blueprint, stripping the "[cite: ...]" ' +
+        'artifacts that generators leave behind. Returns the blueprint and a list of warnings; it ' +
+        'stores nothing — pass the result to resume_create when the warnings look acceptable.',
+      inputSchema: ResumeImportInput,
+      outputSchema: ResumeImportOutput,
+      // Reads nothing and writes nothing: the markdown arrives as an argument.
+      annotations: { readOnlyHint: true }
+    },
+    async ({ markdown }) => {
+      try {
+        const { blueprint, warnings } = profileToBlueprint(markdown)
+
+        // The counts are the fast sanity check ("3 roles, not 1"); the warnings
+        // are the part that actually needs reading, so they go in the text
+        // channel in full rather than being summarized to a number.
+        const counts = [
+          ['work', blueprint.work?.length],
+          ['skill groups', blueprint.skills?.length],
+          ['education', blueprint.education?.length],
+          ['certificates', blueprint.certificates?.length]
+        ]
+          .filter(([, n]) => n)
+          .map(([label, n]) => `${n} ${label}`)
+          .join(', ')
+
+        const summary = `imported ${counts || 'basics only'}`
+        const text = warnings.length ? `${summary}\n\n${warnings.join('\n')}` : summary
+
+        return {
+          content: [{ type: 'text', text }],
+          structuredContent: { blueprint, warnings }
         }
       } catch (error) {
         return toToolError(error)

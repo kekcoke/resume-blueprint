@@ -30,6 +30,7 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 const BIN = resolve(HERE, '..', 'dist', 'index.js')
 const FIXTURES = resolve(HERE, '..', '..', '..', 'fixtures')
 const SAMPLE = resolve(FIXTURES, 'sample.json')
+const PROFILE = resolve(FIXTURES, 'profile.md')
 
 interface Run {
   code: number
@@ -277,5 +278,149 @@ describe('document flags', () => {
 
     assert.equal(code, 1)
     assert.match(stderr, /--font-size must be a number/)
+  })
+})
+
+describe('import', () => {
+  test('writes a blueprint to stdout and warnings to stderr', async () => {
+    // The split is what makes `resume import p.md | resume validate -` work
+    // while a human still sees what the parser had to assume.
+    const { code, stdout, stderr } = await cli('import', PROFILE)
+
+    assert.equal(code, 0)
+    const blueprint = JSON.parse(stdout)
+    assert.equal(blueprint.basics.name, 'Ada Lovelace')
+    assert.match(stderr, /removed \d+ citation artifacts/)
+  })
+
+  test('the output round-trips through validate', async () => {
+    // The importer returns BlueprintInput, not Blueprint -- this is what
+    // asserts that the un-defaulted shape is still valid input.
+    const { stdout } = await cli('import', PROFILE)
+    const validated = await invoke(process.execPath, [BIN, 'validate', '-'], stdout)
+
+    assert.equal(validated.code, 0)
+    assert.match(validated.stderr, /blueprint is valid/)
+  })
+
+  test('leaves no citation artifact in the emitted blueprint', async () => {
+    const { stdout } = await cli('import', PROFILE)
+    assert.ok(!stdout.includes('[cite'))
+  })
+
+  test('reads markdown from stdin', async () => {
+    const markdown = await readFile(PROFILE, 'utf8')
+    const { code, stdout } = await invoke(process.execPath, [BIN, 'import', '-'], markdown)
+
+    assert.equal(code, 0)
+    assert.equal(JSON.parse(stdout).basics.name, 'Ada Lovelace')
+  })
+
+  test('--strict turns warnings into a non-zero exit', async () => {
+    const lenient = await cli('import', PROFILE)
+    const strict = await cli('import', PROFILE, '--strict')
+
+    assert.equal(lenient.code, 0)
+    assert.equal(strict.code, 1)
+    // The blueprint is still emitted -- --strict is a gate on the caller, not
+    // a reason to withhold the parse.
+    assert.equal(JSON.parse(strict.stdout).basics.name, 'Ada Lovelace')
+  })
+
+  test('an unreadable path fails with the errno, not a stack trace', async () => {
+    const { code, stdout, stderr } = await cli('import', resolve(FIXTURES, 'does-not-exist.md'))
+
+    assert.equal(code, 1)
+    assert.equal(stdout, '')
+    assert.match(stderr, /cannot read .*does-not-exist\.md: ENOENT/)
+  })
+
+  test('markdown that is not a profile is a readable error', async () => {
+    const { code, stdout, stderr } = await invoke(
+      process.execPath,
+      [BIN, 'import', '-'],
+      'just some prose with no headings'
+    )
+
+    assert.equal(code, 1)
+    assert.equal(stdout, '')
+    assert.match(stderr, /could not parse the profile/)
+  })
+
+  test('import appears in the usage text', async () => {
+    const { stdout } = await cli('--help')
+    assert.match(stdout, /resume import <profile\.md>/)
+  })
+})
+
+describe('citation warnings', () => {
+  /** Written to a temp file per test rather than piped, so the `-o` and
+   *  redirect paths are both exercised the way a user hits them. */
+  const DIRTY = JSON.stringify({
+    basics: { name: 'Ada[cite: 1, 2, 3]', summary: '[cite_start]Led the group.' },
+    headings: { work: 'Experience[cite: 5]' }
+  })
+
+  const validateDirty = () => invoke(process.execPath, [BIN, 'validate', '-'], DIRTY)
+
+  test('validate reports artifacts on stderr while still calling the blueprint valid', async () => {
+    // A leftover placeholder is legal content, not a schema violation, so
+    // `valid` stands and this is a warning rather than an error.
+    const { code, stdout, stderr } = await validateDirty()
+
+    assert.equal(code, 0)
+    assert.match(stderr, /blueprint is valid/)
+    assert.match(stderr, /citation artifacts at 3 sites/)
+    assert.match(stderr, /basics\.name carries 1 citation artifact/)
+    assert.match(stderr, /headings\.work carries 1 citation artifact/)
+    assert.equal(stdout, '')
+  })
+
+  test('tex keeps stdout pure TeX, warnings on stderr', async () => {
+    // `resume tex x.json > out.tex` must not weld status chatter into the
+    // document. This is the case that decides warnings go to stderr.
+    const { code, stdout, stderr } = await invoke(process.execPath, [BIN, 'tex', '-'], DIRTY)
+
+    assert.equal(code, 0)
+    assert.match(stderr, /citation artifacts at 3 sites/)
+    assert.doesNotMatch(stdout, /warning:/)
+    assert.match(stdout, /documentclass/)
+  })
+
+  test('--strict turns citation warnings into a non-zero exit', async () => {
+    const lenient = await validateDirty()
+    const strict = await invoke(process.execPath, [BIN, 'validate', '-', '--strict'], DIRTY)
+
+    assert.equal(lenient.code, 0)
+    assert.equal(strict.code, 1)
+    // Still reported as valid -- --strict is a gate for the caller's script,
+    // not a reclassification of the blueprint.
+    assert.match(strict.stderr, /blueprint is valid/)
+  })
+
+  test('a clean blueprint says nothing at all', async () => {
+    const { code, stderr } = await cli('validate', SAMPLE)
+
+    assert.equal(code, 0)
+    assert.doesNotMatch(stderr, /citation/)
+  })
+
+  test('--strict on a clean blueprint still exits 0', async () => {
+    const { code } = await cli('validate', SAMPLE, '--strict')
+    assert.equal(code, 0)
+  })
+
+  test('a schema-invalid blueprint reports the error without piling on', async () => {
+    // The caller is about to go fix a type error; a citation warning stacked on
+    // top of it is noise, and `citationsIn` returns nothing when parsing fails.
+    const { code, stderr } = await invoke(
+      process.execPath,
+      [BIN, 'validate', '-'],
+      JSON.stringify({ basics: { name: 123 }, work: [{ summary: 'x[cite: 1]' }] })
+    )
+
+    assert.equal(code, 1)
+    assert.match(stderr, /invalid blueprint:/)
+    assert.doesNotMatch(stderr, /citation/)
   })
 })

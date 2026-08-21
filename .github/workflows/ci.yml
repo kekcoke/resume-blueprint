@@ -25,6 +25,19 @@ jobs:
 
     strategy:
       fail-fast: false
+      # Serialized because both jobs share one Tectonic package cache and, on a
+      # cold key, start by fetching the same bundle at the same moment. Cheap
+      # hygiene, and it costs wall-clock only on a cold key.
+      #
+      # It is NOT a fix for the bundle-fetch failures on this repo, which is
+      # what it was originally added for. Those turned out to have two distinct
+      # signatures -- exit 1 with `429 Too Many Requests` on a moving subset of
+      # templates, then exit 101 (a Rust panic) within 350ms on all ten, with
+      # the package cache never populated in either case. Serializing changed
+      # neither. The real dependency is `relay.fullyjustified.net` being
+      # reachable and unthrottled from the runner, and the durable fix is to
+      # stop fetching per-run: pin the bundle and pass `--bundle <path>`.
+      max-parallel: 1
       matrix:
         # Not Node 20: the suite runs `.ts` files directly through Node's type
         # stripping, which is unflagged only from 22.6. A Node 20 job fails on
