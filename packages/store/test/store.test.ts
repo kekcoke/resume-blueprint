@@ -333,6 +333,8 @@ describe('history() on a nonexistent id (finding #7)', () => {
   })
 })
 
+// See cross-process-lock.test.ts for the process-boundary case this can't
+// exercise — this test only proves the in-process queue.
 describe('concurrent patches', () => {
   test('of two concurrent patches sharing one expectedRev, exactly one wins', async () => {
     await store.create('default', { basics: { name: 'Ada' }, selectedTemplate: 1 })

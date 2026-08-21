@@ -12,6 +12,7 @@ import {
   InvalidRevError,
   AlreadyExistsError,
   InvalidActorError,
+  LockTimeoutError,
   GitError
 } from '@resume-blueprint/store'
 
@@ -59,6 +60,7 @@ export function toToolError(error: unknown): CallToolResult {
     error instanceof InvalidRevError ||
     error instanceof AlreadyExistsError ||
     error instanceof InvalidActorError ||
+    error instanceof LockTimeoutError ||
     error instanceof GitError
   ) {
     return errorResult(`${error.name}: ${error.message}`)

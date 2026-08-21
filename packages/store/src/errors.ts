@@ -51,3 +51,20 @@ export class InvalidActorError extends Error {
     this.name = 'InvalidActorError'
   }
 }
+
+/**
+ * Thrown when acquiring the cross-process store lock (`<home>/.store.lock`)
+ * times out because another process is holding it. Deliberately no
+ * auto-recovery (see lock.ts) — `lockFile` is included so the caller's error
+ * message can point a human at the exact file to inspect and, if genuinely
+ * stale, delete.
+ */
+export class LockTimeoutError extends Error {
+  constructor(
+    message: string,
+    readonly lockFile: string
+  ) {
+    super(message)
+    this.name = 'LockTimeoutError'
+  }
+}
