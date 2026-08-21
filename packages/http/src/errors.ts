@@ -6,6 +6,7 @@ import {
   InvalidRevError,
   AlreadyExistsError,
   InvalidActorError,
+  LockTimeoutError,
   GitError
 } from '@resume-blueprint/store'
 
@@ -58,6 +59,13 @@ export function toHttpError(error: unknown): HttpError {
     error instanceof InvalidActorError
   ) {
     return { status: 400, body: { error: error.message } }
+  }
+
+  if (error instanceof LockTimeoutError) {
+    // Another process is holding the store lock — not a bad request or a
+    // permanent conflict, just busy. 503 lets a caller distinguish
+    // "retry shortly" from the 409 it would get for a real content conflict.
+    return { status: 503, body: { error: error.message } }
   }
 
   if (error instanceof GitError) {
