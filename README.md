@@ -14,7 +14,7 @@ server, and the HTTP adapter all work end to end, over an unchanged core:
 - `packages/core` — schema, sanitizer, ten templates, Tectonic renderer
 - `packages/cli` — thin argv wrapper over core
 - `packages/store` — versioned, git-backed blueprint persistence
-- `packages/mcp` — stdio MCP server (15 tools) for local agents (Claude Code, Hermes)
+- `packages/mcp` — stdio MCP server (17 tools) for local agents (Claude Code, Hermes)
 - `packages/http` — REST adapter (8 routes) for workflow tools such as n8n
 
 ## Requirements
@@ -45,6 +45,7 @@ node packages/cli/dist/index.js render fixtures/sample.json -t 3 -o ada.pdf
 ```
 resume render <blueprint.json> [-t N] [-o out.pdf]   Render to PDF
 resume tex    <blueprint.json> [-t N] [-o out.tex]   Emit LaTeX source
+resume text   <blueprint.json> [-o out.txt]          Emit plain text, honouring sections/headings
 resume validate <blueprint.json>                     Validate, with readable errors
 resume import <profile.md> [--strict]                Markdown profile -> blueprint JSON
 resume list-templates                                List template IDs
@@ -100,17 +101,21 @@ the equivalent entry is:
 }
 ```
 
-Sixteen tools: `resume_list`, `resume_get`, `resume_create`, `resume_patch`,
+Seventeen tools: `resume_list`, `resume_get`, `resume_create`, `resume_patch`,
 `resume_section_append`, `resume_section_update`, `resume_section_remove`,
-`resume_remove`, `resume_validate`, `resume_render`, `resume_tex`, `resume_history`,
-`resume_diff`, `resume_revert`, `resume_templates`, `resume_import`.
+`resume_remove`, `resume_validate`, `resume_render`, `resume_tex`, `resume_text`,
+`resume_history`, `resume_diff`, `resume_revert`, `resume_templates`, `resume_import`.
 
 `resume_import` takes the markdown itself, not a path — the agent already has file
 tools, and no tool on this server reads a caller-supplied path. It stores nothing;
 pass its `blueprint` to `resume_create` once its `warnings` look acceptable.
 
-`resume_validate`, `resume_render`, and `resume_tex` carry an optional `warnings`
-array reporting leftover `[cite: …]` placeholders in the content, present only when
+`resume_text` renders plain text rather than LaTeX — the same `sections`/`headings`
+control fields, but no template or document config, and no LaTeX escaping: it's meant
+to be pasted into a portal that demands plain text, not typeset.
+
+`resume_validate`, `resume_render`, `resume_tex`, and `resume_text` carry an optional
+`warnings` array reporting leftover `[cite: …]` placeholders in the content, present only when
 there are any. `resume_validate` still returns `valid: true` — a placeholder is legal
 content, not a schema violation.
 
@@ -228,7 +233,7 @@ flowchart TB
     end
 
     subgraph Interfaces["Thin adapters"]
-        MCP["packages/mcp<br/>stdio JSON-RPC · 15 tools"]
+        MCP["packages/mcp<br/>stdio JSON-RPC · 17 tools"]
         HTTP["packages/http<br/>REST · 8 routes"]
         CLI["packages/cli<br/>argv"]
     end
