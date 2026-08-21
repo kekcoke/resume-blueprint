@@ -67,29 +67,26 @@ describe('different keys', () => {
   test('do not block each other', async () => {
     const otherDir = await mkdtemp(join(tmpdir(), 'resume-blueprint-lock-test-'))
     try {
-      const order: string[] = []
+      let aReleased = false
       let releaseA: () => void = () => {}
       const gate = new Promise<void>((resolve) => {
         releaseA = resolve
       })
 
       const a = withLock(dir, async () => {
-        order.push('a-start')
         await gate
-        order.push('a-end')
+        aReleased = true
       })
       const b = withLock(otherDir, async () => {
-        order.push('b-start')
-        order.push('b-end')
+        // If this lock were sharing state with `a`'s (keyed by an unrelated
+        // home dir), it would still be waiting on `a`'s gate here.
+        assert.equal(aReleased, false, 'b should not need to wait for a to release')
       })
 
-      // b, keyed by an unrelated home dir, should be able to finish while a
-      // is still waiting on its gate — proves the two locks don't share state.
       await b
-      assert.deepEqual(order, ['a-start', 'b-start', 'b-end'])
       releaseA()
       await a
-      assert.deepEqual(order, ['a-start', 'b-start', 'b-end', 'a-end'])
+      assert.equal(aReleased, true)
     } finally {
       await rm(otherDir, { recursive: true, force: true })
     }
