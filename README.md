@@ -14,7 +14,7 @@ server, and the HTTP adapter all work end to end, over an unchanged core:
 - `packages/core` — schema, sanitizer, ten templates, Tectonic renderer
 - `packages/cli` — thin argv wrapper over core
 - `packages/store` — versioned, git-backed blueprint persistence
-- `packages/mcp` — stdio MCP server (17 tools) for local agents (Claude Code, Hermes)
+- `packages/mcp` — stdio MCP server (18 tools) for local agents (Claude Code, Hermes)
 - `packages/http` — REST adapter (8 routes) for workflow tools such as n8n
 
 ## Requirements
@@ -46,6 +46,7 @@ node packages/cli/dist/index.js render fixtures/sample.json -t 3 -o ada.pdf
 resume render <blueprint.json> [-t N] [-o out.pdf]   Render to PDF
 resume tex    <blueprint.json> [-t N] [-o out.tex]   Emit LaTeX source
 resume text   <blueprint.json> [-o out.txt]          Emit plain text, honouring sections/headings
+resume target <blueprint.json> --jd <job.txt>        Score against a job description
 resume validate <blueprint.json>                     Validate, with readable errors
 resume import <profile.md> [--strict]                Markdown profile -> blueprint JSON
 resume list-templates                                List template IDs
@@ -62,6 +63,41 @@ resume import profile.md | resume validate -
 Warnings are not noise — they name every line the parser could not map and every
 reading it had to assume (which side of `**A:** B` was the school, whether a `###`
 held the employer or the job title). `--strict` exits 1 when any were raised.
+
+`target` scores the blueprint against a job description and reports only — it never
+edits anything:
+
+```bash
+$ resume target blueprint.json --jd fixtures/job-description.md --max-terms 10
+coverage 30%  (3 of 10 terms present)
+
+missing, most prominent first:
+  infrastructure             3x  -> skills
+  Senior Platform Engineer   2x  -> work
+  product                    2x  -> skills
+  Senior                     2x  -> skills
+  production                 2x  -> skills
+  services                   2x  -> skills
+  AWS Certified Solutions    1x  -> skills
+
+present:
+  Platform -- profile, work, skills
+  Engineer -- profile, work
+  Kubernetes -- work, skills
+
+note: reporting the top 10 of 82 terms by prominence
+```
+
+Terms are ranked by prominence in the posting — how often it says them, how early,
+and whether they sit on a requirements bullet. The arrow is where the term would go,
+narrowed to sections this blueprint actually renders, which is why the certification
+above points at `skills`: that blueprint has no `certificates` section to put it in.
+
+A present term that matched through the plural fold says so — `microservices (as
+"microservice")` — so a fold you disagree with is visible rather than silent.
+
+`--jd -` reads the posting from stdin, and `--json` emits the full report (every
+suggestion, not just the first) for piping into something else.
 
 `validate`, `tex`, and `render` warn separately about leftover `[cite: 1, 2, 3]`
 placeholders anywhere in a blueprint:
@@ -101,10 +137,11 @@ the equivalent entry is:
 }
 ```
 
-Seventeen tools: `resume_list`, `resume_get`, `resume_create`, `resume_patch`,
+Eighteen tools: `resume_list`, `resume_get`, `resume_create`, `resume_patch`,
 `resume_section_append`, `resume_section_update`, `resume_section_remove`,
 `resume_remove`, `resume_validate`, `resume_render`, `resume_tex`, `resume_text`,
-`resume_history`, `resume_diff`, `resume_revert`, `resume_templates`, `resume_import`.
+`resume_target`, `resume_history`, `resume_diff`, `resume_revert`, `resume_templates`,
+`resume_import`.
 
 `resume_import` takes the markdown itself, not a path — the agent already has file
 tools, and no tool on this server reads a caller-supplied path. It stores nothing;
@@ -114,7 +151,15 @@ pass its `blueprint` to `resume_create` once its `warnings` look acceptable.
 control fields, but no template or document config, and no LaTeX escaping: it's meant
 to be pasted into a portal that demands plain text, not typeset.
 
-`resume_validate`, `resume_render`, `resume_tex`, and `resume_text` carry an optional
+`resume_target` scores a stored blueprint against a job description: which of the
+posting's terms the resume already covers, which are missing and how prominent each is,
+and which section each missing term would fit. It is read-only by design — the agent
+decides what to change and applies it through `resume_patch` or
+`resume_section_append`, so the edit lands in the blueprint's git history rather than
+in a tool's side effect.
+
+`resume_validate`, `resume_render`, `resume_tex`, `resume_text`, and `resume_target`
+carry an optional
 `warnings` array reporting leftover `[cite: …]` placeholders in the content, present only when
 there are any. `resume_validate` still returns `valid: true` — a placeholder is legal
 content, not a schema violation.
@@ -160,12 +205,19 @@ opt-in — treat the token as mandatory if you do.
 import {
   renderBlueprint,
   blueprintToTex,
+  blueprintToText,
+  analyzeCoverage,
   parseBlueprint,
   profileToBlueprint
 } from '@resume-blueprint/core'
 
 const pdf = await renderBlueprint(blueprint)   // Buffer
 const { texDoc } = blueprintToTex(blueprint)   // LaTeX source
+const plain = blueprintToText(blueprint)       // plain text, unescaped
+
+// Reports only. Never rewrites the blueprint, never sanitizes: this output
+// reaches a reader, not a TeX engine.
+const report = analyzeCoverage(blueprint, jobDescription)
 
 // Markdown master profile in, blueprint out. Takes a string, not a path:
 // core does no I/O it was not handed.
@@ -233,7 +285,7 @@ flowchart TB
     end
 
     subgraph Interfaces["Thin adapters"]
-        MCP["packages/mcp<br/>stdio JSON-RPC · 17 tools"]
+        MCP["packages/mcp<br/>stdio JSON-RPC · 18 tools"]
         HTTP["packages/http<br/>REST · 8 routes"]
         CLI["packages/cli<br/>argv"]
     end
@@ -342,9 +394,9 @@ survives into the generated TeX and that nothing executes during a real compile.
 npm test
 ```
 
-519 tests. Covers the sanitizer, golden `.tex` snapshots for all ten templates, a real
+571 tests. Covers the sanitizer, golden `.tex` snapshots for all ten templates, a real
 compile of each with page-count assertions, the adversarial fixture, the master-profile
-importer, and the parse-fidelity harness described under
+importer, job-description coverage, and the parse-fidelity harness described under
 [Choosing a template](#choosing-a-template).
 After an intentional change to template output:
 
