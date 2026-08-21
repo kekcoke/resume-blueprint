@@ -1,6 +1,7 @@
 import getTemplateData from './templates/index.js'
 import { parseBlueprint } from './schema.js'
 import { sanitizeBlueprint } from './sanitize.js'
+import { renderText } from './text.js'
 import { compileTex, type CompileOptions } from './render/tectonic.js'
 import type { TemplateData } from './types.js'
 
@@ -53,6 +54,19 @@ export type { ProfileImportResult } from './import/profile.js'
  */
 export function blueprintToTex(input: unknown): TemplateData {
   return getTemplateData(sanitizeBlueprint(parseBlueprint(input)))
+}
+
+/**
+ * Validates and renders a blueprint to plain text, honouring `sections` and
+ * `headings`. The sibling of `blueprintToTex` at the same seam, but with no
+ * sanitization step: plain text is not TeX, and running `escapeLatex` over it
+ * would show a human reader a literal `\&`.
+ *
+ * @param input an unvalidated blueprint, e.g. parsed JSON from an agent.
+ * @throws {z.ZodError} if the blueprint fails validation.
+ */
+export function blueprintToText(input: unknown): string {
+  return renderText(parseBlueprint(input))
 }
 
 /**
