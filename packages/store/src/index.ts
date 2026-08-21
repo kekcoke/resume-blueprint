@@ -17,7 +17,8 @@ export {
   InvalidIdError,
   InvalidRevError,
   AlreadyExistsError,
-  InvalidActorError
+  InvalidActorError,
+  LockTimeoutError
 } from './errors.js'
 export { GitError } from './git.js'
 export type { BlueprintSummary, Commit } from './types.js'
