@@ -292,7 +292,7 @@ flowchart TB
 
     subgraph Services["Shared services"]
         STORE["packages/store<br/>versioned persistence"]
-        CORE["packages/core<br/>schema · sanitize · 9 templates · render"]
+        CORE["packages/core<br/>schema · sanitize · 10 templates · render"]
     end
 
     subgraph External["External"]
@@ -394,7 +394,7 @@ survives into the generated TeX and that nothing executes during a real compile.
 npm test
 ```
 
-579 tests. Covers the sanitizer, golden `.tex` snapshots for all ten templates, a real
+584 tests. Covers the sanitizer, golden `.tex` snapshots for all ten templates, a real
 compile of each with page-count assertions, the adversarial fixture, the master-profile
 importer, job-description coverage, and the parse-fidelity harness described under
 [Choosing a template](#choosing-a-template).
@@ -403,6 +403,28 @@ After an intentional change to template output:
 ```bash
 npm run test:update-golden --workspace @resume-blueprint/core
 ```
+
+### The cross-adapter contract
+
+Every one of those tests exercises a package in isolation. `qa/` is the layer that
+tests the four callers — CLI, HTTP, MCP, markdown import — **against each other**:
+
+```bash
+npm run qa:preflight   # binaries, node version, stale dist/
+npm run qa:all         # every contract row, all four callers (~1 min)
+npm run qa:http        # or one surface at a time
+```
+
+`qa/contract.md` is the source of truth: one row per scenario, one column per
+surface, each cell naming the exact observable outcome. The scripts under
+`qa/cli/`, `qa/http/`, `qa/mcp/` and `qa/markdown/` are runnable sample invocables
+— curl commands, literal JSON-RPC sessions, CLI pipelines — that double as the
+executable form of that table. `qa/http/collection.json` is generated from the
+curl scripts for Postman/Insomnia.
+
+The harness runs against a throwaway `RESUME_BLUEPRINT_HOME` and refuses to start
+if it would resolve to your real store. `qa/findings.md` lists the fifteen gaps
+the exercise surfaced; none of them was fixed as part of building it.
 
 ## Notes on the extraction
 
