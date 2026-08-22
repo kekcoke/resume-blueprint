@@ -1,0 +1,9 @@
+// contract: C23 -- a 1ms compile budget cannot finish any real render, so the
+// timeout path is exercised without depending on machine speed. The failure
+// comes back as isError with "Render failed:", not as a JSON-RPC error.
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"resume-blueprint-qa","version":"0.1.0"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"resume_create","arguments":{"id":"qa-timeout","blueprint":"@file:fixtures/sample.json"}}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"resume_render","arguments":{"id":"qa-timeout","timeoutMs":1}}}
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"resume_render","arguments":{"id":"qa-timeout","timeoutMs":600000}}}
+{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"resume_render","arguments":{"id":"qa-timeout","timeoutMs":0}}}

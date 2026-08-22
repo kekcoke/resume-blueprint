@@ -1,0 +1,14 @@
+// contract: C8, C9, C10, C11, C12 -- every way a store operation is refused.
+// All of them come back as isError results with a named error class, never as
+// JSON-RPC protocol errors: a tool that fails is still a tool that answered.
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"resume-blueprint-qa","version":"0.1.0"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"resume_get","arguments":{"id":"qa-does-not-exist"}}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"resume_get","arguments":{"id":"../etc/passwd"}}}
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"resume_create","arguments":{"id":"qa-errors","blueprint":{"basics":{"name":"Ada Lovelace"}}}}}
+{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"resume_create","arguments":{"id":"qa-errors","blueprint":{"basics":{"name":"Ada Lovelace"}}}}}
+{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"resume_patch","arguments":{"id":"qa-errors","patch":{"basics":{"label":"Engineer"}},"expectedRev":"deadbeef"}}}
+{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"resume_patch","arguments":{"id":"qa-errors","patch":{"basics":{"label":"Engineer"}}}}}
+{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"resume_history","arguments":{"id":"qa-errors"}}}
+{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"resume_remove","arguments":{"id":"qa-errors"}}}
+{"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"resume_get","arguments":{"id":"qa-errors"}}}

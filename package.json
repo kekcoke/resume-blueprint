@@ -13,6 +13,13 @@
   "scripts": {
     "build": "npm run build --workspace @resume-blueprint/core && npm run build --workspace @resume-blueprint/store && npm run build --workspace @resume-blueprint/mcp && npm run build --workspace @resume-blueprint/cli && npm run build --workspace @resume-blueprint/http",
     "test": "npm run build && npm run test --workspace @resume-blueprint/core && npm run test --workspace @resume-blueprint/store && npm run test --workspace @resume-blueprint/mcp && npm run test --workspace @resume-blueprint/cli && npm run test --workspace @resume-blueprint/http",
+    "qa:preflight": "node qa/run.mjs --preflight",
+    "qa:all": "node qa/run.mjs",
+    "qa:cli": "node qa/run.mjs cli",
+    "qa:http": "node qa/run.mjs http",
+    "qa:mcp": "node qa/run.mjs mcp",
+    "qa:md": "node qa/run.mjs markdown",
+    "qa:collection": "node qa/run.mjs --emit-collection",
     "start:http": "node packages/http/dist/index.js",
     "start:mcp": "node packages/mcp/dist/index.js"
   }
