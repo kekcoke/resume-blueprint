@@ -11,3 +11,20 @@ profile_templates/
 # and profile URLs. Same reason profile_templates/ is ignored (53fbea6).
 external_feedback.md
 *_feedback.md
+
+# AWS AgentCore workshop scratch that landed in docs/ from another project.
+# Ignored rather than deleted — they are notes, not artifacts of this repo. The
+# reason it matters here: docs/prompts/resume.md tells a session to trust
+# `git status` over the previous session's summary, and untracked noise degrades
+# exactly that signal.
+docs/iauth.txt
+docs/policy.txt
+docs/printall.sh
+docs/shema.txt
+docs/some_thing.yml
+docs/wf.txt
+
+# Per-run QA output. baseline.json and evidence.json ARE tracked — they are the
+# record; these two are just the most recent run.
+qa/plan/last-run.json
+qa/plan/negative-control-run.json
