@@ -7,7 +7,6 @@ design in a form something other than a human can read.
 qa/plan/
   graph.json       16 nodes: deps, mutexes, blast radius, acceptance predicates
   next.mjs         the resolver -- what is ready, what holds what, brief a node
-  claims/          one file per claimed node; never one shared state file
   baseline.json    expected status per contract row per suite
   mutations.json   the negative control, as a registry
   negative-control.mjs   break it, prove the row goes red, revert
@@ -39,9 +38,29 @@ because it is trusted.
 **A gate is a missing file.** A node with `check: "gate"` is unreachable until
 `docs/decisions/<id>.md` exists. See `docs/decisions/README.md`.
 
-**One claim file per node.** A single `state.json` would be exactly the shared
-mutable artifact A4 warns about — an interface between lanes, with the last
-writer silently winning. Three worktrees writing three paths cannot collide.
+**One claim file per node, in the git common dir.** Two separate points.
+
+*One file per node* — a single `state.json` would be exactly the shared mutable
+artifact A4 warns about: an interface between lanes, with the last writer
+silently winning. Three worktrees writing three paths cannot collide.
+
+*In the common dir, not the working tree* — load-bearing, and wrong in the first
+cut of this directory. `git worktree` gives each lane its own checkout, so a
+claim written under `qa/plan/claims/` is invisible to every other lane: the
+mutex would stop working precisely when three lanes are open, which is the only
+time it does anything. Every worktree of a clone shares one
+`git rev-parse --git-common-dir`, so claims live in
+`<common-dir>/qa-plan-claims/` and are visible everywhere instantly, no commit
+required.
+
+That also settles what a claim *is*: ephemeral coordination state, like a lock
+file. Not a reviewable artifact, and not something to commit. `--where` prints
+the directory in effect.
+
+**Run `--ready` and `--claim` from anywhere in the clone.** Because claims are
+shared, the primary checkout on `main` and any lane worktree give the same
+answer. Do the *work* on a branch; the coordination call is
+location-independent.
 
 ## What transcribing the graph found
 

@@ -628,6 +628,26 @@ The practical shape is G5 first and alone, Lane C beside it, and the lanes
 opening behind it. Nobody has to redraw anything: the resolver withholds the
 collisions on its own.
 
+## D2b. Where to run the resolver
+
+Anywhere in the clone. `--ready` and `--claim` read and write
+`<git-common-dir>/qa-plan-claims/`, which every worktree shares, so the primary
+checkout on `main` and a lane worktree give the same answer.
+
+```bash
+node qa/plan/next.mjs --where     # prints the claims dir in effect
+```
+
+The usual shape is: claim from wherever you are, then branch or `-w` for the
+work itself. Coordination and editing are different acts, and only the second
+one needs its own tree.
+
+This was wrong in the first cut of G0 — claims lived under `qa/plan/claims/`,
+inside the working tree, so a claim made in one lane was invisible to the
+others and the mutex silently stopped working at exactly the moment three lanes
+were open. Recorded rather than quietly fixed: it is the same class of bug as
+K9, found the same way, by checking instead of assuming.
+
 ## D3. Gates are files
 
 A node whose `check` is `gate` is unreachable until `docs/decisions/<id>.md`

@@ -13,6 +13,7 @@
  *   node qa/plan/next.mjs --conflicts          # the register, DERIVED from the graph
  *   node qa/plan/next.mjs --graph              # mermaid
  *   node qa/plan/next.mjs --check              # graph integrity
+ *   node qa/plan/next.mjs --where              # which claims dir is in effect
  *
  * `docs/orchestration.md` Part B is the explanation of this graph; `graph.json`
  * is the source of truth. Part A3 is why a mutex is a FIELD here and not an
@@ -21,14 +22,49 @@
  *
  * Node builtins only — `qa/` declares no dependencies and this keeps it that way.
  */
+import { execFileSync } from 'node:child_process'
 import { readFile, writeFile, readdir, unlink, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, isAbsolute, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const PLAN_DIR = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = join(PLAN_DIR, '..', '..')
-const CLAIMS_DIR = join(PLAN_DIR, 'claims')
+
+/**
+ * Claims live in the git COMMON dir, not in the working tree.
+ *
+ * This is load-bearing for the lanes. `git worktree` gives each lane its own
+ * checkout, so a claim written under `qa/plan/` would be invisible to every
+ * other lane — and the mutex that exists to stop two lanes editing one file
+ * would silently stop working exactly when three lanes are open, which is the
+ * only time it matters.
+ *
+ * Every worktree of a clone shares one common dir (`git rev-parse
+ * --git-common-dir` resolves to the same path from all of them), so a claim
+ * written here is visible to all of them immediately, with no commit.
+ *
+ * That also says what a claim IS: ephemeral coordination state, like a lock
+ * file. It is not a reviewable artifact and does not belong in a commit.
+ * Durable state is the node's PR and, once merged, its `done` claim.
+ */
+function resolveClaimsDir() {
+  try {
+    const common = execFileSync('git', ['rev-parse', '--git-common-dir'], {
+      cwd: REPO_ROOT,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore']
+    }).trim()
+    const root = isAbsolute(common) ? common : join(REPO_ROOT, common)
+    return join(root, 'qa-plan-claims')
+  } catch {
+    // Not a git checkout, or no git on PATH. Degrade to the working tree
+    // rather than refusing to run; a single-checkout user loses nothing.
+    return join(PLAN_DIR, 'claims')
+  }
+}
+
+const CLAIMS_DIR = resolveClaimsDir()
 
 /** Statuses that mean the node is finished and no longer holds anything. */
 const TERMINAL = new Set(['done', 'abandoned'])
@@ -421,6 +457,11 @@ async function main() {
   const graph = await loadGraph()
   const claims = await loadClaims()
 
+  if (flags.has('--where')) {
+    process.stdout.write(`claims: ${CLAIMS_DIR}\n`)
+    process.stdout.write('shared by every worktree of this clone.\n')
+    return 0
+  }
   if (flags.has('--check')) return cmdCheck(graph)
   if (flags.has('--conflicts')) return cmdConflicts(graph)
   if (flags.has('--graph')) return cmdGraph(graph)
