@@ -707,6 +707,44 @@ For a lane rather than a node, `claude -w lane-c-lowrisk --model sonnet --tmux`
 still applies, and B4's flag notes still hold — including that `--max-turns`
 does not exist in this build.
 
+## D7b. Model routing, and what "escalate in place" can and cannot be
+
+A7 names a model on every node. Two of the three ways to act on that are
+automatable; the third is not, and it is worth being exact about which.
+
+**At a node boundary — fully automatic.** The graph holds the routing, so a
+launcher never re-derives it:
+
+```bash
+node qa/plan/next.mjs --model G4        # -> sonnet
+claude --model "$(node qa/plan/next.mjs --model G4)" \
+       -p "$(node qa/plan/next.mjs --brief G4)"
+```
+
+**Mid-node, in the same session — NOT automatic.** `/model` is a command a human
+types. A running session has no tool that changes its own model, so an agent
+cannot perform A7's "escalate in place" on itself. What it can do is make the
+signal unmissable and the next keystroke obvious:
+
+```bash
+node qa/plan/next.mjs --escalate G4 "the timeout literal is also read by http"
+# records the escalation on the claim, then prints: type /model opus
+```
+
+The record on the claim is the part that matters. It tells a later session that
+this node has already been attempted at the lower model and why, which is what
+stops attempt two repeating attempt one — and after two escalations with no
+progress it is A9's fourth row, not a third try.
+
+**By delegation — automatic, but it is a different thing.** A subagent can be
+spawned on another model. That is a genuine autonomous switch, and it is the
+wrong tool for escalation: the subagent starts cold, which is exactly the
+restart A7 says not to do. Use it for a bounded read-only question ("audit these
+three files"), not to rescue a node in flight.
+
+The honest summary: **the graph decides the model, the human changes it
+mid-flight, and the claim file remembers that it happened.**
+
 ## D8. What is still not mechanical
 
 Stated plainly, because a substrate that overstates its own coverage is worse

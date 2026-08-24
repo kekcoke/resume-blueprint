@@ -8,6 +8,8 @@
  *   node qa/plan/next.mjs --claim G7           # take the node and its mutexes
  *   node qa/plan/next.mjs --release G7 [--done|--abandoned]
  *   node qa/plan/next.mjs --brief G7           # render docs/prompts/node.md for it
+ *   node qa/plan/next.mjs --model G7           # just the --model alias, for a launcher
+ *   node qa/plan/next.mjs --escalate G7 "why" # A7's escalate-in-place, recorded
  *   node qa/plan/next.mjs --conflicts          # the register, DERIVED from the graph
  *   node qa/plan/next.mjs --graph              # mermaid
  *   node qa/plan/next.mjs --check              # graph integrity
@@ -262,6 +264,57 @@ async function cmdBrief(graph, id) {
  * trusted. Deriving it is the same argument qa/http/collection.json makes for
  * being generated: the two cannot drift.
  */
+/**
+ * Just the model alias, so a launcher can route without parsing anything:
+ *
+ *   claude --model "$(node qa/plan/next.mjs --model G4)" -p "$(... --brief G4)"
+ *
+ * A7 names a model on every node for a reason; this is what stops that routing
+ * being re-derived by hand, or forgotten, at 2am.
+ */
+async function cmdModel(graph, id) {
+  const node = graph.nodes.find((n) => n.id === id)
+  if (!node) return fail(`unknown node "${id}"`)
+  process.stdout.write(`${node.model}\n`)
+  return 0
+}
+
+/**
+ * A7 says: escalate in place, do not restart — the accumulated context is the
+ * expensive part. A session cannot change its own model (`/model` is typed by a
+ * human), so the honest mechanism is to make the signal loud and the human's
+ * next keystroke obvious.
+ *
+ * Records the escalation on the claim so a later session knows this node has
+ * already been tried at the lower model, and why. That history is what stops
+ * the second attempt repeating the first.
+ */
+async function cmdEscalate(graph, claims, id) {
+  const node = graph.nodes.find((n) => n.id === id)
+  if (!node) return fail(`unknown node "${id}"`)
+
+  const path = join(CLAIMS_DIR, `${id}.json`)
+  if (!existsSync(path)) return fail(`${id} is not claimed — nothing to escalate`)
+
+  const reason = positional.slice(1).join(' ') || '(no reason given)'
+  const claim = JSON.parse(await readFile(path, 'utf8'))
+  claim.escalations = claim.escalations ?? []
+  claim.escalations.push({ from: node.model, to: 'opus', reason, at: new Date().toISOString() })
+  claim.status = 'wip'
+  await writeFile(path, `${JSON.stringify(claim, null, 2)}\n`)
+
+  process.stdout.write(
+    `recorded: ${id} escalated from ${node.model} to opus\n  reason: ${reason}\n\n` +
+      'In the SAME session, type:\n\n  /model opus\n\n' +
+      'Do not start a new session. The files already read and the dead ends already\n' +
+      'eliminated are the expensive part; the tokens are not (A7).\n\n' +
+      `If this node has already been escalated ${claim.escalations.length} time(s) with no\n` +
+      'progress, that is A9\'s fourth row: abandon it, record what was learned in\n' +
+      'qa/findings.md, and release it with --abandoned.\n'
+  )
+  return 0
+}
+
 async function cmdConflicts(graph) {
   const byToken = new Map()
   for (const node of graph.nodes) {
@@ -374,6 +427,8 @@ async function main() {
   if (flags.has('--claim')) return cmdClaim(graph, claims, positional[0])
   if (flags.has('--release')) return cmdRelease(graph, claims, positional[0])
   if (flags.has('--brief')) return cmdBrief(graph, positional[0])
+  if (flags.has('--model')) return cmdModel(graph, positional[0])
+  if (flags.has('--escalate')) return cmdEscalate(graph, claims, positional[0])
   if (flags.has('--all')) return cmdAll(graph, claims)
   if (flags.has('--ready') || !argv.length) return cmdReady(graph, claims)
 
