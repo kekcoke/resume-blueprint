@@ -6,6 +6,9 @@
  *   node qa/run.mjs http mcp        # named suites
  *   node qa/run.mjs --preflight     # environment only, run nothing
  *   node qa/run.mjs --emit-collection
+ *   node qa/run.mjs --json[=path]   # results as JSON, for an orchestrator
+ *   node qa/run.mjs --emit-baseline # record the expected status of every row
+ *   node qa/run.mjs --check-baseline# run, then report only the rows that FLIPPED
  *
  * Every suite is a directory of standalone `.sh` sample invocables. This
  * driver adds three things they cannot do for themselves: a preflight, an
@@ -15,8 +18,8 @@
  * runs by hand with no driver at all.
  */
 import { spawn } from 'node:child_process'
-import { readdir, readFile, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 
 import { REPO_ROOT, preflight, printPreflight } from './lib/env.mjs'
 import { Report } from './lib/report.mjs'
@@ -26,8 +29,17 @@ import { startHttpServer } from './lib/http.mjs'
 const SUITES = ['cli', 'markdown', 'http', 'mcp']
 
 const argv = process.argv.slice(2)
-const flags = new Set(argv.filter((a) => a.startsWith('--')))
+const flags = new Set(argv.filter((a) => a.startsWith('--')).map((a) => a.split('=')[0]))
 const requested = argv.filter((a) => !a.startsWith('--'))
+
+/** The value of `--name=value`, or `fallback`. */
+function flagValue(name, fallback) {
+  const hit = argv.find((a) => a.startsWith(`${name}=`))
+  return hit ? hit.slice(name.length + 1) : fallback
+}
+
+const PLAN_DIR = join(REPO_ROOT, 'qa', 'plan')
+const BASELINE = join(PLAN_DIR, 'baseline.json')
 
 for (const name of requested) {
   if (!SUITES.includes(name)) {
@@ -315,6 +327,112 @@ async function emitCollection() {
   process.stdout.write(skipped.length ? `, ${skipped.length} skipped as run-time-generated)\n` : ')\n')
 }
 
+// --- machine-readable output ------------------------------------------------
+//
+// The human matrix is what a person reads; this is what an orchestrator reads.
+// Both come from `Report.matrix()`, so they cannot disagree.
+//
+// Note the destination: a FILE, never stdout. `qa/run.mjs` is piped near MCP
+// often enough that writing structured output to stdout would be one careless
+// redirect away from tripwire 5 (stdout IS the JSON-RPC transport). The path is
+// printed; the payload is not.
+
+async function writeJson(report) {
+  const path = flagValue('--json', join(PLAN_DIR, 'last-run.json'))
+  await mkdir(dirname(path), { recursive: true })
+  await writeFile(path, `${JSON.stringify(report.toJSON(), null, 2)}\n`)
+  process.stdout.write(`\nwrote ${path.replace(`${REPO_ROOT}/`, '')}\n`)
+}
+
+async function emitBaseline(report) {
+  await mkdir(PLAN_DIR, { recursive: true })
+  const baseline = {
+    generated: new Date().toISOString(),
+    note:
+      'Expected status per contract row per suite. Committed, so a change to it is reviewable. ' +
+      'Regenerate deliberately — a baseline refreshed to make --check-baseline quiet is the ' +
+      'same failure as editing qa/contract.md to go green.',
+    suites: report.suites,
+    matrix: report.matrix()
+  }
+  await writeFile(BASELINE, `${JSON.stringify(baseline, null, 2)}\n`)
+  process.stdout.write(`\nwrote ${BASELINE.replace(`${REPO_ROOT}/`, '')} (${Object.keys(baseline.matrix).length} rows)\n`)
+}
+
+/**
+ * Reports only what MOVED since the baseline.
+ *
+ * This is the check the node prompt leans on: make the code change, run this,
+ * and see which row went red BEFORE touching qa/contract.md. A full green
+ * matrix cannot tell you that; a flip list can.
+ *
+ * Rows the run did not cover are not reported as missing — a scoped run
+ * (`node qa/run.mjs cli --check-baseline`) is the normal case while a node is
+ * in flight.
+ */
+async function checkBaseline(report) {
+  let baseline
+  try {
+    baseline = JSON.parse(await readFile(BASELINE, 'utf8'))
+  } catch {
+    process.stdout.write(`\nno baseline at ${BASELINE.replace(`${REPO_ROOT}/`, '')} — run --emit-baseline on a known-good tree first.\n`)
+    return 1
+  }
+
+  const current = report.matrix()
+  const flips = []
+  for (const [id, cells] of Object.entries(current)) {
+    for (const [suite, status] of Object.entries(cells)) {
+      const was = baseline.matrix?.[id]?.[suite]
+      if (was === undefined) flips.push({ id, suite, from: 'NEW', to: status })
+      else if (was !== status) flips.push({ id, suite, from: was, to: status })
+    }
+  }
+
+  process.stdout.write(`\n${'-'.repeat(60)}\nbaseline diff\n\n`)
+  if (!flips.length) {
+    process.stdout.write('no flips — every row covered by this run matches the baseline.\n')
+    return 0
+  }
+  for (const f of flips) {
+    process.stdout.write(`  ${f.id.padEnd(5)} ${f.suite.padEnd(9)} ${f.from} -> ${f.to}\n`)
+  }
+  process.stdout.write('\nEach flip is either a real regression, a deliberate change whose contract\n')
+  process.stdout.write('row has not caught up, or a pinned assertion doing its job. Say which.\n')
+  return 1
+}
+
+/**
+ * Appends every row observed FAIL to qa/plan/evidence.json.
+ *
+ * Part C Track 4's actual question: which of the 210 assertions have NEVER been
+ * seen red? Those are the ones with no evidence behind them. Nothing recorded
+ * this before, so the answer was "all of them, as far as anyone could prove".
+ */
+async function recordEvidence(report) {
+  const path = join(PLAN_DIR, 'evidence.json')
+  let evidence = { note: 'Rows observed FAIL at least once, and when. A row absent from here has never been seen red — it is not yet known to test anything.', seenRed: {} }
+  try {
+    evidence = JSON.parse(await readFile(path, 'utf8'))
+  } catch {
+    // First run; the default above is the file.
+  }
+  let added = false
+  for (const [id, cells] of Object.entries(report.matrix())) {
+    for (const [suite, status] of Object.entries(cells)) {
+      if (status !== 'FAIL') continue
+      const key = `${id}:${suite}`
+      if (evidence.seenRed[key]) continue
+      evidence.seenRed[key] = new Date().toISOString()
+      added = true
+    }
+  }
+  if (added) {
+    await mkdir(PLAN_DIR, { recursive: true })
+    await writeFile(path, `${JSON.stringify(evidence, null, 2)}\n`)
+  }
+}
+
 // --- main -------------------------------------------------------------------
 
 async function main() {
@@ -338,7 +456,14 @@ async function main() {
     if (suite === 'http') await runHttpSuite(report)
     else await runPlainSuite(suite, report)
   }
-  return report.summary()
+  const code = report.summary()
+
+  await recordEvidence(report)
+  if (flags.has('--json')) await writeJson(report)
+  if (flags.has('--emit-baseline')) await emitBaseline(report)
+  if (flags.has('--check-baseline')) return (await checkBaseline(report)) || code
+
+  return code
 }
 
 main()
