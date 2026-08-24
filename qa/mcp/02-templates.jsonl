@@ -1,0 +1,15 @@
+// contract: C2 -- every template, through the MCP path, against one stored blueprint.
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"resume-blueprint-qa","version":"0.1.0"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"resume_create","arguments":{"id":"qa-templates","blueprint":"@file:fixtures/sample.json"}}}
+{"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"resume_render","arguments":{"id":"qa-templates","template":1}}}
+{"jsonrpc":"2.0","id":12,"method":"tools/call","params":{"name":"resume_render","arguments":{"id":"qa-templates","template":2}}}
+{"jsonrpc":"2.0","id":13,"method":"tools/call","params":{"name":"resume_render","arguments":{"id":"qa-templates","template":3}}}
+{"jsonrpc":"2.0","id":14,"method":"tools/call","params":{"name":"resume_render","arguments":{"id":"qa-templates","template":4}}}
+{"jsonrpc":"2.0","id":15,"method":"tools/call","params":{"name":"resume_render","arguments":{"id":"qa-templates","template":5}}}
+{"jsonrpc":"2.0","id":16,"method":"tools/call","params":{"name":"resume_render","arguments":{"id":"qa-templates","template":6}}}
+{"jsonrpc":"2.0","id":17,"method":"tools/call","params":{"name":"resume_render","arguments":{"id":"qa-templates","template":7}}}
+{"jsonrpc":"2.0","id":18,"method":"tools/call","params":{"name":"resume_render","arguments":{"id":"qa-templates","template":8}}}
+{"jsonrpc":"2.0","id":19,"method":"tools/call","params":{"name":"resume_render","arguments":{"id":"qa-templates","template":9}}}
+{"jsonrpc":"2.0","id":20,"method":"tools/call","params":{"name":"resume_render","arguments":{"id":"qa-templates","template":10}}}
+{"jsonrpc":"2.0","id":21,"method":"tools/call","params":{"name":"resume_render","arguments":{"id":"qa-templates","template":99}}}

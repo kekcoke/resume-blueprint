@@ -629,3 +629,32 @@ Checked against CLAUDE.md, because three of these features add TeX-interpolating
    the adapter reads the file. No new runtime dependency is proposed for core in any
    feature; F2's `pdfinfo` / `pdftotext -bbox` usage is test-only, matching the existing
    harness.
+
+---
+
+## Status: the backlog is complete
+
+F0 through F13 have all shipped; `git log` carries the reasoning for each, and F13
+(the zod 4 migration) was the last to merge. Nothing in this document is still in
+flight, which means it is now a record of decisions rather than a plan.
+
+The successor track is **QA and local stability**, on the way to a production-grade
+MVP. It lives in `qa/`:
+
+- `qa/contract.md` — the cross-adapter expectation matrix. Every feature above was
+  built and tested inside one package; this is the first artifact that states what
+  the *same* blueprint should do through the CLI, HTTP, MCP and the markdown
+  importer, and it is executable.
+- `qa/findings.md` — fifteen gaps surfaced by reading those four surfaces against
+  each other. None was fixed as part of building the harness, so they triage on
+  their own merits. Two are worth naming here because they bear directly on the
+  work above: **G3**, HTTP's eight routes against MCP's eighteen tools — which is
+  why the citation-warning surface F8 added is unreachable from n8n, extending F8's
+  own addendum — and **G10**, CI's per-run Tectonic bundle fetch, whose fix
+  `.github/workflows/ci.yml` names in a comment and which remains unimplemented.
+- `qa/README.md` — how to run it, and how to add a row.
+
+Conflict register note: none of the fifteen findings conflicts with a decision
+recorded above. G5 (four different render-timeout ceilings) is the closest — it is
+the accumulated result of the per-feature timeout choices made in F3 and Gate 2,
+each individually justified, none aware of the others.

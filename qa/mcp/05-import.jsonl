@@ -1,0 +1,9 @@
+// contract: C18, C19, C21 -- the markdown caller, over MCP.
+// resume_import takes the markdown ITSELF, never a path: no other tool on
+// this server reads a caller-supplied path, and adding one would hand an
+// agent an arbitrary local-file read through a resume tool.
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"resume-blueprint-qa","version":"0.1.0"}}}
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"resume_import","arguments":{"markdown":"@text:fixtures/profile.md"}}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"resume_import","arguments":{"markdown":"@text:fixtures/profile-injection.md"}}}
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"resume_import","arguments":{"markdown":"# Shopping list\n\n- milk\n- bread\n"}}}
