@@ -1,0 +1,46 @@
+{
+  "note": "The negative control, as data. Each entry breaks the exact behaviour one contract row claims to check; the row must go red, and go green again on revert. An assertion never observed failing has not been shown to test anything (Part C, Track 4). Every `find` string was grepped against the working tree, not written from memory.",
+  "howToAdd": "Pick a row. Find the ONE line that, changed, should make it fail. Prefer a constant over logic — a mutation that breaks the build proves nothing. Then run it: if the row stays green, you have found a vacuous assertion, which is the more valuable outcome.",
+  "mutations": [
+    {
+      "row": "C15",
+      "suites": ["http"],
+      "file": "packages/http/src/renderLimit.ts",
+      "find": "export const MAX_CONCURRENT_RENDERS = 4",
+      "replace": "export const MAX_CONCURRENT_RENDERS = 99",
+      "note": "The mutation PR #19 ran by hand and reported in its verification table. Raising the cap above the 8 concurrent requests the script issues means nothing is ever rejected, so C15's '>= 1 rejected' assertion must fail."
+    },
+    {
+      "row": "C7",
+      "suites": ["http"],
+      "file": "packages/http/src/body.ts",
+      "find": "maxBytes = 5 * 1024 * 1024",
+      "replace": "maxBytes = 50 * 1024 * 1024",
+      "note": "The 6 MiB oversize probe now fits under the limit, so the 413 never happens."
+    },
+    {
+      "row": "C8",
+      "suites": ["mcp"],
+      "file": "packages/mcp/src/validate.ts",
+      "find": "maxDepth = 32",
+      "replace": "maxDepth = 4096",
+      "note": "The 40-deep patch is no longer too deep, so resume_patch stops raising. Deliberately the MCP copy, not HTTP's: C8's HTTP cell is currently pinned to the UNGATED behaviour (G11), so mutating that side proves nothing until G11 lands."
+    },
+    {
+      "row": "C10",
+      "suites": ["http", "mcp"],
+      "file": "packages/store/src/paths.ts",
+      "find": "const ID_PATTERN = /^[a-z0-9-]+$/",
+      "replace": "const ID_PATTERN = /^[a-z0-9./-]+$/",
+      "note": "A traversal id like `../etc` now passes validation. This one is a security boundary, so it is the mutation most worth having: if C10 stays green here, nothing is checking the boundary."
+    },
+    {
+      "row": "C22",
+      "suites": ["cli", "mcp"],
+      "file": "packages/core/src/render/tectonic.ts",
+      "find": "'tectonic not found on PATH. Install it with `brew install tectonic` '",
+      "replace": "'the typesetter could not be started. '",
+      "note": "Both surfaces assert on the message text, so changing it must turn the row red. If only one goes red, the two surfaces are not asserting the same thing and that is a finding."
+    }
+  ]
+}
