@@ -1,0 +1,6 @@
+{
+  "note": "Rows observed FAIL at least once, and when. A row absent from here has never been seen red — it is not yet known to test anything.",
+  "seenRed": {
+    "C15:http": "2026-08-24T19:01:28.633Z"
+  }
+}

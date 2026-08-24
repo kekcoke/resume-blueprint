@@ -1,0 +1,106 @@
+{
+  "generated": "2026-08-24T18:58:00.795Z",
+  "note": "Expected status per contract row per suite. Committed, so a change to it is reviewable. Regenerate deliberately — a baseline refreshed to make --check-baseline quiet is the same failure as editing qa/contract.md to go green.",
+  "suites": [
+    "cli",
+    "markdown",
+    "http",
+    "mcp"
+  ],
+  "matrix": {
+    "C1": {
+      "cli": "PASS",
+      "http": "PASS",
+      "mcp": "PASS"
+    },
+    "C2": {
+      "cli": "PASS",
+      "mcp": "PASS"
+    },
+    "C3": {
+      "cli": "PASS",
+      "http": "PASS",
+      "mcp": "PASS"
+    },
+    "C4": {
+      "cli": "PASS",
+      "http": "PASS"
+    },
+    "C5": {
+      "cli": "PASS",
+      "http": "PASS",
+      "mcp": "PASS"
+    },
+    "C6": {
+      "cli": "PASS",
+      "http": "PASS",
+      "mcp": "PASS"
+    },
+    "C7": {
+      "http": "PASS"
+    },
+    "C8": {
+      "http": "PASS",
+      "mcp": "PASS"
+    },
+    "C9": {
+      "http": "PASS",
+      "mcp": "PASS"
+    },
+    "C10": {
+      "http": "PASS",
+      "mcp": "PASS"
+    },
+    "C11": {
+      "http": "PASS",
+      "mcp": "PASS"
+    },
+    "C12": {
+      "http": "PASS",
+      "mcp": "PASS"
+    },
+    "C13": {
+      "http": "PASS"
+    },
+    "C14": {
+      "http": "PASS"
+    },
+    "C15": {
+      "cli": "PASS",
+      "http": "PASS",
+      "mcp": "PASS"
+    },
+    "C16": {
+      "http": "PASS",
+      "mcp": "PASS"
+    },
+    "C17": {
+      "cli": "PASS",
+      "mcp": "PASS"
+    },
+    "C18": {
+      "markdown": "PASS",
+      "mcp": "PASS"
+    },
+    "C19": {
+      "markdown": "PASS",
+      "mcp": "PASS"
+    },
+    "C20": {
+      "markdown": "PASS",
+      "mcp": "PASS"
+    },
+    "C21": {
+      "markdown": "PASS"
+    },
+    "C22": {
+      "cli": "PASS",
+      "http": "PASS",
+      "mcp": "PASS"
+    },
+    "C23": {
+      "cli": "PASS",
+      "mcp": "PASS"
+    }
+  }
+}

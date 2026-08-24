@@ -54,6 +54,51 @@ export class Report {
     return this.results.filter((r) => r.status === 'SKIP')
   }
 
+  get suites() {
+    return [...new Set(this.results.map((r) => r.suite))]
+  }
+
+  get ids() {
+    return [...new Set(this.results.map((r) => r.id))].sort(byContractId)
+  }
+
+  /**
+   * One collapsed status per row per suite: `{ C1: { cli: 'PASS', http: 'PASS' } }`.
+   *
+   * A row can be asserted more than once in a suite, so the cell has to
+   * collapse: any FAIL wins, then all-SKIP, else PASS. Both `summary()` and
+   * the JSON output read this, so the coloured table a human reads and the
+   * baseline a runner diffs cannot disagree about what a cell says.
+   */
+  matrix() {
+    const out = {}
+    for (const id of this.ids) {
+      out[id] = {}
+      for (const suite of this.suites) {
+        const hits = this.results.filter((r) => r.id === id && r.suite === suite)
+        if (!hits.length) continue
+        if (hits.some((h) => h.status === 'FAIL')) out[id][suite] = 'FAIL'
+        else if (hits.every((h) => h.status === 'SKIP')) out[id][suite] = 'SKIP'
+        else out[id][suite] = 'PASS'
+      }
+    }
+    return out
+  }
+
+  /** Everything a runner needs, and nothing a TTY needs. */
+  toJSON() {
+    return {
+      generated: new Date().toISOString(),
+      suites: this.suites,
+      passed: this.results.filter((r) => r.status === 'PASS').length,
+      failed: this.failed.length,
+      skipped: this.skipped.length,
+      durationMs: Date.now() - this.started,
+      matrix: this.matrix(),
+      results: this.results
+    }
+  }
+
   /**
    * Prints the coverage matrix — one row per contract id, one column per
    * suite — then the tally. Returns the process exit code: non-zero if
@@ -61,8 +106,9 @@ export class Report {
    * an environment fact, not a regression), but it is always reported.
    */
   summary() {
-    const suites = [...new Set(this.results.map((r) => r.suite))]
-    const ids = [...new Set(this.results.map((r) => r.id))].sort(byContractId)
+    const suites = this.suites
+    const ids = this.ids
+    const matrix = this.matrix()
 
     process.stdout.write(`\n${'-'.repeat(60)}\ncontract coverage\n\n`)
     const head = ['row  ', ...suites.map((s) => s.padEnd(9))].join(' ')
@@ -70,11 +116,12 @@ export class Report {
 
     for (const id of ids) {
       const cells = suites.map((suite) => {
-        const hits = this.results.filter((r) => r.id === id && r.suite === suite)
-        if (!hits.length) return '-'.padEnd(9)
-        if (hits.some((h) => h.status === 'FAIL')) return paintCell(RED, 'FAIL', hits.length)
-        if (hits.every((h) => h.status === 'SKIP')) return paintCell(YELLOW, 'skip', hits.length)
-        return paintCell(GREEN, 'ok', hits.length)
+        const cell = matrix[id][suite]
+        if (!cell) return '-'.padEnd(9)
+        const count = this.results.filter((r) => r.id === id && r.suite === suite).length
+        if (cell === 'FAIL') return paintCell(RED, 'FAIL', count)
+        if (cell === 'SKIP') return paintCell(YELLOW, 'skip', count)
+        return paintCell(GREEN, 'ok', count)
       })
       process.stdout.write(`${id.padEnd(5)} ${cells.join(' ')}\n`)
     }
