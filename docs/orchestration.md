@@ -723,3 +723,9 @@ than none:
   row moved; it does not prove it moved for the right reason. That judgment is
   still B5's red-row triage, and still a human's.
 - **The `--force` escape on `--claim` exists**, and is how K1 gets violated.
+- **Hooks guard the agent's tools, not its subprocesses.** `guard.mjs` sees
+  `Write`, `Edit` and `Bash` calls. A script the agent *runs* — including
+  `qa/plan/negative-control.mjs`, which edits source in place on purpose — writes
+  through the hook layer untouched. That is inherent to where hooks sit, and it
+  is why tripwire 1 is enforced a second time by `assertIsolated()` inside the
+  harness rather than by the hook alone.
