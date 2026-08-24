@@ -1,0 +1,527 @@
+{
+  "phase": "G1-G15",
+  "source": "docs/orchestration.md Part B — that document is the explanation; this file is the source of truth.",
+  "note": "Transcribed from B1 (the graph), B2 (the node table) and B3 (the conflict register). Every `paths` entry was verified with grep against the working tree rather than copied from the prose, which is how K11 and K12 surfaced. See mutexNotes.",
+  "phases": [
+    {
+      "n": 0,
+      "name": "serial, alone",
+      "note": "Each touches everything; none may overlap. G10 -> G9 -> G8."
+    },
+    {
+      "n": 1,
+      "name": "decision node",
+      "note": "No code. Gates every future HTTP route."
+    },
+    {
+      "n": 2,
+      "name": "three lanes",
+      "note": "Separate worktrees. Merge order C -> A -> B, set by the register, not by finish time."
+    },
+    {
+      "n": 3,
+      "name": "serial tail",
+      "note": "Touches golden snapshots."
+    }
+  ],
+  "mutexNotes": {
+    "qa/contract.md": "K1 — the shared mutable artifact of this phase (A4). G1 moves seven rows; G4 and G11 each flip a deliberately-pinned assertion; G2's own acceptance test says it updates C15's MCP row. Lane B is serial internally for this reason, and K10 records that G2 collides with it from Lane A.",
+    "row:C23": "K1, sharpened — G1 and G4 collide on the same ROW, not merely the same file. G4 rewrites C23's NaN assertion; G1 is one of the seven rows C23 belongs to.",
+    "packages/http/src/routes.ts": "K9 + K11 — three nodes edit this file: G6 at the render-cap 503 (:80), G14 at renderStored's slot ordering (:183), and G11 adding the depth guard to postRender (:101). K9 caught G6/G14 and moved G14 into Lane A. It did not catch G11, which sits in Lane B.",
+    "packages/mcp/src/tools.ts": "K12 — G2 adds the render cap around :411; G11 adds the depth guard to resume_create. Different lanes, same file.",
+    "packages/http/src/renderLimit.ts": "K9 — G2 reuses it from a shared location, G14 reorders against it.",
+    "fixtures/golden/": "K5 — G15's template4 comment removal rewrites 3 of 25 snapshots. Phase 3, serial, re-baselined at the end with the diff explained.",
+    "**": "K2 — G9's repo-wide format run rewrites every file. Alone, or never. Any concurrent diff becomes unreviewable.",
+    "packages/cli/src/index.ts": "K13 — three nodes rewrite different regions of this file: G5 the timeout literal (lane A), G4 the --timeout parse (lane B), G1 the top-level catch (lane B). B3 never listed it. Note the separate hazard it leaves behind: G1 changes an interface the README documents, but README.md is G12's scope in lane C, and the stated merge order C -> A -> B lands G12 FIRST. Whoever closes G1 must re-check the README after, or G12 documents exit 1 and G1 immediately makes it stale."
+  },
+  "nodes": [
+    {
+      "id": "G10-a",
+      "title": "Decide where the Tectonic bundle is hosted",
+      "finding": "G10",
+      "phase": 0,
+      "lane": "0",
+      "kind": "judgment",
+      "model": "opus",
+      "check": "gate",
+      "blockedBy": [],
+      "mutex": [],
+      "rows": [],
+      "paths": [
+        "docs/decisions/g10-a.md"
+      ],
+      "acceptance": {
+        "decision": "docs/decisions/g10-a.md",
+        "statement": "A written decision naming the host and the checksum strategy.",
+        "commands": []
+      },
+      "why": "Choosing where to host a TeX bundle has no obvious right answer and real consequences. Split from G10-b so an Opus session does not spend its reasoning on curl flags."
+    },
+    {
+      "id": "G10-b",
+      "title": "Pin the bundle, pass --bundle, split the cache key off the template hash",
+      "finding": "G10",
+      "phase": 0,
+      "lane": "0",
+      "kind": "mechanical",
+      "model": "sonnet",
+      "check": "review",
+      "blockedBy": [
+        "G10-a"
+      ],
+      "mutex": [],
+      "rows": [],
+      "paths": [
+        ".github/workflows/ci.yml"
+      ],
+      "acceptance": {
+        "statement": "CI green twice consecutively with a cold cache.",
+        "commands": []
+      },
+      "why": "CI's green currently depends on relay.fullyjustified.net being unthrottled, and the failure looks like a code failure. Until this lands, no downstream merge decision is trustworthy."
+    },
+    {
+      "id": "G9",
+      "title": "Prettier config + repo-wide run + lint script",
+      "finding": "G9",
+      "phase": 0,
+      "lane": "0",
+      "kind": "mechanical",
+      "model": "sonnet",
+      "check": "review",
+      "blockedBy": [
+        "G10-b"
+      ],
+      "mutex": [
+        "**"
+      ],
+      "rows": [],
+      "paths": [
+        "**"
+      ],
+      "acceptance": {
+        "statement": "npx prettier --check . clean; npm test unchanged at 584.",
+        "commands": [
+          "npx prettier --check .",
+          "npm test"
+        ]
+      },
+      "why": "K2 — rewrites every file. Land it before lanes open, or defer it to the end entirely."
+    },
+    {
+      "id": "G8",
+      "title": "tsconfig.test.json x 5, then fix what it surfaces",
+      "finding": "G8",
+      "phase": 0,
+      "lane": "0",
+      "kind": "exploratory",
+      "model": "opus",
+      "check": "gate",
+      "blockedBy": [
+        "G9"
+      ],
+      "mutex": [],
+      "rows": [],
+      "paths": [
+        "docs/decisions/g8.md",
+        "packages/*/tsconfig.test.json",
+        "packages/*/test/",
+        "packages/*/package.json"
+      ],
+      "acceptance": {
+        "decision": "docs/decisions/g8.md",
+        "statement": "Typecheck passes over test/; every error triaged, not silenced.",
+        "commands": [
+          "npm run build",
+          "npm test"
+        ]
+      },
+      "why": "Adding the tsconfig is trivial; what it surfaces across five packages of previously unchecked test code is not. K4 — lanes open only after the typecheck is clean."
+    },
+    {
+      "id": "G3",
+      "title": "Decide: is HTTP a deliberate subset or an incomplete adapter?",
+      "finding": "G3",
+      "phase": 1,
+      "lane": "1",
+      "kind": "judgment",
+      "model": "opus",
+      "check": "gate",
+      "blockedBy": [
+        "G8"
+      ],
+      "mutex": [
+        "qa/contract.md"
+      ],
+      "rows": [
+        "C17",
+        "C18"
+      ],
+      "paths": [
+        "docs/decisions/g3.md",
+        "qa/contract.md",
+        "README.md"
+      ],
+      "acceptance": {
+        "decision": "docs/decisions/g3.md",
+        "statement": "A decision record in docs/; qa/contract.md's two 'no surface' cells resolve to a plan.",
+        "commands": []
+      },
+      "why": "K7 — gates every new HTTP route, including the citation surface. No route work in any lane until this is written down."
+    },
+    {
+      "id": "G5",
+      "title": "One shared default and one shared ceiling for render timeouts",
+      "finding": "G5",
+      "phase": 2,
+      "lane": "A",
+      "kind": "mechanical",
+      "model": "opus",
+      "check": "review",
+      "blockedBy": [],
+      "mutex": [
+        "packages/http/src/routes.ts",
+        "packages/cli/src/index.ts"
+      ],
+      "rows": [
+        "C23"
+      ],
+      "paths": [
+        "packages/core/src/render.ts",
+        "packages/cli/src/index.ts",
+        "packages/http/src/routes.ts",
+        "packages/mcp/src/schemas.ts"
+      ],
+      "acceptance": {
+        "statement": "Four packages read one constant; C23's bounds still hold.",
+        "before": {},
+        "after": {
+          "C23": "PASS"
+        },
+        "commands": [
+          "npm test",
+          "node qa/run.mjs cli mcp --json"
+        ]
+      },
+      "why": "Opus despite being a constants change — it crosses four packages, which trips the three-package clause. packages/store's LOCK_TIMEOUT_MS is a DIFFERENT concept and must not be folded in.",
+      "warn": "B3 filed G5 as conflicting only with G2 (K3). It also holds routes.ts and the CLI entry point, so while G5 is open, G4, G6, G11, G14 and G1 are all withheld. Phase 2's three-lane parallelism does not survive this node — run G5 first, alone, and the lanes open behind it."
+    },
+    {
+      "id": "G2",
+      "title": "Render concurrency cap for MCP",
+      "finding": "G2",
+      "phase": 2,
+      "lane": "A",
+      "kind": "judgment",
+      "model": "opus",
+      "check": "gate",
+      "blockedBy": [
+        "G5"
+      ],
+      "mutex": [
+        "qa/contract.md",
+        "packages/mcp/src/tools.ts",
+        "packages/http/src/renderLimit.ts"
+      ],
+      "rows": [
+        "C15"
+      ],
+      "paths": [
+        "docs/decisions/g2.md",
+        "packages/mcp/src/tools.ts",
+        "packages/mcp/src/render.ts",
+        "packages/http/src/renderLimit.ts",
+        "qa/contract.md"
+      ],
+      "acceptance": {
+        "decision": "docs/decisions/g2.md",
+        "statement": "Queue-vs-reject decided and written; C15's MCP row updated.",
+        "commands": [
+          "npm test",
+          "node qa/run.mjs mcp --json"
+        ]
+      },
+      "why": "findings.md argues MCP should probably QUEUE rather than reject, unlike HTTP — an agent should not settle that alone. K3: G5 settles where shared adapter constants live and G2 consumes the answer; never concurrent."
+    },
+    {
+      "id": "G6",
+      "title": "Split render-cap 503 from lock-timeout 503",
+      "finding": "G6",
+      "phase": 2,
+      "lane": "A",
+      "kind": "mechanical",
+      "model": "sonnet",
+      "check": "review",
+      "blockedBy": [],
+      "mutex": [
+        "packages/http/src/routes.ts"
+      ],
+      "rows": [],
+      "paths": [
+        "packages/http/src/routes.ts",
+        "packages/http/src/errors.ts"
+      ],
+      "acceptance": {
+        "statement": "The two are distinguishable without reading the message string.",
+        "commands": [
+          "npm test",
+          "node qa/run.mjs http --json"
+        ]
+      },
+      "why": "Sonnet despite 'medium' severity — severity measures impact, not difficulty, and C15's contract row already defines done."
+    },
+    {
+      "id": "G14",
+      "title": "Acquire the render slot before reading the store",
+      "finding": "G14",
+      "phase": 2,
+      "lane": "A",
+      "kind": "mechanical",
+      "model": "sonnet",
+      "check": "review",
+      "blockedBy": [
+        "G6"
+      ],
+      "mutex": [
+        "packages/http/src/routes.ts",
+        "packages/http/src/renderLimit.ts"
+      ],
+      "rows": [
+        "C9"
+      ],
+      "paths": [
+        "packages/http/src/routes.ts"
+      ],
+      "acceptance": {
+        "statement": "C9's 'unknown id returns 404' still passes — the ordering is load-bearing.",
+        "before": {},
+        "after": {
+          "C9": "PASS"
+        },
+        "commands": [
+          "npm test",
+          "node qa/run.mjs http --json"
+        ]
+      },
+      "why": "K6 — a missing id must still 404, not 503. K9 moved this out of Lane C into Lane A, serial after G6."
+    },
+    {
+      "id": "G4",
+      "title": "Route --timeout through parseNumberFlag",
+      "finding": "G4",
+      "phase": 2,
+      "lane": "B",
+      "kind": "mechanical",
+      "model": "sonnet",
+      "check": "review",
+      "blockedBy": [],
+      "mutex": [
+        "qa/contract.md",
+        "row:C23",
+        "packages/cli/src/index.ts"
+      ],
+      "rows": [
+        "C23"
+      ],
+      "paths": [
+        "packages/cli/src/index.ts",
+        "qa/cli/07-render-failure-modes.sh",
+        "qa/contract.md"
+      ],
+      "acceptance": {
+        "statement": "C23's NaN assertion goes RED, then is rewritten to expect a usage error.",
+        "before": {
+          "C23": "FAIL"
+        },
+        "after": {
+          "C23": "PASS"
+        },
+        "commands": [
+          "npm test",
+          "node qa/run.mjs cli --json"
+        ]
+      },
+      "why": "K8 — turning a deliberately-pinned assertion red is expected and correct. The commit must update qa/contract.md in the same change."
+    },
+    {
+      "id": "G11",
+      "title": "Apply the depth guard to POST /render and resume_create",
+      "finding": "G11",
+      "phase": 2,
+      "lane": "B",
+      "kind": "mechanical",
+      "model": "sonnet",
+      "check": "review",
+      "blockedBy": [
+        "G4"
+      ],
+      "mutex": [
+        "qa/contract.md",
+        "packages/http/src/routes.ts",
+        "packages/mcp/src/tools.ts"
+      ],
+      "rows": [
+        "C8"
+      ],
+      "paths": [
+        "packages/http/src/routes.ts",
+        "packages/mcp/src/tools.ts",
+        "qa/http/04-limits.sh",
+        "qa/contract.md"
+      ],
+      "acceptance": {
+        "statement": "C8's 'G11 still ungated' assertion goes RED, then is rewritten.",
+        "before": {
+          "C8": "FAIL"
+        },
+        "after": {
+          "C8": "PASS"
+        },
+        "commands": [
+          "npm test",
+          "node qa/run.mjs http mcp --json"
+        ]
+      },
+      "why": "K8, as G4. Its two code paths are postRender (routes.ts:101) and resume_create (tools.ts) — which is why it carries the K11 and K12 mutexes that B3 missed."
+    },
+    {
+      "id": "G1",
+      "title": "Exit-code taxonomy: 2 usage / 3 validation / 4 render / 5 busy",
+      "finding": "G1",
+      "phase": 2,
+      "lane": "B",
+      "kind": "judgment",
+      "model": "opus",
+      "check": "gate",
+      "blockedBy": [
+        "G11"
+      ],
+      "mutex": [
+        "qa/contract.md",
+        "row:C23",
+        "packages/cli/src/index.ts"
+      ],
+      "rows": [
+        "C3",
+        "C4",
+        "C6",
+        "C17",
+        "C20",
+        "C22",
+        "C23"
+      ],
+      "paths": [
+        "packages/cli/src/index.ts",
+        "qa/cli/",
+        "qa/markdown/",
+        "qa/contract.md"
+      ],
+      "acceptance": {
+        "decision": "docs/decisions/g1.md",
+        "statement": "Seven contract rows updated together; the change is called breaking in the commit.",
+        "commands": [
+          "npm test",
+          "node qa/run.mjs cli markdown --json"
+        ]
+      },
+      "why": "Opus and gated because exit codes are an interface. Anything already branching on exit 1 breaks."
+    },
+    {
+      "id": "G7",
+      "title": "hasBinary gate for tectonic",
+      "finding": "G7",
+      "phase": 2,
+      "lane": "C",
+      "kind": "mechanical",
+      "model": "sonnet",
+      "check": "review",
+      "blockedBy": [],
+      "mutex": [],
+      "rows": [],
+      "paths": [
+        "packages/core/test/"
+      ],
+      "acceptance": {
+        "statement": "A machine without Tectonic reports it once, not as N render failures.",
+        "commands": [
+          "npm test"
+        ]
+      },
+      "why": "Reuse the existing hasBinary in packages/core/test/ats.test.ts; qa/lib/env.mjs is the model. CI must keep treating a missing poppler as a hard failure, not flatten it to a skip."
+    },
+    {
+      "id": "G12",
+      "title": "README flag list + HTTP response-contract section",
+      "finding": "G12",
+      "phase": 2,
+      "lane": "C",
+      "kind": "mechanical",
+      "model": "sonnet",
+      "check": "review",
+      "blockedBy": [],
+      "mutex": [],
+      "rows": [],
+      "paths": [
+        "README.md"
+      ],
+      "acceptance": {
+        "statement": "Flag list matches `resume --help` exactly.",
+        "commands": [
+          "npm run build"
+        ]
+      },
+      "why": "Genuinely disjoint. The cheapest node on which to rehearse the loop end to end."
+    },
+    {
+      "id": "G13",
+      "title": "Report the swallowed error in store.list()",
+      "finding": "G13",
+      "phase": 2,
+      "lane": "C",
+      "kind": "mechanical",
+      "model": "sonnet",
+      "check": "review",
+      "blockedBy": [],
+      "mutex": [],
+      "rows": [],
+      "paths": [
+        "packages/store/src/index.ts"
+      ],
+      "acceptance": {
+        "statement": "A corrupt blueprint is visible to the caller; stderr only.",
+        "commands": [
+          "npm test"
+        ]
+      },
+      "why": "A similarly small change to G4 with NO test pinning it — silent failure — which pulls it toward more care despite its size (A7)."
+    },
+    {
+      "id": "G15",
+      "title": "Three F12 residue items",
+      "finding": "G15",
+      "phase": 3,
+      "lane": "3",
+      "kind": "mechanical",
+      "model": "sonnet",
+      "check": "review",
+      "blockedBy": [],
+      "mutex": [
+        "fixtures/golden/"
+      ],
+      "rows": [],
+      "paths": [
+        "packages/core/src/templates/template4.ts",
+        "packages/core/src/templates/",
+        "fixtures/golden/"
+      ],
+      "acceptance": {
+        "statement": "Golden re-baselined WITH the diff explained.",
+        "commands": [
+          "npm test",
+          "git status --porcelain fixtures/golden/"
+        ]
+      },
+      "why": "K5 — rewrites 3 of 25 golden snapshots. Serial tail. Requires GOLDEN_REBASELINE_REASON to be set, per the guard-golden hook."
+    }
+  ]
+}
