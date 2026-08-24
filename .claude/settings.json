@@ -1,0 +1,51 @@
+{
+  "$comment": "Checked-in project settings. .claude/settings.local.json stays for personal overrides. Guardrail layers 1 and 3 from docs/orchestration.md A6 live here; layer 2 (blast radius) is per-node in qa/plan/graph.json.",
+
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PROJECT_DIR}/.claude/hooks/guard.mjs"
+          }
+        ]
+      }
+    ]
+  },
+
+  "permissions": {
+    "allow": [
+      "Bash(npm test*)",
+      "Bash(npm run *)",
+      "Bash(npm ci*)",
+      "Bash(node qa/*)",
+      "Bash(bash qa/*)",
+      "Bash(npx prettier*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git checkout *)",
+      "Bash(git worktree *)",
+      "Bash(git check-ignore *)",
+      "Bash(gh pr *)"
+    ],
+
+    "$comment-deny": "CLAUDE.md says not to read these three; saying it in prose only works on a reader who reads it. There is deliberately no Bash(curl *) in either list — A6 wants curl to prompt.",
+    "deny": [
+      "Read(./packages/core/assets/**)",
+      "Read(./fixtures/golden/**)",
+      "Read(./profile_templates/**)",
+      "Bash(rm -rf *)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)"
+    ]
+  },
+
+  "enabledMcpjsonServers": ["resume-blueprint"]
+}
