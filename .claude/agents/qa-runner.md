@@ -44,5 +44,5 @@ Facts about this repo that are cheap to state and expensive to rediscover:
 - Render failures are usually Tectonic, not the harness — hand those to
   `render-triage` rather than reasoning about TeX from a stack trace.
 - Known gaps are catalogued in `qa/findings.md`. Two of them (G4, G11) are
-  pinned as *current behaviour* in the assertions, so fixing either turns a row
+  pinned as _current behaviour_ in the assertions, so fixing either turns a row
   red on purpose. Check that file before reporting a "new" issue.

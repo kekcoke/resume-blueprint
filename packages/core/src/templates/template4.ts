@@ -11,8 +11,16 @@ const generator: Generator = {
       return '\\namesection{Your}{Name}{}'
     }
 
-    const { name, label, summary, email, phone, location = {}, website, profiles } =
-      profile
+    const {
+      name,
+      label,
+      summary,
+      email,
+      phone,
+      location = {},
+      website,
+      profiles
+    } = profile
 
     let nameStart = ''
     let nameEnd = ''
@@ -443,8 +451,12 @@ function template4(values: FormValues, config: ResolvedDocumentConfig) {
   const extraLines = [
     '\\usepackage{geometry}',
     `\\geometry{margin=${config.margin}}`,
-    config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-    config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+    config.lineSpacing !== 1.0
+      ? `\\linespread{${config.lineSpacing}}\\selectfont`
+      : '',
+    config.linkStyle === 'colored'
+      ? '\\hypersetup{colorlinks=true,allcolors=blue}'
+      : '',
     fontLines
   ]
     .filter(Boolean)
@@ -474,13 +486,25 @@ function template4(values: FormValues, config: ResolvedDocumentConfig) {
             return generator.workSection(values.work, headings.work, config)
 
           case 'skills':
-            return generator.skillsSection(values.skills, headings.skills, config)
+            return generator.skillsSection(
+              values.skills,
+              headings.skills,
+              config
+            )
 
           case 'projects':
-            return generator.projectsSection(values.projects, headings.projects, config)
+            return generator.projectsSection(
+              values.projects,
+              headings.projects,
+              config
+            )
 
           case 'awards':
-            return generator.awardsSection(values.awards, headings.awards, config)
+            return generator.awardsSection(
+              values.awards,
+              headings.awards,
+              config
+            )
 
           case 'certificates':
             return (
@@ -488,7 +512,12 @@ function template4(values: FormValues, config: ResolvedDocumentConfig) {
                 values.certificates,
                 headings.certificates,
                 config
-              ) ?? defaultCertificatesSection(values.certificates, headings.certificates, config)
+              ) ??
+              defaultCertificatesSection(
+                values.certificates,
+                headings.certificates,
+                config
+              )
             )
 
           default:

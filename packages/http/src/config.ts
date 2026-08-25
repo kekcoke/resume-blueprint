@@ -10,7 +10,9 @@ export interface Config {
  * this fresh per case rather than fighting a cached value.
  */
 export function loadConfig(): Config {
-  const port = process.env.RESUME_BLUEPRINT_PORT ? Number(process.env.RESUME_BLUEPRINT_PORT) : 8787
+  const port = process.env.RESUME_BLUEPRINT_PORT
+    ? Number(process.env.RESUME_BLUEPRINT_PORT)
+    : 8787
   // Loopback by default. Binding 0.0.0.0 (or any other host) is an explicit
   // opt-in via env — this is a local-first tool, not a service meant to sit
   // on a network interface by default.

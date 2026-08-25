@@ -154,7 +154,16 @@ const LENGTH_PATTERN = /^\d+(\.\d+)?(in|cm|mm|pt)$/
  * `sanitize.ts`, which passes `document` through unescaped by design. */
 export const DocumentConfigSchema = z
   .object({
-    fontFamily: z.enum(['template', 'calibri', 'arial', 'helvetica', 'garamond', 'georgia']).optional(),
+    fontFamily: z
+      .enum([
+        'template',
+        'calibri',
+        'arial',
+        'helvetica',
+        'garamond',
+        'georgia'
+      ])
+      .optional(),
     /** `10.5`/`11.5` are dropped from the range `\documentclass` accepts only
      * `10pt`/`11pt`/`12pt` natively; see docs/next-features.md's F3 write-up. */
     fontSize: z.union([z.literal(10), z.literal(11), z.literal(12)]).optional(),
@@ -164,7 +173,10 @@ export const DocumentConfigSchema = z
      * on the same footing before the floor is applied. */
     margin: z
       .string()
-      .regex(LENGTH_PATTERN, 'margin must look like "0.75in", "2cm", "20mm", or "18pt"')
+      .regex(
+        LENGTH_PATTERN,
+        'margin must look like "0.75in", "2cm", "20mm", or "18pt"'
+      )
       .transform(clampMarginFloor)
       .optional(),
     lineSpacing: z.number().transform(clamp(1.0, 1.15)).optional(),
@@ -172,7 +184,10 @@ export const DocumentConfigSchema = z
     bulletSpacing: z.number().transform(clamp(0, 12)).optional(),
     accentColor: z
       .string()
-      .regex(/^#[0-9A-Fa-f]{6}$/, 'accentColor must be a 6-digit hex color like "#4A90D9"')
+      .regex(
+        /^#[0-9A-Fa-f]{6}$/,
+        'accentColor must be a 6-digit hex color like "#4A90D9"'
+      )
       .optional(),
     contactLayout: z.enum(['row', 'stacked']).optional(),
     linkStyle: z.enum(['hidden', 'colored']).optional()

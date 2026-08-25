@@ -29,7 +29,8 @@ export function breakableUrl(text: string): string {
   const scheme = text.match(/^[a-z][a-z0-9+.-]*:\/\//i)?.[0] ?? ''
 
   return (
-    scheme + text.slice(scheme.length).replace(/([/\-.?=&])/g, '$1\\allowbreak{}')
+    scheme +
+    text.slice(scheme.length).replace(/([/\-.?=&])/g, '$1\\allowbreak{}')
   )
 }
 
@@ -43,7 +44,9 @@ export function profileLinks(profiles: Basics['profiles'] = []): string[] {
       return text ? [text] : []
     }
 
-    const shown = url.replace(/^(?:https?:\/\/|mailto:)/i, '').replace(/\/$/, '')
+    const shown = url
+      .replace(/^(?:https?:\/\/|mailto:)/i, '')
+      .replace(/\/$/, '')
     const host = shown.split('/')[0]
     const key = alphanumeric(network)
 
@@ -68,7 +71,9 @@ export function joinContactInfo(
   layout: ResolvedDocumentConfig['contactLayout'],
   rowSeparator: string
 ): string {
-  return fields.filter(Boolean).join(layout === 'stacked' ? ' \\\\\n' : rowSeparator)
+  return fields
+    .filter(Boolean)
+    .join(layout === 'stacked' ? ' \\\\\n' : rowSeparator)
 }
 
 function alphanumeric(text?: string): string {

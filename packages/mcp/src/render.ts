@@ -19,7 +19,10 @@ export function renderPath(id: string, rev: string, template: number): string {
  * blueprints/<id>.json`, never `-A` — but the `.gitignore` keeps `git status`
  * clean for a human inspecting the store repo by hand.
  */
-export async function writeRenderFile(pdf: Buffer, path: string): Promise<void> {
+export async function writeRenderFile(
+  pdf: Buffer,
+  path: string
+): Promise<void> {
   const dir = dirname(path)
   await mkdir(dir, { recursive: true })
 
@@ -43,7 +46,11 @@ function isEnoent(error: unknown): boolean {
  * serializing calls for the same `id` via {@link withRenderLock} so this
  * doesn't need to rely on ENOENT-swallowing alone.
  */
-export async function pruneOldRenders(home: string, id: string, keep = 10): Promise<void> {
+export async function pruneOldRenders(
+  home: string,
+  id: string,
+  keep = 10
+): Promise<void> {
   const dir = renderDir(home)
 
   let entries: string[]
@@ -54,7 +61,9 @@ export async function pruneOldRenders(home: string, id: string, keep = 10): Prom
   }
 
   const prefix = `${id}-`
-  const candidates = entries.filter((entry) => entry.startsWith(prefix) && entry.endsWith('.pdf'))
+  const candidates = entries.filter(
+    (entry) => entry.startsWith(prefix) && entry.endsWith('.pdf')
+  )
 
   const stated = await Promise.all(
     candidates.map(async (name) => {
@@ -68,7 +77,9 @@ export async function pruneOldRenders(home: string, id: string, keep = 10): Prom
       }
     })
   )
-  const withMtime = stated.filter((entry): entry is { path: string; mtimeMs: number } => entry !== null)
+  const withMtime = stated.filter(
+    (entry): entry is { path: string; mtimeMs: number } => entry !== null
+  )
 
   withMtime.sort((a, b) => b.mtimeMs - a.mtimeMs)
   const stale = withMtime.slice(keep)
@@ -95,7 +106,10 @@ export async function pruneOldRenders(home: string, id: string, keep = 10): Prom
  */
 const renderQueues = new Map<string, Promise<unknown>>()
 
-export function withRenderLock<T>(id: string, fn: () => Promise<T>): Promise<T> {
+export function withRenderLock<T>(
+  id: string,
+  fn: () => Promise<T>
+): Promise<T> {
   const previous = renderQueues.get(id) ?? Promise.resolve()
   const run = previous.then(fn)
   // The queued continuation must never itself be a rejected promise, or every

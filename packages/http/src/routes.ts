@@ -67,7 +67,10 @@ function writePdf(res: ServerResponse, pdf: Buffer): void {
 }
 
 /** Wraps a handler body: catches anything thrown and writes the mapped error response. */
-async function guarded(res: ServerResponse, fn: () => Promise<void>): Promise<void> {
+async function guarded(
+  res: ServerResponse,
+  fn: () => Promise<void>
+): Promise<void> {
   try {
     await fn()
   } catch (error) {
@@ -78,7 +81,9 @@ async function guarded(res: ServerResponse, fn: () => Promise<void>): Promise<vo
 
 function writeTooManyRenders(res: ServerResponse): void {
   res.setHeader('Retry-After', '5')
-  writeJson(res, 503, { error: 'too many concurrent renders, try again shortly' })
+  writeJson(res, 503, {
+    error: 'too many concurrent renders, try again shortly'
+  })
 }
 
 /**
@@ -86,7 +91,10 @@ function writeTooManyRenders(res: ServerResponse): void {
  * Rejects immediately with 503 rather than queuing when the cap is already
  * reached — see `renderLimit.ts` for why this fails fast instead of waiting.
  */
-async function withRenderLimit(res: ServerResponse, fn: () => Promise<void>): Promise<void> {
+async function withRenderLimit(
+  res: ServerResponse,
+  fn: () => Promise<void>
+): Promise<void> {
   if (!tryAcquire()) {
     writeTooManyRenders(res)
     return
@@ -98,17 +106,25 @@ async function withRenderLimit(res: ServerResponse, fn: () => Promise<void>): Pr
   }
 }
 
-export function postRender(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export function postRender(
+  req: IncomingMessage,
+  res: ServerResponse
+): Promise<void> {
   return guarded(res, async () => {
     const blueprint = await readJsonBody(req)
     await withRenderLimit(res, async () => {
-      const pdf = await renderBlueprint(blueprint, { timeoutMs: RENDER_TIMEOUT_MS })
+      const pdf = await renderBlueprint(blueprint, {
+        timeoutMs: RENDER_TIMEOUT_MS
+      })
       writePdf(res, pdf)
     })
   })
 }
 
-export function listBlueprints(_req: IncomingMessage, res: ServerResponse): Promise<void> {
+export function listBlueprints(
+  _req: IncomingMessage,
+  res: ServerResponse
+): Promise<void> {
   return guarded(res, async () => {
     const summaries = await store.list()
     writeJson(res, 200, summaries)
@@ -126,9 +142,13 @@ export function getBlueprint(
   })
 }
 
-export function createBlueprint(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export function createBlueprint(
+  req: IncomingMessage,
+  res: ServerResponse
+): Promise<void> {
   return guarded(res, async () => {
-    const body = (await readJsonBody(req)) as { id?: string; blueprint?: object } | undefined
+    const body = (await readJsonBody(req)) as
+      { id?: string; blueprint?: object } | undefined
     if (!body || typeof body.id !== 'string') {
       writeJson(res, 400, { error: 'request body must include a string "id"' })
       return
@@ -136,7 +156,9 @@ export function createBlueprint(req: IncomingMessage, res: ServerResponse): Prom
     if (body.blueprint !== undefined) {
       assertReasonableDepth(body.blueprint)
     }
-    const { rev } = await store.create(body.id, body.blueprint ?? {}, { actor: ACTOR })
+    const { rev } = await store.create(body.id, body.blueprint ?? {}, {
+      actor: ACTOR
+    })
     res.setHeader('Location', `/blueprints/${body.id}`)
     writeJson(res, 201, { id: body.id, rev })
   })
@@ -148,9 +170,12 @@ export function patchBlueprint(
   params: Record<string, string>
 ): Promise<void> {
   return guarded(res, async () => {
-    const body = (await readJsonBody(req)) as { patch?: object; expectedRev?: string } | undefined
+    const body = (await readJsonBody(req)) as
+      { patch?: object; expectedRev?: string } | undefined
     if (!body || typeof body.patch !== 'object' || body.patch === null) {
-      writeJson(res, 400, { error: 'request body must include a "patch" object' })
+      writeJson(res, 400, {
+        error: 'request body must include a "patch" object'
+      })
       return
     }
     assertReasonableDepth(body.patch)
@@ -168,8 +193,12 @@ export function deleteBlueprint(
   params: Record<string, string>
 ): Promise<void> {
   return guarded(res, async () => {
-    const body = (await readJsonBody(req)) as { expectedRev?: string } | undefined
-    const { rev } = await store.remove(params.id, { actor: ACTOR, expectedRev: body?.expectedRev })
+    const body = (await readJsonBody(req)) as
+      { expectedRev?: string } | undefined
+    const { rev } = await store.remove(params.id, {
+      actor: ACTOR,
+      expectedRev: body?.expectedRev
+    })
     writeJson(res, 200, { id: params.id, rev })
   })
 }
@@ -182,13 +211,18 @@ export function renderStored(
   return guarded(res, async () => {
     const { blueprint } = await store.get(params.id)
     await withRenderLimit(res, async () => {
-      const pdf = await renderBlueprint(blueprint, { timeoutMs: RENDER_TIMEOUT_MS })
+      const pdf = await renderBlueprint(blueprint, {
+        timeoutMs: RENDER_TIMEOUT_MS
+      })
       writePdf(res, pdf)
     })
   })
 }
 
-export function healthz(_req: IncomingMessage, res: ServerResponse): Promise<void> {
+export function healthz(
+  _req: IncomingMessage,
+  res: ServerResponse
+): Promise<void> {
   return guarded(res, async () => {
     writeJson(res, 200, { status: 'ok' })
   })

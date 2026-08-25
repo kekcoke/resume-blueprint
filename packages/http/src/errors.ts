@@ -1,4 +1,8 @@
-import { isValidationError, formatValidationError, TectonicError } from '@resume-blueprint/core'
+import {
+  isValidationError,
+  formatValidationError,
+  TectonicError
+} from '@resume-blueprint/core'
 import {
   ConflictError,
   NotFoundError,

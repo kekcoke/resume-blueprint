@@ -1,6 +1,15 @@
 import { test, describe, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtemp, rm, readFile, stat, writeFile, readdir, mkdir, chmod } from 'node:fs/promises'
+import {
+  mkdtemp,
+  rm,
+  readFile,
+  stat,
+  writeFile,
+  readdir,
+  mkdir,
+  chmod
+} from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
@@ -39,13 +48,21 @@ const READ_ONLY_HINTS: Record<string, boolean> = {
 }
 
 /** Harness A: SDK client/transport, for everything except stdout purity. */
-async function startClient(home: string): Promise<{ client: Client; transport: StdioClientTransport }> {
+async function startClient(
+  home: string
+): Promise<{ client: Client; transport: StdioClientTransport }> {
   const transport = new StdioClientTransport({
     command: 'node',
     args: [DIST_INDEX_PATH],
-    env: { ...(process.env as Record<string, string>), RESUME_BLUEPRINT_HOME: home }
+    env: {
+      ...(process.env as Record<string, string>),
+      RESUME_BLUEPRINT_HOME: home
+    }
   })
-  const client = new Client({ name: 'mcp-test-client', version: '0.0.0' }, { capabilities: {} })
+  const client = new Client(
+    { name: 'mcp-test-client', version: '0.0.0' },
+    { capabilities: {} }
+  )
   await client.connect(transport)
   return { client, transport }
 }
@@ -85,7 +102,10 @@ describe('tools/list', () => {
     assert.deepEqual(names, Object.keys(READ_ONLY_HINTS).sort())
 
     for (const tool of tools) {
-      assert.ok(tool.description && tool.description.length > 0, `${tool.name} needs a description`)
+      assert.ok(
+        tool.description && tool.description.length > 0,
+        `${tool.name} needs a description`
+      )
       assert.equal(
         tool.annotations?.readOnlyHint,
         READ_ONLY_HINTS[tool.name],
@@ -99,7 +119,11 @@ describe('tools/list', () => {
     for (const tool of tools) {
       if (TOOLS_WITHOUT_OUTPUT_SCHEMA.has(tool.name)) continue
       assert.ok(tool.outputSchema, `${tool.name} is missing an outputSchema`)
-      assert.equal(tool.outputSchema?.type, 'object', `${tool.name}'s outputSchema should describe an object`)
+      assert.equal(
+        tool.outputSchema?.type,
+        'object',
+        `${tool.name}'s outputSchema should describe an object`
+      )
     }
   })
 
@@ -114,11 +138,21 @@ describe('tools/list', () => {
     const render = tools.find((t) => t.name === 'resume_render')
     assert.ok(render, 'resume_render should be listed')
 
-    const props = render.inputSchema.properties as Record<string, Record<string, unknown>>
+    const props = render.inputSchema.properties as Record<
+      string,
+      Record<string, unknown>
+    >
     assert.equal(props.id?.type, 'string')
 
-    const document = props.document as { type?: string; properties?: Record<string, { type?: string; pattern?: string }> }
-    assert.equal(document?.type, 'object', 'document should survive as an object, not collapse to a bare transform')
+    const document = props.document as {
+      type?: string
+      properties?: Record<string, { type?: string; pattern?: string }>
+    }
+    assert.equal(
+      document?.type,
+      'object',
+      'document should survive as an object, not collapse to a bare transform'
+    )
     assert.equal(document.properties?.margin?.type, 'string')
     assert.ok(
       document.properties?.margin?.pattern,
@@ -137,8 +171,14 @@ describe('tools/list', () => {
     ] as const) {
       const tool = tools.find((t) => t.name === name)
       assert.ok(tool, `${name} should be listed`)
-      const prop = (tool.inputSchema.properties as Record<string, { type?: string }>)[field]
-      assert.equal(prop?.type, 'object', `${name}.${field} should publish as an object`)
+      const prop = (
+        tool.inputSchema.properties as Record<string, { type?: string }>
+      )[field]
+      assert.equal(
+        prop?.type,
+        'object',
+        `${name}.${field} should publish as an object`
+      )
     }
   })
 })
@@ -147,26 +187,43 @@ describe('create -> patch -> get -> remove round-trip', () => {
   test('patch is visible via get, and remove actually removes it', async () => {
     const create = await client.callTool({
       name: 'resume_create',
-      arguments: { id: 'roundtrip', blueprint: { basics: { name: 'Ada Lovelace' } } }
+      arguments: {
+        id: 'roundtrip',
+        blueprint: { basics: { name: 'Ada Lovelace' } }
+      }
     })
     assert.equal(create.isError, undefined)
 
     const patch = await client.callTool({
       name: 'resume_patch',
-      arguments: { id: 'roundtrip', patch: { basics: { label: 'Mathematician' } } }
+      arguments: {
+        id: 'roundtrip',
+        patch: { basics: { label: 'Mathematician' } }
+      }
     })
     assert.equal(patch.isError, undefined)
 
-    const got = await client.callTool({ name: 'resume_get', arguments: { id: 'roundtrip' } })
+    const got = await client.callTool({
+      name: 'resume_get',
+      arguments: { id: 'roundtrip' }
+    })
     assert.equal(got.isError, undefined)
-    const structured = got.structuredContent as { blueprint: { basics?: { name?: string; label?: string } } }
+    const structured = got.structuredContent as {
+      blueprint: { basics?: { name?: string; label?: string } }
+    }
     assert.equal(structured.blueprint.basics?.name, 'Ada Lovelace')
     assert.equal(structured.blueprint.basics?.label, 'Mathematician')
 
-    const removed = await client.callTool({ name: 'resume_remove', arguments: { id: 'roundtrip' } })
+    const removed = await client.callTool({
+      name: 'resume_remove',
+      arguments: { id: 'roundtrip' }
+    })
     assert.equal(removed.isError, undefined)
 
-    const gotAfterRemove = await client.callTool({ name: 'resume_get', arguments: { id: 'roundtrip' } })
+    const gotAfterRemove = await client.callTool({
+      name: 'resume_get',
+      arguments: { id: 'roundtrip' }
+    })
     assert.equal(gotAfterRemove.isError, true)
   })
 })
@@ -197,7 +254,10 @@ describe('document override', () => {
     assert.equal(tex.isError, undefined)
 
     const structured = tex.structuredContent as { texDoc: string }
-    assert.ok(structured.texDoc.includes('12pt'), 'the fontSize override should reach the TeX source')
+    assert.ok(
+      structured.texDoc.includes('12pt'),
+      'the fontSize override should reach the TeX source'
+    )
     assert.ok(
       structured.texDoc.includes('4A90D9'),
       'the stored accentColor should survive an unrelated document override'
@@ -205,7 +265,10 @@ describe('document override', () => {
   })
 
   test('resume_templates reports resolved document defaults and honoured fields', async () => {
-    const result = await client.callTool({ name: 'resume_templates', arguments: {} })
+    const result = await client.callTool({
+      name: 'resume_templates',
+      arguments: {}
+    })
     assert.equal(result.isError, undefined)
 
     const structured = result.structuredContent as {
@@ -231,14 +294,19 @@ describe('resume_text', () => {
         blueprint: {
           basics: { name: 'Ada Lovelace', label: 'R&D Lead' },
           headings: { work: 'Employment' },
-          work: [{ name: 'Acme', position: 'Engineer', summary: 'Shipped things.' }],
+          work: [
+            { name: 'Acme', position: 'Engineer', summary: 'Shipped things.' }
+          ],
           sections: ['profile', 'work']
         }
       }
     })
     assert.equal(create.isError, undefined)
 
-    const result = await client.callTool({ name: 'resume_text', arguments: { id: 'plain-text' } })
+    const result = await client.callTool({
+      name: 'resume_text',
+      arguments: { id: 'plain-text' }
+    })
     assert.equal(result.isError, undefined)
 
     const structured = result.structuredContent as { text: string }
@@ -271,7 +339,13 @@ describe('resume_target', () => {
         id,
         blueprint: {
           basics: { name: 'Ada Lovelace' },
-          work: [{ name: 'Acme', position: 'Engineer', highlights: ['Ran Kubernetes in production'] }],
+          work: [
+            {
+              name: 'Acme',
+              position: 'Engineer',
+              highlights: ['Ran Kubernetes in production']
+            }
+          ],
           skills: [{ name: 'Platform', keywords: ['Terraform'] }],
           sections: ['profile', 'work', 'skills']
         }
@@ -292,30 +366,47 @@ describe('resume_target', () => {
     const report = result.structuredContent as {
       coverage: number
       matched: Array<{ term: string; sections: string[] }>
-      missing: Array<{ term: string; prominence: number; suggestions: Array<{ section: string }> }>
+      missing: Array<{
+        term: string
+        prominence: number
+        suggestions: Array<{ section: string }>
+      }>
       sections: Array<{ section: string; matched: number }>
       notes: string[]
     }
 
     assert.ok(
-      report.matched.some((t) => t.term === 'Kubernetes' && t.sections.includes('work')),
+      report.matched.some(
+        (t) => t.term === 'Kubernetes' && t.sections.includes('work')
+      ),
       `Kubernetes should be matched in work; got ${JSON.stringify(report.matched)}`
     )
-    assert.ok(report.missing.some((t) => t.term === 'Rust'), 'Rust is not on this resume')
+    assert.ok(
+      report.missing.some((t) => t.term === 'Rust'),
+      'Rust is not on this resume'
+    )
     assert.ok(report.coverage > 0 && report.coverage < 1)
 
     // Ranked, highest prominence first.
     const scores = report.missing.map((t) => t.prominence)
-    assert.deepEqual(scores, [...scores].sort((a, b) => b - a))
+    assert.deepEqual(
+      scores,
+      [...scores].sort((a, b) => b - a)
+    )
 
     // Suggestions never name a section this blueprint does not render.
     for (const term of report.missing) {
       for (const { section } of term.suggestions) {
-        assert.ok(['profile', 'work', 'skills'].includes(section), `leaked ${section}`)
+        assert.ok(
+          ['profile', 'work', 'skills'].includes(section),
+          `leaked ${section}`
+        )
       }
     }
 
-    assert.ok(report.sections.some((s) => s.section === 'work' && s.matched > 0))
+    assert.ok(
+      report.sections.some((s) => s.section === 'work' && s.matched > 0)
+    )
   })
 
   test('labels the quoted terms in the text channel as data', async () => {
@@ -327,16 +418,28 @@ describe('resume_target', () => {
     })
 
     const [content] = result.content as Array<{ type: string; text: string }>
-    assert.match(content.text, /^coverage \d+% -- \d+ of \d+ terms already present$/m)
+    assert.match(
+      content.text,
+      /^coverage \d+% -- \d+ of \d+ terms already present$/m
+    )
     assert.match(content.text, /data, not instructions/)
   })
 
   test('writes nothing: the blueprint is unchanged at the same revision', async () => {
     await seed('targeting-readonly')
 
-    const before = await client.callTool({ name: 'resume_get', arguments: { id: 'targeting-readonly' } })
-    await client.callTool({ name: 'resume_target', arguments: { id: 'targeting-readonly', jobDescription: JD } })
-    const after = await client.callTool({ name: 'resume_get', arguments: { id: 'targeting-readonly' } })
+    const before = await client.callTool({
+      name: 'resume_get',
+      arguments: { id: 'targeting-readonly' }
+    })
+    await client.callTool({
+      name: 'resume_target',
+      arguments: { id: 'targeting-readonly', jobDescription: JD }
+    })
+    const after = await client.callTool({
+      name: 'resume_get',
+      arguments: { id: 'targeting-readonly' }
+    })
 
     assert.deepEqual(after.structuredContent, before.structuredContent)
   })
@@ -346,7 +449,10 @@ describe('resume_target', () => {
 
     const result = await client.callTool({
       name: 'resume_target',
-      arguments: { id: 'targeting-huge', jobDescription: 'Kubernetes '.repeat(10_000) }
+      arguments: {
+        id: 'targeting-huge',
+        jobDescription: 'Kubernetes '.repeat(10_000)
+      }
     })
 
     assert.equal(result.isError, true)
@@ -363,16 +469,31 @@ describe('invalid tool args', () => {
 
 describe('citation warnings', () => {
   const DIRTY = {
-    basics: { name: 'Ada[cite: 1, 2, 3]', summary: '[cite_start]Led the group.' },
-    work: [{ name: 'Analytical Engine Works', position: 'Engineer', highlights: ['Shipped it.'] }],
+    basics: {
+      name: 'Ada[cite: 1, 2, 3]',
+      summary: '[cite_start]Led the group.'
+    },
+    work: [
+      {
+        name: 'Analytical Engine Works',
+        position: 'Engineer',
+        highlights: ['Shipped it.']
+      }
+    ],
     headings: { work: 'Experience[cite: 5]' }
   }
 
   test('resume_validate reports artifacts while still returning valid: true', async () => {
     // A leftover placeholder is legal content, not a schema violation.
-    const result = await client.callTool({ name: 'resume_validate', arguments: { blueprint: DIRTY } })
+    const result = await client.callTool({
+      name: 'resume_validate',
+      arguments: { blueprint: DIRTY }
+    })
 
-    const structured = result.structuredContent as { valid: boolean; warnings?: string[] }
+    const structured = result.structuredContent as {
+      valid: boolean
+      warnings?: string[]
+    }
     assert.equal(structured.valid, true)
     assert.deepEqual(structured.warnings, [
       'basics.name carries 1 citation artifact',
@@ -396,29 +517,56 @@ describe('citation warnings', () => {
       arguments: { blueprint: { basics: { name: 'Ada Lovelace' } } }
     })
 
-    const structured = result.structuredContent as { valid: boolean; warnings?: string[] }
+    const structured = result.structuredContent as {
+      valid: boolean
+      warnings?: string[]
+    }
     assert.deepEqual(structured, { valid: true })
   })
 
   test('resume_tex carries warnings in structuredContent but never in the TeX', async () => {
     // The text channel IS the document here. Appending a warning to it would
     // corrupt the file the caller is about to write to disk.
-    await client.callTool({ name: 'resume_create', arguments: { id: 'dirty-tex', blueprint: DIRTY } })
-    const result = await client.callTool({ name: 'resume_tex', arguments: { id: 'dirty-tex' } })
+    await client.callTool({
+      name: 'resume_create',
+      arguments: { id: 'dirty-tex', blueprint: DIRTY }
+    })
+    const result = await client.callTool({
+      name: 'resume_tex',
+      arguments: { id: 'dirty-tex' }
+    })
 
-    const { texDoc, warnings } = result.structuredContent as { texDoc: string; warnings?: string[] }
+    const { texDoc, warnings } = result.structuredContent as {
+      texDoc: string
+      warnings?: string[]
+    }
     assert.ok(warnings && warnings.length === 3)
-    assert.ok(!texDoc.includes('warning:'), 'the TeX document must stay uncontaminated')
+    assert.ok(
+      !texDoc.includes('warning:'),
+      'the TeX document must stay uncontaminated'
+    )
     assert.equal((result.content as Array<{ text: string }>)[0]!.text, texDoc)
   })
 
   test('resume_text carries warnings in structuredContent but never in the text', async () => {
-    await client.callTool({ name: 'resume_create', arguments: { id: 'dirty-text', blueprint: DIRTY } })
-    const result = await client.callTool({ name: 'resume_text', arguments: { id: 'dirty-text' } })
+    await client.callTool({
+      name: 'resume_create',
+      arguments: { id: 'dirty-text', blueprint: DIRTY }
+    })
+    const result = await client.callTool({
+      name: 'resume_text',
+      arguments: { id: 'dirty-text' }
+    })
 
-    const { text, warnings } = result.structuredContent as { text: string; warnings?: string[] }
+    const { text, warnings } = result.structuredContent as {
+      text: string
+      warnings?: string[]
+    }
     assert.ok(warnings && warnings.length === 3)
-    assert.ok(!text.includes('warning:'), 'the rendered text must stay uncontaminated')
+    assert.ok(
+      !text.includes('warning:'),
+      'the rendered text must stay uncontaminated'
+    )
     // Unlike resume_tex, the markers themselves are neither stripped nor
     // escaped -- they typeset (or here, print) as literal text either way.
     assert.match(text, /\[cite: 1, 2, 3\]/)
@@ -428,10 +576,15 @@ describe('citation warnings', () => {
   test('an invalid blueprint reports the schema error without piling on', async () => {
     const result = await client.callTool({
       name: 'resume_validate',
-      arguments: { blueprint: { basics: { name: 123 }, work: [{ summary: 'x[cite: 1]' }] } }
+      arguments: {
+        blueprint: { basics: { name: 123 }, work: [{ summary: 'x[cite: 1]' }] }
+      }
     })
 
-    const structured = result.structuredContent as { valid: boolean; warnings?: string[] }
+    const structured = result.structuredContent as {
+      valid: boolean
+      warnings?: string[]
+    }
     assert.equal(structured.valid, false)
     assert.equal(structured.warnings, undefined)
   })
@@ -456,30 +609,46 @@ describe('resume_import', () => {
   ].join('\n')
 
   test('parses a profile and returns it without storing anything', async () => {
-    const result = await client.callTool({ name: 'resume_import', arguments: { markdown: PROFILE } })
+    const result = await client.callTool({
+      name: 'resume_import',
+      arguments: { markdown: PROFILE }
+    })
     assert.equal(result.isError, undefined)
 
-    const { blueprint } = result.structuredContent as { blueprint: Record<string, any> }
+    const { blueprint } = result.structuredContent as {
+      blueprint: Record<string, any>
+    }
     assert.equal(blueprint.basics.name, 'Ada Lovelace')
     assert.equal(blueprint.work[0].name, 'Analytical Engine Works')
     assert.equal(blueprint.work[0].endDate, 'Present')
 
     // readOnlyHint is not decoration: nothing may have appeared in the store.
     const list = await client.callTool({ name: 'resume_list', arguments: {} })
-    assert.deepEqual((list.structuredContent as { blueprints: unknown[] }).blueprints, [])
+    assert.deepEqual(
+      (list.structuredContent as { blueprints: unknown[] }).blueprints,
+      []
+    )
   })
 
   test('strips citation artifacts before they can reach a document', async () => {
-    const result = await client.callTool({ name: 'resume_import', arguments: { markdown: PROFILE } })
+    const result = await client.callTool({
+      name: 'resume_import',
+      arguments: { markdown: PROFILE }
+    })
     assert.ok(!JSON.stringify(result.structuredContent).includes('[cite'))
   })
 
   test('reports a section the schema has no home for', async () => {
     // BlueprintSchema has no `volunteer`, and zod objects are non-strict, so
     // without the warning this content vanishes with no error anywhere.
-    const result = await client.callTool({ name: 'resume_import', arguments: { markdown: PROFILE } })
+    const result = await client.callTool({
+      name: 'resume_import',
+      arguments: { markdown: PROFILE }
+    })
     const { warnings } = result.structuredContent as { warnings: string[] }
-    assert.ok(warnings.some((w) => /unrecognized section "Volunteer Work"/.test(w)))
+    assert.ok(
+      warnings.some((w) => /unrecognized section "Volunteer Work"/.test(w))
+    )
     // And the warnings must be readable in the text channel too — an agent that
     // only reads `content` should still see them.
     const text = (result.content as Array<{ text: string }>)[0]!.text
@@ -487,8 +656,13 @@ describe('resume_import', () => {
   })
 
   test('the imported blueprint is valid input for resume_create', async () => {
-    const imported = await client.callTool({ name: 'resume_import', arguments: { markdown: PROFILE } })
-    const { blueprint } = imported.structuredContent as { blueprint: Record<string, unknown> }
+    const imported = await client.callTool({
+      name: 'resume_import',
+      arguments: { markdown: PROFILE }
+    })
+    const { blueprint } = imported.structuredContent as {
+      blueprint: Record<string, unknown>
+    }
 
     const created = await client.callTool({
       name: 'resume_create',
@@ -514,7 +688,9 @@ describe('resume_import', () => {
 
 describe('resume_render', () => {
   test('renders a real PDF with no base64 in the response', async () => {
-    const sample = JSON.parse(await readFile(resolve(FIXTURES, 'sample.json'), 'utf8'))
+    const sample = JSON.parse(
+      await readFile(resolve(FIXTURES, 'sample.json'), 'utf8')
+    )
 
     const create = await client.callTool({
       name: 'resume_create',
@@ -533,7 +709,10 @@ describe('resume_render', () => {
       .join('\n')
     // A base64-encoded PDF would be long stretches of base64 alphabet with no
     // spaces; a human-readable one-liner never looks like that.
-    assert.ok(!/[A-Za-z0-9+/]{200,}={0,2}/.test(text), 'response text looks like a base64 blob')
+    assert.ok(
+      !/[A-Za-z0-9+/]{200,}={0,2}/.test(text),
+      'response text looks like a base64 blob'
+    )
 
     const structured = rendered.structuredContent as {
       path: string
@@ -541,7 +720,10 @@ describe('resume_render', () => {
       byteSize: number
       coreBuild: string
     }
-    assert.ok(existsSync(structured.path), `expected a file at ${structured.path}`)
+    assert.ok(
+      existsSync(structured.path),
+      `expected a file at ${structured.path}`
+    )
     assert.ok(structured.pageCount >= 1)
 
     const stats = await stat(structured.path)
@@ -564,7 +746,9 @@ describe('resume_render', () => {
 
 describe('security', () => {
   test('injection fixture is neutralized end-to-end through resume_render', async () => {
-    const injection = JSON.parse(await readFile(resolve(FIXTURES, 'injection.json'), 'utf8'))
+    const injection = JSON.parse(
+      await readFile(resolve(FIXTURES, 'injection.json'), 'utf8')
+    )
 
     const create = await client.callTool({
       name: 'resume_create',
@@ -580,7 +764,11 @@ describe('security', () => {
 
     const structured = rendered.structuredContent as { path: string }
     const pdf = await readFile(structured.path)
-    assert.equal(pdf.subarray(0, 5).toString(), '%PDF-', 'missing PDF magic bytes')
+    assert.equal(
+      pdf.subarray(0, 5).toString(),
+      '%PDF-',
+      'missing PDF magic bytes'
+    )
 
     assert.ok(!existsSync('/tmp/pwned'), 'shell escape executed')
     assert.ok(!existsSync('/tmp/escape.txt'), 'file write executed')
@@ -605,8 +793,13 @@ describe('resource limits', () => {
       arguments: { id: 'whatever', timeoutMs: 300_000 }
     })
     assert.equal(result.isError, true)
-    const text = (result.content as Array<{ type: string; text?: string }>).map((c) => c.text ?? '').join('\n')
-    assert.ok(/NotFoundError/.test(text), `expected a NotFoundError, not an input-validation error: ${text}`)
+    const text = (result.content as Array<{ type: string; text?: string }>)
+      .map((c) => c.text ?? '')
+      .join('\n')
+    assert.ok(
+      /NotFoundError/.test(text),
+      `expected a NotFoundError, not an input-validation error: ${text}`
+    )
   })
 
   test('resume_history rejects a limit above the 500 ceiling', async () => {
@@ -622,16 +815,24 @@ describe('resume_patch depth guard', () => {
   test('assertReasonableDepth throws a plain Error, not a RangeError, on deep input', () => {
     let deep: unknown = { a: 1 }
     for (let i = 0; i < 5000; i++) deep = { nested: deep }
-    assert.throws(() => assertReasonableDepth(deep), (error: unknown) => {
-      assert.ok(error instanceof Error)
-      assert.ok(!(error instanceof RangeError), 'should not be a raw RangeError (stack overflow)')
-      assert.match(error.message, /nested too deeply/)
-      return true
-    })
+    assert.throws(
+      () => assertReasonableDepth(deep),
+      (error: unknown) => {
+        assert.ok(error instanceof Error)
+        assert.ok(
+          !(error instanceof RangeError),
+          'should not be a raw RangeError (stack overflow)'
+        )
+        assert.match(error.message, /nested too deeply/)
+        return true
+      }
+    )
   })
 
   test('shallow input passes through without throwing', () => {
-    assert.doesNotThrow(() => assertReasonableDepth({ basics: { name: 'Ada' }, work: [{ name: 'X' }] }))
+    assert.doesNotThrow(() =>
+      assertReasonableDepth({ basics: { name: 'Ada' }, work: [{ name: 'X' }] })
+    )
   })
 
   test('resume_patch with a ~1000-level-deep patch is a clean isError response, not a crash', async () => {
@@ -649,9 +850,14 @@ describe('resume_patch depth guard', () => {
       arguments: { id: 'deep-patch', patch: deep }
     })
     assert.equal(result.isError, true)
-    const text = (result.content as Array<{ type: string; text?: string }>).map((c) => c.text ?? '').join('\n')
+    const text = (result.content as Array<{ type: string; text?: string }>)
+      .map((c) => c.text ?? '')
+      .join('\n')
     assert.match(text, /nested too deeply/)
-    assert.ok(!/RangeError/.test(text), 'a raw RangeError leaked into the response')
+    assert.ok(
+      !/RangeError/.test(text),
+      'a raw RangeError leaked into the response'
+    )
   })
 })
 
@@ -672,10 +878,21 @@ describe('pruneOldRenders', () => {
       // both list the same 12 candidates, both compute the same 2 stale
       // entries, and whichever runs second hits ENOENT unlinking what the
       // first already removed. Without the ENOENT swallow, this rejects.
-      await assert.doesNotReject(Promise.all([pruneOldRenders(home, id, 10), pruneOldRenders(home, id, 10)]))
+      await assert.doesNotReject(
+        Promise.all([
+          pruneOldRenders(home, id, 10),
+          pruneOldRenders(home, id, 10)
+        ])
+      )
 
-      const remaining = (await readdir(rdir)).filter((f) => f.startsWith(`${id}-`))
-      assert.equal(remaining.length, 10, `expected exactly 10 files to remain, got ${remaining.length}`)
+      const remaining = (await readdir(rdir)).filter((f) =>
+        f.startsWith(`${id}-`)
+      )
+      assert.equal(
+        remaining.length,
+        10,
+        `expected exactly 10 files to remain, got ${remaining.length}`
+      )
     } finally {
       await rm(home, { recursive: true, force: true })
     }
@@ -684,10 +901,15 @@ describe('pruneOldRenders', () => {
 
 describe('resume_render concurrency and prune failures', () => {
   test('two concurrent resume_render calls for the same id both succeed', async () => {
-    const sample = JSON.parse(await readFile(resolve(FIXTURES, 'sample.json'), 'utf8'))
+    const sample = JSON.parse(
+      await readFile(resolve(FIXTURES, 'sample.json'), 'utf8')
+    )
     const id = 'concurrent-render'
 
-    const create = await client.callTool({ name: 'resume_create', arguments: { id, blueprint: sample } })
+    const create = await client.callTool({
+      name: 'resume_create',
+      arguments: { id, blueprint: sample }
+    })
     assert.equal(create.isError, undefined)
 
     // Build up to exactly `keep` (10) distinct render files sequentially —
@@ -702,7 +924,11 @@ describe('resume_render concurrency and prune failures', () => {
         name: 'resume_render',
         arguments: { id, template: 1, timeoutMs: 180_000 }
       })
-      assert.equal(rendered.isError, undefined, JSON.stringify(rendered.content))
+      assert.equal(
+        rendered.isError,
+        undefined,
+        JSON.stringify(rendered.content)
+      )
     }
 
     // One more rev, then two *concurrent* renders of it at different
@@ -716,18 +942,34 @@ describe('resume_render concurrency and prune failures', () => {
     assert.equal(finalPatch.isError, undefined)
 
     const [r1, r2] = await Promise.all([
-      client.callTool({ name: 'resume_render', arguments: { id, template: 2, timeoutMs: 180_000 } }),
-      client.callTool({ name: 'resume_render', arguments: { id, template: 3, timeoutMs: 180_000 } })
+      client.callTool({
+        name: 'resume_render',
+        arguments: { id, template: 2, timeoutMs: 180_000 }
+      }),
+      client.callTool({
+        name: 'resume_render',
+        arguments: { id, template: 3, timeoutMs: 180_000 }
+      })
     ])
 
     assert.equal(r1.isError, undefined, JSON.stringify(r1.content))
     assert.equal(r2.isError, undefined, JSON.stringify(r2.content))
 
     for (const result of [r1, r2]) {
-      const structured = result.structuredContent as { path: string; byteSize: number }
-      assert.ok(existsSync(structured.path), `expected a file at ${structured.path}`)
+      const structured = result.structuredContent as {
+        path: string
+        byteSize: number
+      }
+      assert.ok(
+        existsSync(structured.path),
+        `expected a file at ${structured.path}`
+      )
       const pdf = await readFile(structured.path)
-      assert.equal(pdf.subarray(0, 5).toString(), '%PDF-', 'missing PDF magic bytes')
+      assert.equal(
+        pdf.subarray(0, 5).toString(),
+        '%PDF-',
+        'missing PDF magic bytes'
+      )
       const stats = await stat(structured.path)
       assert.equal(structured.byteSize, stats.size)
     }
@@ -735,15 +977,26 @@ describe('resume_render concurrency and prune failures', () => {
     // Prune should have run to completion on both sides without error,
     // leaving exactly `keep` (10) files for this id.
     const rdir = renderDir(dir)
-    const remaining = (await readdir(rdir)).filter((f) => f.startsWith(`${id}-`) && f.endsWith('.pdf'))
-    assert.equal(remaining.length, 10, `expected exactly 10 retained render files, got ${remaining.length}`)
+    const remaining = (await readdir(rdir)).filter(
+      (f) => f.startsWith(`${id}-`) && f.endsWith('.pdf')
+    )
+    assert.equal(
+      remaining.length,
+      10,
+      `expected exactly 10 retained render files, got ${remaining.length}`
+    )
   })
 
   test('a forced prune failure does not fail an otherwise-successful resume_render', async () => {
-    const sample = JSON.parse(await readFile(resolve(FIXTURES, 'sample.json'), 'utf8'))
+    const sample = JSON.parse(
+      await readFile(resolve(FIXTURES, 'sample.json'), 'utf8')
+    )
     const id = 'prune-fails'
 
-    const create = await client.callTool({ name: 'resume_create', arguments: { id, blueprint: sample } })
+    const create = await client.callTool({
+      name: 'resume_create',
+      arguments: { id, blueprint: sample }
+    })
     assert.equal(create.isError, undefined)
 
     const got = await client.callTool({ name: 'resume_get', arguments: { id } })
@@ -778,13 +1031,25 @@ describe('resume_render concurrency and prune failures', () => {
         arguments: { id, template, timeoutMs: 180_000 }
       })
 
-      assert.equal(rendered.isError, undefined, JSON.stringify(rendered.content))
-      const structured = rendered.structuredContent as { path: string; pageCount: number; byteSize: number }
+      assert.equal(
+        rendered.isError,
+        undefined,
+        JSON.stringify(rendered.content)
+      )
+      const structured = rendered.structuredContent as {
+        path: string
+        pageCount: number
+        byteSize: number
+      }
       assert.equal(structured.path, expectedPath)
       assert.ok(structured.pageCount >= 1)
 
       const pdf = await readFile(structured.path)
-      assert.equal(pdf.subarray(0, 5).toString(), '%PDF-', 'missing PDF magic bytes — write step did not succeed')
+      assert.equal(
+        pdf.subarray(0, 5).toString(),
+        '%PDF-',
+        'missing PDF magic bytes — write step did not succeed'
+      )
       assert.equal(structured.byteSize, pdf.length)
     } finally {
       await chmod(rdir, 0o755) // restore, so afterEach's rm(dir, { recursive: true }) can clean up
@@ -794,10 +1059,15 @@ describe('resume_render concurrency and prune failures', () => {
 
 describe('render pruning', () => {
   test('keeps only the last 10 renders for an id', async () => {
-    const sample = JSON.parse(await readFile(resolve(FIXTURES, 'sample.json'), 'utf8'))
+    const sample = JSON.parse(
+      await readFile(resolve(FIXTURES, 'sample.json'), 'utf8')
+    )
     const id = 'many-renders'
 
-    const create = await client.callTool({ name: 'resume_create', arguments: { id, blueprint: sample } })
+    const create = await client.callTool({
+      name: 'resume_create',
+      arguments: { id, blueprint: sample }
+    })
     assert.equal(create.isError, undefined)
 
     const revs: string[] = []
@@ -814,16 +1084,28 @@ describe('render pruning', () => {
         name: 'resume_render',
         arguments: { id, template: 1, timeoutMs: 180_000 }
       })
-      assert.equal(rendered.isError, undefined, JSON.stringify(rendered.content))
+      assert.equal(
+        rendered.isError,
+        undefined,
+        JSON.stringify(rendered.content)
+      )
     }
 
     const rdir = renderDir(dir)
-    const files = (await readdir(rdir)).filter((f) => f.startsWith(`${id}-`) && f.endsWith('.pdf'))
-    assert.equal(files.length, 10, `expected exactly 10 retained render files, got ${files.length}`)
+    const files = (await readdir(rdir)).filter(
+      (f) => f.startsWith(`${id}-`) && f.endsWith('.pdf')
+    )
+    assert.equal(
+      files.length,
+      10,
+      `expected exactly 10 retained render files, got ${files.length}`
+    )
 
     // The retained files should be exactly the last 10 revs' files — i.e.
     // the most recent by mtime, matching "keep the last 10".
-    const expectedNames = new Set(revs.slice(-10).map((rev) => renderPath(id, rev, 1)))
+    const expectedNames = new Set(
+      revs.slice(-10).map((rev) => renderPath(id, rev, 1))
+    )
     assert.deepEqual(new Set(files), expectedNames)
   })
 })
@@ -842,9 +1124,14 @@ describe('actor attribution', () => {
     })
     assert.equal(patch.isError, undefined)
 
-    const history = await client.callTool({ name: 'resume_history', arguments: { id: 'actor-check' } })
+    const history = await client.callTool({
+      name: 'resume_history',
+      arguments: { id: 'actor-check' }
+    })
     assert.equal(history.isError, undefined)
-    const { commits } = history.structuredContent as { commits: Array<{ message: string }> }
+    const { commits } = history.structuredContent as {
+      commits: Array<{ message: string }>
+    }
     assert.ok(
       commits.some((c) => c.message.includes('via mcp')),
       `expected a commit message containing "via mcp", got: ${JSON.stringify(commits)}`
@@ -867,14 +1154,22 @@ describe('stdout purity', () => {
   // branch logs to stderr, so this also confirms stderr logging never
   // bleeds into stdout.
   test('stdout carries only JSON-RPC frames across create, render, and an error path', async () => {
-    const purityHome = await mkdtemp(join(tmpdir(), 'resume-blueprint-mcp-purity-'))
+    const purityHome = await mkdtemp(
+      join(tmpdir(), 'resume-blueprint-mcp-purity-')
+    )
     try {
-      const sample = JSON.parse(await readFile(resolve(FIXTURES, 'sample.json'), 'utf8'))
+      const sample = JSON.parse(
+        await readFile(resolve(FIXTURES, 'sample.json'), 'utf8')
+      )
 
-      const child: ChildProcessWithoutNullStreams = spawn('node', [DIST_INDEX_PATH], {
-        env: { ...process.env, RESUME_BLUEPRINT_HOME: purityHome },
-        stdio: ['pipe', 'pipe', 'pipe']
-      })
+      const child: ChildProcessWithoutNullStreams = spawn(
+        'node',
+        [DIST_INDEX_PATH],
+        {
+          env: { ...process.env, RESUME_BLUEPRINT_HOME: purityHome },
+          stdio: ['pipe', 'pipe', 'pipe']
+        }
+      )
 
       let stdout = ''
       child.stdout.on('data', (chunk) => (stdout += chunk.toString('utf8')))
@@ -883,9 +1178,15 @@ describe('stdout purity', () => {
         child.stdin.write(JSON.stringify(message) + '\n')
       }
 
-      const waitForResponses = (count: number, timeoutMs = 60_000): Promise<void> =>
+      const waitForResponses = (
+        count: number,
+        timeoutMs = 60_000
+      ): Promise<void> =>
         new Promise((resolvePromise, rejectPromise) => {
-          const timer = setTimeout(() => rejectPromise(new Error('timed out waiting for responses')), timeoutMs)
+          const timer = setTimeout(
+            () => rejectPromise(new Error('timed out waiting for responses')),
+            timeoutMs
+          )
           const check = () => {
             const lines = stdout.split('\n').filter((l) => l.trim().length > 0)
             if (lines.length >= count) {
@@ -912,7 +1213,12 @@ describe('stdout purity', () => {
 
       send({ jsonrpc: '2.0', method: 'notifications/initialized' })
 
-      send({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'resume_templates', arguments: {} } })
+      send({
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/call',
+        params: { name: 'resume_templates', arguments: {} }
+      })
       await waitForResponses(2)
 
       // Real `git` subprocess, via the store.
@@ -920,7 +1226,10 @@ describe('stdout purity', () => {
         jsonrpc: '2.0',
         id: 3,
         method: 'tools/call',
-        params: { name: 'resume_create', arguments: { id: 'purity', blueprint: sample } }
+        params: {
+          name: 'resume_create',
+          arguments: { id: 'purity', blueprint: sample }
+        }
       })
       await waitForResponses(3)
 
@@ -929,7 +1238,10 @@ describe('stdout purity', () => {
         jsonrpc: '2.0',
         id: 4,
         method: 'tools/call',
-        params: { name: 'resume_render', arguments: { id: 'purity', timeoutMs: 180_000 } }
+        params: {
+          name: 'resume_render',
+          arguments: { id: 'purity', timeoutMs: 180_000 }
+        }
       })
       await waitForResponses(4)
 
@@ -940,7 +1252,10 @@ describe('stdout purity', () => {
         jsonrpc: '2.0',
         id: 5,
         method: 'tools/call',
-        params: { name: 'resume_patch', arguments: { id: 'purity', patch: deep } }
+        params: {
+          name: 'resume_patch',
+          arguments: { id: 'purity', patch: deep }
+        }
       })
       await waitForResponses(5)
 

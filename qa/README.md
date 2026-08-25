@@ -5,7 +5,7 @@ and markdown master-profiles through the importer. Each is well tested in its
 own package, and nothing tests them **against each other**. This directory is
 that missing layer.
 
-Everything here is a *sample invocable*: a runnable, readable example of how to
+Everything here is a _sample invocable_: a runnable, readable example of how to
 drive one surface, which also happens to assert the right answer. That dual
 role is deliberate — documentation that is executed cannot rot quietly.
 
@@ -40,7 +40,7 @@ fact (no `pdfinfo`, say), not a failure, and is always shown.
 ## Running one script by hand
 
 Every script stands alone. That is the point: when a row goes red you want to
-run *that one thing* and watch it, not re-run the suite.
+run _that one thing_ and watch it, not re-run the suite.
 
 ```bash
 bash qa/cli/01-render-sample.sh
@@ -89,7 +89,7 @@ the `tectonic`/`poppler` the project already requires. In particular there is no
 ## How a script reports
 
 Scripts print `RESULT <contract-id> PASS|FAIL|SKIP <label>` lines. A human reads
-them directly; `run.mjs` parses them into the matrix. That is the *only*
+them directly; `run.mjs` parses them into the matrix. That is the _only_
 coupling between the two, in one direction, which is why every script still
 works with no driver at all.
 

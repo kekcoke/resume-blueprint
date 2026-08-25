@@ -4,11 +4,24 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
-import { profileToBlueprint, ProfileParseError } from '../dist/import/profile.js'
-import { parseBlueprint, formatValidationError, isValidationError } from '../dist/schema.js'
+import {
+  profileToBlueprint,
+  ProfileParseError
+} from '../dist/import/profile.js'
+import {
+  parseBlueprint,
+  formatValidationError,
+  isValidationError
+} from '../dist/schema.js'
 import { blueprintToTex } from '../dist/index.js'
 
-const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'fixtures')
+const FIXTURES = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  'fixtures'
+)
 
 /**
  * `fixtures/profile.md` is a synthetic stand-in for `profile_templates/*.md`,
@@ -35,7 +48,9 @@ describe('profileToBlueprint', () => {
     } catch (error) {
       assert.fail(
         `importer emitted an invalid blueprint:\n${
-          isValidationError(error) ? formatValidationError(error) : String(error)
+          isValidationError(error)
+            ? formatValidationError(error)
+            : String(error)
         }`
       )
     }
@@ -72,7 +87,10 @@ describe('profileToBlueprint', () => {
 
 describe('profileToBlueprint basics', () => {
   test('reads the H1 suffix as the targeting label', () => {
-    assert.equal(parse().blueprint.basics!.label, 'Numerical Analyst & Computing Pioneer')
+    assert.equal(
+      parse().blueprint.basics!.label,
+      'Numerical Analyst & Computing Pioneer'
+    )
   })
 
   test('maps the metadata bullets onto basics', () => {
@@ -97,7 +115,11 @@ describe('profileToBlueprint basics', () => {
   test('splits the multi-value portfolio field into website plus profiles', () => {
     const basics = parse().blueprint.basics!
     assert.equal(basics.website, 'example.com/ada')
-    assert.ok(basics.profiles!.some((p) => p.network === 'GitHub' && p.url === 'github.com/ada'))
+    assert.ok(
+      basics.profiles!.some(
+        (p) => p.network === 'GitHub' && p.url === 'github.com/ada'
+      )
+    )
   })
 
   test('stores URLs scheme-less, exactly as written', () => {
@@ -122,7 +144,11 @@ describe('profileToBlueprint skills', () => {
     // `AWS (EKS, Lambda, SQS)` is one skill. Splitting on ", " makes it four.
     const skills = parse().blueprint.skills!
     const cloud = skills.find((s) => s.name === 'Cloud, IaC & Observability')!
-    assert.deepEqual(cloud.keywords, ['AWS (EKS, Lambda, SQS)', 'Terraform', 'Datadog'])
+    assert.deepEqual(cloud.keywords, [
+      'AWS (EKS, Lambda, SQS)',
+      'Terraform',
+      'Datadog'
+    ])
   })
 
   test('keeps a category label that contains a comma intact', () => {
@@ -135,7 +161,10 @@ describe('profileToBlueprint skills', () => {
   test('imports an unlabelled bullet as an uncategorized group, and says so', () => {
     const { blueprint, warnings } = parse()
     const uncategorized = blueprint.skills!.find((s) => s.name === undefined)!
-    assert.deepEqual(uncategorized.keywords, ['Mechanical Tabulation', 'Punched Cards'])
+    assert.deepEqual(uncategorized.keywords, [
+      'Mechanical Tabulation',
+      'Punched Cards'
+    ])
     assert.ok(warnings.some((w) => /no "\*\*Category:\*\*" label/.test(w)))
   })
 })
@@ -159,7 +188,10 @@ describe('profileToBlueprint work', () => {
   test('collects bullets as highlights', () => {
     const first = parse().blueprint.work![0]!
     assert.equal(first.highlights!.length, 2)
-    assert.match(first.highlights![0]!, /^Designed the first published algorithm/)
+    assert.match(
+      first.highlights![0]!,
+      /^Designed the first published algorithm/
+    )
     assert.match(first.highlights![0]!, /machine\.$/)
   })
 
@@ -176,7 +208,9 @@ describe('profileToBlueprint work', () => {
   })
 
   test('warns about a continuation line it cannot place', () => {
-    assert.ok(parse().warnings.some((w) => /unparsed line in work entry/.test(w)))
+    assert.ok(
+      parse().warnings.some((w) => /unparsed line in work entry/.test(w))
+    )
   })
 })
 
@@ -201,26 +235,39 @@ describe('profileToBlueprint education and certificates', () => {
     // "Note G Study Programme" contains an institution-ish word but is plainly
     // the credential; the institution is the "Bernoulli Institute" beside it.
     // Checking institution words first got this backwards, silently.
-    const noteG = education().find((e) => e.studyType === 'Note G Study Programme')!
+    const noteG = education().find(
+      (e) => e.studyType === 'Note G Study Programme'
+    )!
     assert.equal(noteG.institution, 'Bernoulli Institute')
   })
 
   test('drops a trailing italic descriptor loudly rather than misfiling it', () => {
-    const noteG = education().find((e) => e.studyType === 'Note G Study Programme')!
+    const noteG = education().find(
+      (e) => e.studyType === 'Note G Study Programme'
+    )!
     assert.ok(!JSON.stringify(noteG).includes('Recurrence Relations'))
-    assert.ok(parse().warnings.some((w) => /EducationSchema has no field for it/.test(w)))
+    assert.ok(
+      parse().warnings.some((w) =>
+        /EducationSchema has no field for it/.test(w)
+      )
+    )
   })
 
   test('splits a packed **Certifications:** bullet into separate certificates', () => {
     const certs = parse().blueprint.certificates!
     assert.equal(certs.length, 3)
-    assert.deepEqual(certs[0], { name: 'Certified Engine Operator', date: '2020' })
+    assert.deepEqual(certs[0], {
+      name: 'Certified Engine Operator',
+      date: '2020'
+    })
     assert.deepEqual(certs[1], { name: 'Punched Card Systems', date: '2018' })
   })
 
   test('keeps a certificate with no year, and warns', () => {
     const { blueprint, warnings } = parse()
-    assert.deepEqual(blueprint.certificates![2], { name: 'Difference Engine Maintenance' })
+    assert.deepEqual(blueprint.certificates![2], {
+      name: 'Difference Engine Maintenance'
+    })
     assert.ok(warnings.some((w) => /has no year in parentheses/.test(w)))
   })
 })
@@ -231,7 +278,9 @@ describe('profileToBlueprint warnings', () => {
     // zod objects are non-strict -- so "## Notes to Self" would disappear with
     // no error anywhere in the chain.
     const { blueprint, warnings } = parse()
-    assert.ok(warnings.some((w) => /unrecognized section "Notes to Self"/.test(w)))
+    assert.ok(
+      warnings.some((w) => /unrecognized section "Notes to Self"/.test(w))
+    )
     assert.ok(!JSON.stringify(blueprint).includes('graph paper'))
   })
 
@@ -239,23 +288,38 @@ describe('profileToBlueprint warnings', () => {
     // "## Notes to Self" sits between experience and education. Skipping only
     // the heading would file its bullet under whichever section was still open.
     const { blueprint } = parse()
-    assert.ok(!blueprint.education!.some((e) => /graph paper/.test(JSON.stringify(e))))
+    assert.ok(
+      !blueprint.education!.some((e) => /graph paper/.test(JSON.stringify(e)))
+    )
     assert.equal(blueprint.work!.length, 2)
   })
 
   test('reports an unrecognized metadata label but keeps the value', () => {
     const { blueprint, warnings } = parse()
-    assert.ok(warnings.some((w) => /unrecognized metadata label "Carrier Pigeon"/.test(w)))
-    assert.ok(blueprint.basics!.profiles!.some((p) => p.network === 'Carrier Pigeon'))
+    assert.ok(
+      warnings.some((w) =>
+        /unrecognized metadata label "Carrier Pigeon"/.test(w)
+      )
+    )
+    assert.ok(
+      blueprint.basics!.profiles!.some((p) => p.network === 'Carrier Pigeon')
+    )
   })
 
   test('leads with the citation count', () => {
-    assert.match(parse().warnings[0]!, /^removed \d+ citation artifacts before parsing$/)
+    assert.match(
+      parse().warnings[0]!,
+      /^removed \d+ citation artifacts before parsing$/
+    )
   })
 
   test('every other warning names its source line', () => {
     for (const warning of parse().warnings.slice(1)) {
-      assert.match(warning, /^line \d+: /, `warning has no line number: ${warning}`)
+      assert.match(
+        warning,
+        /^line \d+: /,
+        `warning has no line number: ${warning}`
+      )
     }
   })
 })
@@ -264,11 +328,14 @@ describe('profileToBlueprint failure modes', () => {
   test('throws ProfileParseError, not a ZodError, for input that is not a profile', () => {
     // Adapters branch on isValidationError. A malformed-markdown failure
     // reported as a schema failure points the caller at the wrong thing.
-    assert.throws(() => profileToBlueprint('just some prose\n\nwith no headings'), (error: unknown) => {
-      assert.ok(error instanceof ProfileParseError)
-      assert.ok(!isValidationError(error))
-      return true
-    })
+    assert.throws(
+      () => profileToBlueprint('just some prose\n\nwith no headings'),
+      (error: unknown) => {
+        assert.ok(error instanceof ProfileParseError)
+        assert.ok(!isValidationError(error))
+        return true
+      }
+    )
   })
 
   test('throws on an empty document', () => {
@@ -296,9 +363,18 @@ describe('profileToBlueprint routes through the sanitize path', () => {
     const { blueprint } = profileToBlueprint(injection)
     const { texDoc } = blueprintToTex(blueprint)
 
-    assert.ok(!texDoc.includes('\\input{/etc/passwd}'), 'raw \\input survived into the document')
-    assert.ok(!texDoc.includes('\\write18{'), 'raw \\write18 survived into the document')
-    assert.ok(texDoc.includes('\\textbackslash{}input'), 'payload should typeset as literal text')
+    assert.ok(
+      !texDoc.includes('\\input{/etc/passwd}'),
+      'raw \\input survived into the document'
+    )
+    assert.ok(
+      !texDoc.includes('\\write18{'),
+      'raw \\write18 survived into the document'
+    )
+    assert.ok(
+      texDoc.includes('\\textbackslash{}input'),
+      'payload should typeset as literal text'
+    )
   })
 
   test('the importer itself leaves the payload unescaped', () => {

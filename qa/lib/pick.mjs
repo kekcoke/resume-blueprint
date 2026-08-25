@@ -21,7 +21,9 @@ import { readFileSync } from 'node:fs'
 
 const [file, path] = process.argv.slice(2)
 if (!file || !path) {
-  process.stderr.write('usage: node qa/lib/pick.mjs <responses.jsonl> <id.dotted.path>\n')
+  process.stderr.write(
+    'usage: node qa/lib/pick.mjs <responses.jsonl> <id.dotted.path>\n'
+  )
   process.exit(2)
 }
 
@@ -32,7 +34,9 @@ const messages = readFileSync(file, 'utf8')
 
 const [rawId, ...rest] = path.split('.')
 const wanted = Number(rawId)
-let value = messages.find((m) => m.id === (Number.isNaN(wanted) ? rawId : wanted))
+let value = messages.find(
+  (m) => m.id === (Number.isNaN(wanted) ? rawId : wanted)
+)
 
 for (const segment of rest) {
   if (value === undefined || value === null) break

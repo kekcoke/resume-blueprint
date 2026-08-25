@@ -22,7 +22,9 @@ const LENGTH_RE = /^(\d+(?:\.\d+)?)(in|cm|mm|pt)$/
  * not match `DocumentConfigSchema`'s pattern — callers that reach here have
  * already gone through that regex, so this is belt and braces, not the
  * primary guard. */
-export function parseLengthInches(raw: string): { inches: number; unit: string } | undefined {
+export function parseLengthInches(
+  raw: string
+): { inches: number; unit: string } | undefined {
   const match = LENGTH_RE.exec(raw.trim())
   if (!match) return undefined
   const [, numeral, unit] = match

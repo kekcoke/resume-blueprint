@@ -4,7 +4,11 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
-import { escapeLatex, sanitizeUrl, sanitizeBlueprint } from '../dist/sanitize.js'
+import {
+  escapeLatex,
+  sanitizeUrl,
+  sanitizeBlueprint
+} from '../dist/sanitize.js'
 import {
   BlueprintSchema,
   parseBlueprint,
@@ -15,7 +19,13 @@ import {
 } from '../dist/schema.js'
 import { blueprintToTex } from '../dist/index.js'
 
-const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'fixtures')
+const FIXTURES = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  'fixtures'
+)
 
 describe('escapeLatex', () => {
   test('neutralizes every LaTeX special character', () => {
@@ -104,7 +114,10 @@ describe('sanitizeBlueprint', () => {
       })
     )
     assert.equal(result.basics?.name, 'Ada')
-    assert.ok(!('email' in (result.basics ?? {})), 'whitespace-only email should be pruned')
+    assert.ok(
+      !('email' in (result.basics ?? {})),
+      'whitespace-only email should be pruned'
+    )
     assert.ok(!('work' in result), 'empty work array should be pruned')
   })
 
@@ -126,7 +139,10 @@ describe('sanitizeBlueprint', () => {
 
   test('collapses runs of whitespace', () => {
     const result = sanitizeBlueprint(
-      parseBlueprint({ basics: { name: '  Ada   Byron  ' }, selectedTemplate: 1 })
+      parseBlueprint({
+        basics: { name: '  Ada   Byron  ' },
+        selectedTemplate: 1
+      })
     )
     assert.equal(result.basics?.name, 'Ada Byron')
   })
@@ -140,11 +156,20 @@ describe('sanitizeBlueprint', () => {
       parseBlueprint({
         basics: { name: 'Ada' },
         selectedTemplate: 1,
-        certificates: [{ name: 'AWS Certified Cloud Practitioner', issuer: 'AWS', date: '2025' }]
+        certificates: [
+          {
+            name: 'AWS Certified Cloud Practitioner',
+            issuer: 'AWS',
+            date: '2025'
+          }
+        ]
       })
     )
     assert.equal(result.certificates?.length, 1)
-    assert.equal(result.certificates?.[0].name, 'AWS Certified Cloud Practitioner')
+    assert.equal(
+      result.certificates?.[0].name,
+      'AWS Certified Cloud Practitioner'
+    )
   })
 
   // sanitizeBlueprint builds its result from an explicit allowlist
@@ -173,7 +198,10 @@ describe('sanitizeBlueprint', () => {
     // accentColor is a regex-validated hex string; if it were routed through
     // escapeLatex like free text, the '#' would come back as '\#'.
     const result = sanitizeBlueprint(
-      parseBlueprint({ selectedTemplate: 1, document: { accentColor: '#4A90D9' } })
+      parseBlueprint({
+        selectedTemplate: 1,
+        document: { accentColor: '#4A90D9' }
+      })
     )
     assert.equal(result.document?.accentColor, '#4A90D9')
   })
@@ -181,7 +209,9 @@ describe('sanitizeBlueprint', () => {
 
 describe('injection fixture end to end', () => {
   test('no TeX command from the fixture survives into the generated document', async () => {
-    const fixture = JSON.parse(await readFile(resolve(FIXTURES, 'injection.json'), 'utf8'))
+    const fixture = JSON.parse(
+      await readFile(resolve(FIXTURES, 'injection.json'), 'utf8')
+    )
     const { texDoc } = blueprintToTex(fixture)
 
     // The document legitimately contains \input for its own preamble, so assert
@@ -205,7 +235,9 @@ describe('injection fixture end to end', () => {
   })
 
   test('injected text is preserved as visible literal content', async () => {
-    const fixture = JSON.parse(await readFile(resolve(FIXTURES, 'injection.json'), 'utf8'))
+    const fixture = JSON.parse(
+      await readFile(resolve(FIXTURES, 'injection.json'), 'utf8')
+    )
     const { texDoc } = blueprintToTex(fixture)
 
     // Escaped, not silently dropped — the user should see what was submitted.
@@ -213,10 +245,15 @@ describe('injection fixture end to end', () => {
   })
 
   test('unsafe URLs are dropped rather than rendered', async () => {
-    const fixture = JSON.parse(await readFile(resolve(FIXTURES, 'injection.json'), 'utf8'))
+    const fixture = JSON.parse(
+      await readFile(resolve(FIXTURES, 'injection.json'), 'utf8')
+    )
     const { texDoc } = blueprintToTex(fixture)
 
-    assert.ok(!texDoc.includes('javascript:'), 'javascript: URL reached the document')
+    assert.ok(
+      !texDoc.includes('javascript:'),
+      'javascript: URL reached the document'
+    )
     assert.ok(!texDoc.includes('file:///'), 'file:// URL reached the document')
   })
 })
@@ -227,10 +264,16 @@ describe('injection fixture end to end', () => {
 // value is outright rejection at validation, not escaping.
 describe('document injection fixture is rejected outright', () => {
   test('the adversarial document fixture fails validation, not silent escaping', async () => {
-    const fixture = JSON.parse(await readFile(resolve(FIXTURES, 'injection-document.json'), 'utf8'))
+    const fixture = JSON.parse(
+      await readFile(resolve(FIXTURES, 'injection-document.json'), 'utf8')
+    )
     const result = BlueprintSchema.safeParse(fixture)
 
-    assert.equal(result.success, false, 'adversarial document block should fail validation')
+    assert.equal(
+      result.success,
+      false,
+      'adversarial document block should fail validation'
+    )
   })
 
   test('accentColor rejects a TeX-injection payload rather than escaping it', () => {
@@ -268,7 +311,10 @@ describe('document injection fixture is rejected outright', () => {
 
   test('a validation failure is reported as a ZodError, not thrown as something opaque', () => {
     try {
-      parseBlueprint({ selectedTemplate: 1, document: { accentColor: 'not-a-color' } })
+      parseBlueprint({
+        selectedTemplate: 1,
+        document: { accentColor: 'not-a-color' }
+      })
       assert.fail('expected parseBlueprint to throw')
     } catch (error) {
       assert.ok(isValidationError(error))
@@ -278,41 +324,48 @@ describe('document injection fixture is rejected outright', () => {
 
 describe('document clamping', () => {
   test('margin below the 0.5in floor is silently raised, not rejected', () => {
-    const blueprint = parseBlueprint({ selectedTemplate: 1, document: { margin: '0.2in' } })
+    const blueprint = parseBlueprint({
+      selectedTemplate: 1,
+      document: { margin: '0.2in' }
+    })
     assert.equal(blueprint.document.margin, '0.5in')
   })
 
   test('margin above the floor, and in other units, passes through unchanged', () => {
     assert.equal(
-      parseBlueprint({ selectedTemplate: 1, document: { margin: '1in' } }).document.margin,
+      parseBlueprint({ selectedTemplate: 1, document: { margin: '1in' } })
+        .document.margin,
       '1in'
     )
     assert.equal(
-      parseBlueprint({ selectedTemplate: 1, document: { margin: '20mm' } }).document.margin,
+      parseBlueprint({ selectedTemplate: 1, document: { margin: '20mm' } })
+        .document.margin,
       '20mm'
     )
   })
 
   test('lineSpacing is clamped into [1.0, 1.15]', () => {
     assert.equal(
-      parseBlueprint({ selectedTemplate: 1, document: { lineSpacing: 0.5 } }).document.lineSpacing,
+      parseBlueprint({ selectedTemplate: 1, document: { lineSpacing: 0.5 } })
+        .document.lineSpacing,
       1.0
     )
     assert.equal(
-      parseBlueprint({ selectedTemplate: 1, document: { lineSpacing: 3 } }).document.lineSpacing,
+      parseBlueprint({ selectedTemplate: 1, document: { lineSpacing: 3 } })
+        .document.lineSpacing,
       1.15
     )
   })
 
   test('sectionSpacing and bulletSpacing are clamped into [0, 12]', () => {
     assert.equal(
-      parseBlueprint({ selectedTemplate: 1, document: { sectionSpacing: -5 } }).document
-        .sectionSpacing,
+      parseBlueprint({ selectedTemplate: 1, document: { sectionSpacing: -5 } })
+        .document.sectionSpacing,
       0
     )
     assert.equal(
-      parseBlueprint({ selectedTemplate: 1, document: { bulletSpacing: 99 } }).document
-        .bulletSpacing,
+      parseBlueprint({ selectedTemplate: 1, document: { bulletSpacing: 99 } })
+        .document.bulletSpacing,
       12
     )
   })
@@ -357,7 +410,10 @@ describe('schema contracts the zod 4 migration must preserve', () => {
     }
 
     for (const id of TEMPLATE_IDS) {
-      assert.equal(parseBlueprint({ selectedTemplate: id }).selectedTemplate, id)
+      assert.equal(
+        parseBlueprint({ selectedTemplate: id }).selectedTemplate,
+        id
+      )
     }
   })
 })

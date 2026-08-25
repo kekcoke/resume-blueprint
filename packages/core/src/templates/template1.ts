@@ -14,7 +14,9 @@ const generator: Generator = {
     const { name, label, summary, email, phone, location, website, profiles } =
       basics
     const address = location?.address || ''
-    const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
+    const websiteLine = website
+      ? `\\href{${website}}{${breakableUrl(website)}}`
+      : ''
 
     // The job title gets its own line rather than joining the contact run. A
     // parser reads the line under the name as the candidate's title; buried in
@@ -124,8 +126,15 @@ const generator: Generator = {
       \\vspace{1mm}
 
       ${work.map((job) => {
-        const { name, position, location, startDate, endDate, summary, highlights } =
-          job
+        const {
+          name,
+          position,
+          location,
+          startDate,
+          endDate,
+          summary,
+          highlights
+        } = job
 
         let line1 = ''
         let line2 = ''
@@ -377,11 +386,15 @@ function template1(values: FormValues, config: ResolvedDocumentConfig) {
     // GLOBAL_DEFAULTS.lineSpacing is 1.0, which is LaTeX's own un-overridden
     // spacing — omitting \linespread entirely at that value is what keeps
     // this additive rather than replacing a line that never existed.
-    config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
+    config.lineSpacing !== 1.0
+      ? `\\linespread{${config.lineSpacing}}\\selectfont`
+      : '',
     // Additive rather than replacing '[hidelinks]{hyperref}' below: layering
     // \hypersetup after hyperref is already loaded needs no knowledge of
     // exactly how that line reads, and never fires when linkStyle is 'hidden'.
-    config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+    config.linkStyle === 'colored'
+      ? '\\hypersetup{colorlinks=true,allcolors=blue}'
+      : '',
     nfssFontPreamble(1, config)
   ]
     .filter(Boolean)
@@ -422,13 +435,25 @@ function template1(values: FormValues, config: ResolvedDocumentConfig) {
             return generator.workSection(values.work, headings.work, config)
 
           case 'skills':
-            return generator.skillsSection(values.skills, headings.skills, config)
+            return generator.skillsSection(
+              values.skills,
+              headings.skills,
+              config
+            )
 
           case 'projects':
-            return generator.projectsSection(values.projects, headings.projects, config)
+            return generator.projectsSection(
+              values.projects,
+              headings.projects,
+              config
+            )
 
           case 'awards':
-            return generator.awardsSection(values.awards, headings.awards, config)
+            return generator.awardsSection(
+              values.awards,
+              headings.awards,
+              config
+            )
 
           case 'certificates':
             return (
@@ -436,7 +461,12 @@ function template1(values: FormValues, config: ResolvedDocumentConfig) {
                 values.certificates,
                 headings.certificates,
                 config
-              ) ?? defaultCertificatesSection(values.certificates, headings.certificates, config)
+              ) ??
+              defaultCertificatesSection(
+                values.certificates,
+                headings.certificates,
+                config
+              )
             )
 
           default:

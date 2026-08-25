@@ -48,7 +48,9 @@ async function waitForHealthz(baseUrl, child, timeoutMs = 15_000) {
     }
     await new Promise((r) => setTimeout(r, 100))
   }
-  throw new Error(`http server did not become healthy in ${timeoutMs}ms: ${lastError?.message}`)
+  throw new Error(
+    `http server did not become healthy in ${timeoutMs}ms: ${lastError?.message}`
+  )
 }
 
 /**
@@ -62,19 +64,23 @@ export async function startHttpServer({ home, env = {} } = {}) {
   const port = await freePort()
   const baseUrl = `http://127.0.0.1:${port}`
 
-  const child = spawn(process.execPath, [join(REPO_ROOT, 'packages', 'http', 'dist', 'index.js')], {
-    env: {
-      ...process.env,
-      ...(home ? { RESUME_BLUEPRINT_HOME: home } : {}),
-      RESUME_BLUEPRINT_PORT: String(port),
-      RESUME_BLUEPRINT_BIND: '127.0.0.1',
-      // Cleared unless the caller asks for it: inheriting a token from the
-      // developer's own shell would turn every unauthenticated row red.
-      RESUME_BLUEPRINT_TOKEN: '',
-      ...env
-    },
-    stdio: ['ignore', 'pipe', 'pipe']
-  })
+  const child = spawn(
+    process.execPath,
+    [join(REPO_ROOT, 'packages', 'http', 'dist', 'index.js')],
+    {
+      env: {
+        ...process.env,
+        ...(home ? { RESUME_BLUEPRINT_HOME: home } : {}),
+        RESUME_BLUEPRINT_PORT: String(port),
+        RESUME_BLUEPRINT_BIND: '127.0.0.1',
+        // Cleared unless the caller asks for it: inheriting a token from the
+        // developer's own shell would turn every unauthenticated row red.
+        RESUME_BLUEPRINT_TOKEN: '',
+        ...env
+      },
+      stdio: ['ignore', 'pipe', 'pipe']
+    }
+  )
 
   let stderr = ''
   child.stderr.on('data', (chunk) => {

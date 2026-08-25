@@ -7,8 +7,18 @@ import { git, GitError } from './git.js'
 import { ensureRepo } from './repo.js'
 import { applyMergePatch } from './mergePatch.js'
 import { withLock } from './lock.js'
-import { resolveHome, blueprintPath, blueprintRelPath, assertValidRev } from './paths.js'
-import { ConflictError, NotFoundError, AlreadyExistsError, InvalidActorError } from './errors.js'
+import {
+  resolveHome,
+  blueprintPath,
+  blueprintRelPath,
+  assertValidRev
+} from './paths.js'
+import {
+  ConflictError,
+  NotFoundError,
+  AlreadyExistsError,
+  InvalidActorError
+} from './errors.js'
 import type { BlueprintSummary, Commit } from './types.js'
 
 export {
@@ -60,13 +70,23 @@ async function readBlueprint(id: string, path: string): Promise<unknown> {
  * existed" apart from "existed, then was removed" — the removal commit still
  * shows up — so existence is checked on disk first).
  */
-async function currentRev(home: string, id: string, path: string): Promise<string> {
+async function currentRev(
+  home: string,
+  id: string,
+  path: string
+): Promise<string> {
   try {
     await stat(path)
   } catch {
     throw new NotFoundError(`blueprint "${id}" does not exist`)
   }
-  const out = await git(home, ['log', '-1', '--format=%H', '--', blueprintRelPath(id)])
+  const out = await git(home, [
+    'log',
+    '-1',
+    '--format=%H',
+    '--',
+    blueprintRelPath(id)
+  ])
   const rev = out.trim()
   if (!rev) {
     throw new NotFoundError(`blueprint "${id}" does not exist`)
@@ -74,7 +94,11 @@ async function currentRev(home: string, id: string, path: string): Promise<strin
   return rev
 }
 
-function checkExpectedRev(id: string, expectedRev: string | undefined, rev: string): void {
+function checkExpectedRev(
+  id: string,
+  expectedRev: string | undefined,
+  rev: string
+): void {
   if (expectedRev !== undefined && expectedRev !== rev) {
     throw new ConflictError(
       `blueprint "${id}" changed since rev ${expectedRev} (now at ${rev})`
@@ -98,7 +122,11 @@ function assertValidActor(actor: string | undefined): void {
 }
 
 /** `git add` + `git commit` + `git rev-parse HEAD` for a single blueprint file. */
-async function commitFile(home: string, id: string, message: string): Promise<{ rev: string }> {
+async function commitFile(
+  home: string,
+  id: string,
+  message: string
+): Promise<{ rev: string }> {
   const rel = blueprintRelPath(id)
   await git(home, ['add', rel])
 
@@ -127,7 +155,11 @@ async function hasStagedChanges(home: string, rel: string): Promise<boolean> {
   }
 }
 
-function commitMessage(op: string, id: string, actor: string | undefined): string {
+function commitMessage(
+  op: string,
+  id: string,
+  actor: string | undefined
+): string {
   return `${op}(${id}) via ${actor ?? 'store'}`
 }
 
@@ -148,9 +180,13 @@ async function ensureRepoLocked(home: string): Promise<void> {
 }
 
 /** Reads the array a section name addresses. `'profile'` maps to `basics.profiles`. */
-function readSectionArray(blueprint: Record<string, unknown>, section: SectionName): unknown[] {
+function readSectionArray(
+  blueprint: Record<string, unknown>,
+  section: SectionName
+): unknown[] {
   if (section === 'profile') {
-    const basics = (blueprint.basics as Record<string, unknown> | undefined) ?? {}
+    const basics =
+      (blueprint.basics as Record<string, unknown> | undefined) ?? {}
     return [...((basics.profiles as unknown[] | undefined) ?? [])]
   }
   return [...((blueprint[section] as unknown[] | undefined) ?? [])]
@@ -163,7 +199,8 @@ function writeSectionArray(
   arr: unknown[]
 ): Record<string, unknown> {
   if (section === 'profile') {
-    const basics = (blueprint.basics as Record<string, unknown> | undefined) ?? {}
+    const basics =
+      (blueprint.basics as Record<string, unknown> | undefined) ?? {}
     return { ...blueprint, basics: { ...basics, profiles: arr } }
   }
   return { ...blueprint, [section]: arr }
@@ -230,7 +267,9 @@ export async function list(): Promise<BlueprintSummary[]> {
   return summaries
 }
 
-export async function get(id: string): Promise<{ blueprint: Blueprint; rev: string }> {
+export async function get(
+  id: string
+): Promise<{ blueprint: Blueprint; rev: string }> {
   const home = resolveHome()
   // Locked so the (blueprint, rev) pair read back is always consistent — a
   // mutation can't land between the content read and the rev read.
@@ -268,7 +307,9 @@ export function patch(
   mergePatch: unknown,
   opts: MutationOpts = {}
 ): Promise<{ rev: string }> {
-  return mutate(id, 'patch', opts, (current) => applyMergePatch(current, mergePatch))
+  return mutate(id, 'patch', opts, (current) =>
+    applyMergePatch(current, mergePatch)
+  )
 }
 
 export function sectionAppend(
@@ -296,7 +337,9 @@ export function sectionUpdate(
     const blueprint = current as Record<string, unknown>
     const arr = readSectionArray(blueprint, section)
     if (index < 0 || index >= arr.length) {
-      throw new NotFoundError(`section "${section}" of blueprint "${id}" has no item at index ${index}`)
+      throw new NotFoundError(
+        `section "${section}" of blueprint "${id}" has no item at index ${index}`
+      )
     }
     arr[index] = item
     return writeSectionArray(blueprint, section, arr)
@@ -313,14 +356,19 @@ export function sectionRemove(
     const blueprint = current as Record<string, unknown>
     const arr = readSectionArray(blueprint, section)
     if (index < 0 || index >= arr.length) {
-      throw new NotFoundError(`section "${section}" of blueprint "${id}" has no item at index ${index}`)
+      throw new NotFoundError(
+        `section "${section}" of blueprint "${id}" has no item at index ${index}`
+      )
     }
     arr.splice(index, 1)
     return writeSectionArray(blueprint, section, arr)
   })
 }
 
-export async function remove(id: string, opts: MutationOpts = {}): Promise<{ rev: string }> {
+export async function remove(
+  id: string,
+  opts: MutationOpts = {}
+): Promise<{ rev: string }> {
   assertValidActor(opts.actor)
   const home = resolveHome()
   return withLock(home, async () => {
@@ -349,7 +397,13 @@ export async function history(id: string, limit = 50): Promise<Commit[]> {
 
   let out: string
   try {
-    out = await git(home, ['log', `-n${limit}`, `--format=%H${FIELD_SEP}%cI${FIELD_SEP}%s`, '--', rel])
+    out = await git(home, [
+      'log',
+      `-n${limit}`,
+      `--format=%H${FIELD_SEP}%cI${FIELD_SEP}%s`,
+      '--',
+      rel
+    ])
   } catch (error) {
     if (error instanceof GitError) {
       throw new NotFoundError(`blueprint "${id}" does not exist`)
@@ -372,7 +426,11 @@ export async function history(id: string, limit = 50): Promise<Commit[]> {
   return commits
 }
 
-export async function diff(id: string, revA: string, revB?: string): Promise<string> {
+export async function diff(
+  id: string,
+  revA: string,
+  revB?: string
+): Promise<string> {
   assertValidRev(revA)
   if (revB !== undefined) assertValidRev(revB)
 
@@ -412,7 +470,9 @@ export async function revert(
       raw = await git(home, ['show', `${rev}:${rel}`])
     } catch (error) {
       if (error instanceof GitError) {
-        throw new NotFoundError(`revision "${rev}" of blueprint "${id}" not found`)
+        throw new NotFoundError(
+          `revision "${rev}" of blueprint "${id}" not found`
+        )
       }
       throw error
     }

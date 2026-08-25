@@ -8,7 +8,12 @@ import type { Certificate, ResolvedDocumentConfig } from '../types.js'
  * `\href{url}{url}` idiom in every template) rather than hiding behind
  * `name`, so it stays in the plain-text extraction layer.
  */
-export function certificateLine({ name, issuer, date, url }: Certificate): string {
+export function certificateLine({
+  name,
+  issuer,
+  date,
+  url
+}: Certificate): string {
   const meta = [issuer, date ? `(${date})` : ''].filter(Boolean).join(' ')
   const link = url ? `\\href{${url}}{${url}}` : ''
   return [name, meta, link].filter(Boolean).join(' | ')

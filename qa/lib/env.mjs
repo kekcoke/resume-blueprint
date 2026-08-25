@@ -11,7 +11,11 @@ import { promisify } from 'node:util'
 
 const run = promisify(execFile)
 
-export const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
+export const REPO_ROOT = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..'
+)
 
 /** Resolves to the binary's version line, or null if it is not on PATH. */
 export async function probeBinary(name, args = ['--version']) {
@@ -82,30 +86,55 @@ export async function checkBuildFreshness() {
  */
 export async function preflight() {
   const checks = []
-  const add = (name, ok, detail, fatal = false) => checks.push({ name, ok, detail, fatal })
+  const add = (name, ok, detail, fatal = false) =>
+    checks.push({ name, ok, detail, fatal })
 
-  add('node >= 22.6', nodeAtLeast(22, 6), `found ${process.versions.node}`, true)
+  add(
+    'node >= 22.6',
+    nodeAtLeast(22, 6),
+    `found ${process.versions.node}`,
+    true
+  )
 
   const tectonic = await probeBinary('tectonic')
-  add('tectonic on PATH', Boolean(tectonic), tectonic ?? 'not found — every render row will fail', true)
+  add(
+    'tectonic on PATH',
+    Boolean(tectonic),
+    tectonic ?? 'not found — every render row will fail',
+    true
+  )
 
   const pdftotext = await probeBinary('pdftotext', ['-v'])
-  add('pdftotext on PATH', Boolean(pdftotext), pdftotext ?? 'not found — parse-fidelity rows will skip', false)
+  add(
+    'pdftotext on PATH',
+    Boolean(pdftotext),
+    pdftotext ?? 'not found — parse-fidelity rows will skip',
+    false
+  )
 
   const curl = await probeBinary('curl')
-  add('curl on PATH', Boolean(curl), curl ?? 'not found — the http suite cannot run', true)
+  add(
+    'curl on PATH',
+    Boolean(curl),
+    curl ?? 'not found — the http suite cannot run',
+    true
+  )
 
   const { stale, missing } = await checkBuildFreshness()
   add(
     'dist/ built',
     missing.length === 0,
-    missing.length ? `never built: ${missing.join(', ')} — run npm run build` : 'all five packages',
+    missing.length
+      ? `never built: ${missing.join(', ')} — run npm run build`
+      : 'all five packages',
     true
   )
   add(
     'dist/ current',
     stale.length === 0,
-    stale.length ? `src newer than dist: ${stale.join(', ')} — run npm run build` : 'no package has src newer than dist',
+    stale.length
+      ? `src newer than dist: ${stale.join(', ')} — run npm run build`
+      : 'no package has src newer than dist',
     true
   )
 

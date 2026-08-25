@@ -36,7 +36,7 @@ Check specifically:
   routes against MCP's eighteen tools is the standing example (G3).
 - **Error taxonomy.** The same underlying failure — `TectonicError`,
   `NotFoundError`, `ConflictError` — surfacing as three shapes. That is
-  expected; what matters is whether each shape is *distinguishable* on its own
+  expected; what matters is whether each shape is _distinguishable_ on its own
   surface. The CLI's single exit code (G1) is where it is not.
 - **Limits.** Timeouts, body sizes, nesting depth, concurrency caps. Any bound
   enforced on one surface and absent on another (G2, G11), or the same bound

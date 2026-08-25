@@ -192,16 +192,16 @@ If a template change appears not to have worked, compare that timestamp against
 npm run start:http     # 127.0.0.1:8787
 ```
 
-| Route | Purpose |
-|---|---|
-| `POST /render` | Stateless: blueprint in, `application/pdf` out |
-| `GET /blueprints` | List stored blueprints |
-| `POST /blueprints` | Create — `{ id, blueprint }` |
-| `GET /blueprints/:id` | Fetch one, with its rev |
-| `PATCH /blueprints/:id` | Merge-patch — `{ patch, expectedRev? }` |
-| `DELETE /blueprints/:id` | Remove |
+| Route                         | Purpose                                        |
+| ----------------------------- | ---------------------------------------------- |
+| `POST /render`                | Stateless: blueprint in, `application/pdf` out |
+| `GET /blueprints`             | List stored blueprints                         |
+| `POST /blueprints`            | Create — `{ id, blueprint }`                   |
+| `GET /blueprints/:id`         | Fetch one, with its rev                        |
+| `PATCH /blueprints/:id`       | Merge-patch — `{ patch, expectedRev? }`        |
+| `DELETE /blueprints/:id`      | Remove                                         |
 | `POST /blueprints/:id/render` | Render a stored blueprint to `application/pdf` |
-| `GET /healthz` | Liveness, exempt from auth |
+| `GET /healthz`                | Liveness, exempt from auth                     |
 
 `RESUME_BLUEPRINT_PORT` and `RESUME_BLUEPRINT_BIND` override the defaults. Auth is off
 until `RESUME_BLUEPRINT_TOKEN` is set; once set, every route but `/healthz` requires
@@ -220,9 +220,9 @@ import {
   profileToBlueprint
 } from '@resume-blueprint/core'
 
-const pdf = await renderBlueprint(blueprint)   // Buffer
-const { texDoc } = blueprintToTex(blueprint)   // LaTeX source
-const plain = blueprintToText(blueprint)       // plain text, unescaped
+const pdf = await renderBlueprint(blueprint) // Buffer
+const { texDoc } = blueprintToTex(blueprint) // LaTeX source
+const plain = blueprintToText(blueprint) // plain text, unescaped
 
 // Reports only. Never rewrites the blueprint, never sanitizes: this output
 // reaches a reader, not a TeX engine.
@@ -250,18 +250,18 @@ blueprint up incrementally.
 
 `resume list-templates` (and the `resume_templates` MCP tool) prints this:
 
-| # | Built on | ATS-grade | Note |
-|---|---|---|---|
-| 1 | Classic (article) | yes | |
-| 2 | Awesome CV | no | FontAwesome contact labels |
-| 3 | Compact (article) | yes | |
-| 4 | Deedy | yes | |
-| 5 | res.cls | yes | |
-| 6 | Minimal | yes | |
-| 7 | ModernCV (banking) | no | moderncv icon contact labels |
-| 8 | McDowell | yes | |
-| 9 | Contrast (article) | yes | |
-| 10 | Word-alike (article) | yes | Calibri/11pt/0.75in/1.15 spacing by default |
+| #   | Built on             | ATS-grade | Note                                        |
+| --- | -------------------- | --------- | ------------------------------------------- |
+| 1   | Classic (article)    | yes       |                                             |
+| 2   | Awesome CV           | no        | FontAwesome contact labels                  |
+| 3   | Compact (article)    | yes       |                                             |
+| 4   | Deedy                | yes       |                                             |
+| 5   | res.cls              | yes       |                                             |
+| 6   | Minimal              | yes       |                                             |
+| 7   | ModernCV (banking)   | no        | moderncv icon contact labels                |
+| 8   | McDowell             | yes       |                                             |
+| 9   | Contrast (article)   | yes       |                                             |
+| 10  | Word-alike (article) | yes       | Calibri/11pt/0.75in/1.15 spacing by default |
 
 **ATS-grade is measured, not asserted.** An applicant tracking system never sees the
 PDF's layout — it extracts the text layer and parses that. So the test suite renders a

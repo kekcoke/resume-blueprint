@@ -65,7 +65,11 @@ export async function compileTex(
   opts: LaTeXOpts,
   options: CompileOptions = {}
 ): Promise<Buffer> {
-  const { timeoutMs = 60_000, assetRoot: root = ASSET_ROOT, keepTempDir = false } = options
+  const {
+    timeoutMs = 60_000,
+    assetRoot: root = ASSET_ROOT,
+    keepTempDir = false
+  } = options
 
   const dir = await mkdtemp(join(tmpdir(), 'resume-blueprint-'))
 
@@ -156,9 +160,13 @@ function runTectonic(dir: string, timeoutMs: number): Promise<string> {
     child.on('close', (code) => {
       clearTimeout(timer)
       if (timedOut) {
-        rejectPromise(new TectonicError(`Tectonic timed out after ${timeoutMs}ms`, output))
+        rejectPromise(
+          new TectonicError(`Tectonic timed out after ${timeoutMs}ms`, output)
+        )
       } else if (code !== 0) {
-        rejectPromise(new TectonicError(`Tectonic exited with code ${code}`, output))
+        rejectPromise(
+          new TectonicError(`Tectonic exited with code ${code}`, output)
+        )
       } else {
         resolvePromise(output)
       }

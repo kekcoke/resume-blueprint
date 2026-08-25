@@ -12,9 +12,19 @@ const generator: Generator = {
       return ''
     }
 
-    const { name, label, summary, email, phone, location = {}, website, profiles } =
-      basics
-    const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
+    const {
+      name,
+      label,
+      summary,
+      email,
+      phone,
+      location = {},
+      website,
+      profiles
+    } = basics
+    const websiteLine = website
+      ? `\\href{${website}}{${breakableUrl(website)}}`
+      : ''
 
     const info = joinContactInfo(
       [email, phone, location.address, websiteLine, ...profileLinks(profiles)],
@@ -25,7 +35,9 @@ const generator: Generator = {
     // \MySlogan is defined in this template's own preamble for exactly this and
     // has gone unused since the extraction.
     const labelLine = label ? `\\MySlogan{${label}}` : ''
-    const summaryBlock = summary ? `\n\\smallskip\n{\\small ${summary}\\par}` : ''
+    const summaryBlock = summary
+      ? `\n\\smallskip\n{\\small ${summary}\\par}`
+      : ''
 
     return stripIndent`
       \\MyName{${name || ''}}
@@ -245,8 +257,12 @@ const generator: Generator = {
     const geometryLine = `\\usepackage[${paperOption}margin=${config.margin}]{geometry}`
 
     const extraLines = [
-      config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+      config.lineSpacing !== 1.0
+        ? `\\linespread{${config.lineSpacing}}\\selectfont`
+        : '',
+      config.linkStyle === 'colored'
+        ? '\\hypersetup{colorlinks=true,allcolors=blue}'
+        : '',
       nfssFontPreamble(9, config)
     ]
       .filter(Boolean)
@@ -274,7 +290,8 @@ const generator: Generator = {
     // since their fontspec/OpenType-feature routes have no OT1-encoded
     // shape. `\encodingdefault` tracks whatever encoding is actually active
     // and resolves correctly for all four NFSS families in the spike.
-    const fontOverrideActive = config.fontFamily !== 'template' && isFontSupported(9, config.fontFamily)
+    const fontOverrideActive =
+      config.fontFamily !== 'template' && isFontSupported(9, config.fontFamily)
     const sectionFontEncoding = fontOverrideActive ? '\\encodingdefault' : 'OT1'
     const sectionFontFamily = fontOverrideActive ? '\\sfdefault' : 'phv'
 
@@ -397,7 +414,8 @@ function template9(values: FormValues, config: ResolvedDocumentConfig) {
   // override emits correct '<n>pt' syntax instead and actually takes
   // effect, fixing the bug only when someone opts in.
   const paperOption = config.paper === 'a4' ? 'a4paper,' : ''
-  const sizeOption = config.fontSize === 10 ? 'fontsize=11pt' : `${config.fontSize}pt`
+  const sizeOption =
+    config.fontSize === 10 ? 'fontsize=11pt' : `${config.fontSize}pt`
   const classLine = `\\documentclass[${paperOption}${sizeOption}]{article}`
 
   return stripIndent`
@@ -421,13 +439,25 @@ function template9(values: FormValues, config: ResolvedDocumentConfig) {
             return generator.workSection(values.work, headings.work, config)
 
           case 'skills':
-            return generator.skillsSection(values.skills, headings.skills, config)
+            return generator.skillsSection(
+              values.skills,
+              headings.skills,
+              config
+            )
 
           case 'projects':
-            return generator.projectsSection(values.projects, headings.projects, config)
+            return generator.projectsSection(
+              values.projects,
+              headings.projects,
+              config
+            )
 
           case 'awards':
-            return generator.awardsSection(values.awards, headings.awards, config)
+            return generator.awardsSection(
+              values.awards,
+              headings.awards,
+              config
+            )
 
           case 'certificates':
             return (
@@ -435,7 +465,12 @@ function template9(values: FormValues, config: ResolvedDocumentConfig) {
                 values.certificates,
                 headings.certificates,
                 config
-              ) ?? defaultCertificatesSection(values.certificates, headings.certificates, config)
+              ) ??
+              defaultCertificatesSection(
+                values.certificates,
+                headings.certificates,
+                config
+              )
             )
 
           default:

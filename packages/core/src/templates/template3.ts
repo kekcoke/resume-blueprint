@@ -12,9 +12,19 @@ const generator: Generator = {
       return ''
     }
 
-    const { name, label, summary, email, phone, location = {}, website, profiles } =
-      basics
-    const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
+    const {
+      name,
+      label,
+      summary,
+      email,
+      phone,
+      location = {},
+      website,
+      profiles
+    } = basics
+    const websiteLine = website
+      ? `\\href{${website}}{${breakableUrl(website)}}`
+      : ''
 
     const info = joinContactInfo(
       [email, phone, location.address, websiteLine, ...profileLinks(profiles)],
@@ -119,8 +129,15 @@ const generator: Generator = {
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       \\begin{itemize}[leftmargin=*, itemsep=${config.bulletSpacing}pt]
       ${work.map((job) => {
-        const { name, position, location, startDate, endDate, summary, highlights } =
-          job
+        const {
+          name,
+          position,
+          location,
+          startDate,
+          endDate,
+          summary,
+          highlights
+        } = job
 
         let dateRange
         let dutyLines
@@ -272,8 +289,12 @@ const generator: Generator = {
       : '\\definecolor{shadecolorB}{gray}{0.93}  % Inner background color of title bars'
 
     const extraLines = [
-      config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+      config.lineSpacing !== 1.0
+        ? `\\linespread{${config.lineSpacing}}\\selectfont`
+        : '',
+      config.linkStyle === 'colored'
+        ? '\\hypersetup{colorlinks=true,allcolors=blue}'
+        : '',
       nfssFontPreamble(3, config)
     ]
       .filter(Boolean)
@@ -380,8 +401,12 @@ function template3(values: FormValues, config: ResolvedDocumentConfig) {
   // (resheading, above) does not follow along, a known cosmetic limit of
   // overriding margin on this template.
   const geometryLine =
-    values.document.margin !== undefined ? `\\usepackage[margin=${config.margin}]{geometry}` : ''
-  const preamble = [generator.resumeHeader(config), geometryLine].filter(Boolean).join('\n')
+    values.document.margin !== undefined
+      ? `\\usepackage[margin=${config.margin}]{geometry}`
+      : ''
+  const preamble = [generator.resumeHeader(config), geometryLine]
+    .filter(Boolean)
+    .join('\n')
 
   return stripIndent`
     ${preamble}
@@ -403,13 +428,25 @@ function template3(values: FormValues, config: ResolvedDocumentConfig) {
             return generator.workSection(values.work, headings.work, config)
 
           case 'skills':
-            return generator.skillsSection(values.skills, headings.skills, config)
+            return generator.skillsSection(
+              values.skills,
+              headings.skills,
+              config
+            )
 
           case 'projects':
-            return generator.projectsSection(values.projects, headings.projects, config)
+            return generator.projectsSection(
+              values.projects,
+              headings.projects,
+              config
+            )
 
           case 'awards':
-            return generator.awardsSection(values.awards, headings.awards, config)
+            return generator.awardsSection(
+              values.awards,
+              headings.awards,
+              config
+            )
 
           case 'certificates':
             return (
@@ -417,7 +454,12 @@ function template3(values: FormValues, config: ResolvedDocumentConfig) {
                 values.certificates,
                 headings.certificates,
                 config
-              ) ?? defaultCertificatesSection(values.certificates, headings.certificates, config)
+              ) ??
+              defaultCertificatesSection(
+                values.certificates,
+                headings.certificates,
+                config
+              )
             )
 
           default:

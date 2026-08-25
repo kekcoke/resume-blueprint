@@ -11,7 +11,7 @@ failing row by its id.
 ## When to Use
 
 - After changing anything in `packages/cli`, `packages/http`, `packages/mcp`, or
-  `packages/core`'s render path — the unit tests will not notice a *cross*-adapter
+  `packages/core`'s render path — the unit tests will not notice a _cross_-adapter
   regression, because none of them spans two adapters.
 - Before opening a PR that touches a caller surface.
 - When something works through one caller and not another. That gap is the exact

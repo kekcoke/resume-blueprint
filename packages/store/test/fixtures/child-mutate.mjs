@@ -21,7 +21,12 @@ try {
       { actor, expectedRev: expectedRev || undefined }
     )
   } else if (mode === 'append') {
-    result = await store.sectionAppend(id, 'work', { name: actor, position: 'Engineer' }, { actor })
+    result = await store.sectionAppend(
+      id,
+      'work',
+      { name: actor, position: 'Engineer' },
+      { actor }
+    )
   } else {
     throw new Error(`unknown mode "${mode}"`)
   }

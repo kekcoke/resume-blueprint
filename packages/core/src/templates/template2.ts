@@ -12,8 +12,16 @@ const generator: Generator = {
       return ''
     }
 
-    const { name, label, summary, email, phone, location = {}, website, profiles } =
-      basics
+    const {
+      name,
+      label,
+      summary,
+      email,
+      phone,
+      location = {},
+      website,
+      profiles
+    } = basics
 
     let nameLine = ''
 
@@ -145,8 +153,15 @@ const generator: Generator = {
       \\cvsection{${heading || 'Experience'}}
       \\begin{cventries}
       ${work.map((job) => {
-        const { name, position, location, startDate, endDate, summary, highlights } =
-          job
+        const {
+          name,
+          position,
+          location,
+          startDate,
+          endDate,
+          summary,
+          highlights
+        } = job
 
         let dateRange
         let dutyLines
@@ -319,8 +334,12 @@ const generator: Generator = {
         : ''
 
     const extraLines = [
-      config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+      config.lineSpacing !== 1.0
+        ? `\\linespread{${config.lineSpacing}}\\selectfont`
+        : '',
+      config.linkStyle === 'colored'
+        ? '\\hypersetup{colorlinks=true,allcolors=blue}'
+        : '',
       fontLines
     ]
       .filter(Boolean)
@@ -392,7 +411,11 @@ function template2(values: FormValues, config: ResolvedDocumentConfig) {
   // clash" error. A bare re-`\usepackage` never clashes, and `\geometry{}`
   // wins regardless of whether the class already loaded the package.
   const geometryOptions = [
-    values.document.paper !== undefined ? (config.paper === 'a4' ? 'a4paper' : 'letterpaper') : '',
+    values.document.paper !== undefined
+      ? config.paper === 'a4'
+        ? 'a4paper'
+        : 'letterpaper'
+      : '',
     values.document.margin !== undefined ? `margin=${config.margin}` : ''
   ].filter(Boolean)
   const geometryLines = geometryOptions.length
@@ -402,7 +425,9 @@ function template2(values: FormValues, config: ResolvedDocumentConfig) {
   // on its own line: resumeHeader() is immediately followed by
   // \begin{document} in the original with no blank line between them, and an
   // empty addition on its own line would insert one.
-  const preamble = [generator.resumeHeader(config), ...geometryLines].filter(Boolean).join('\n')
+  const preamble = [generator.resumeHeader(config), ...geometryLines]
+    .filter(Boolean)
+    .join('\n')
 
   return stripIndent`
     ${preamble}
@@ -424,13 +449,25 @@ function template2(values: FormValues, config: ResolvedDocumentConfig) {
             return generator.workSection(values.work, headings.work, config)
 
           case 'skills':
-            return generator.skillsSection(values.skills, headings.skills, config)
+            return generator.skillsSection(
+              values.skills,
+              headings.skills,
+              config
+            )
 
           case 'projects':
-            return generator.projectsSection(values.projects, headings.projects, config)
+            return generator.projectsSection(
+              values.projects,
+              headings.projects,
+              config
+            )
 
           case 'awards':
-            return generator.awardsSection(values.awards, headings.awards, config)
+            return generator.awardsSection(
+              values.awards,
+              headings.awards,
+              config
+            )
 
           case 'certificates':
             return (
@@ -438,7 +475,12 @@ function template2(values: FormValues, config: ResolvedDocumentConfig) {
                 values.certificates,
                 headings.certificates,
                 config
-              ) ?? defaultCertificatesSection(values.certificates, headings.certificates, config)
+              ) ??
+              defaultCertificatesSection(
+                values.certificates,
+                headings.certificates,
+                config
+              )
             )
 
           default:

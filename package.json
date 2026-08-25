@@ -21,6 +21,10 @@
     "qa:md": "node qa/run.mjs markdown",
     "qa:collection": "node qa/run.mjs --emit-collection",
     "start:http": "node packages/http/dist/index.js",
-    "start:mcp": "node packages/mcp/dist/index.js"
+    "start:mcp": "node packages/mcp/dist/index.js",
+    "lint": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6"
   }
 }

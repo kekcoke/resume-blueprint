@@ -1,4 +1,9 @@
-import { createServer as createHttpServer, type IncomingMessage, type ServerResponse, type Server } from 'node:http'
+import {
+  createServer as createHttpServer,
+  type IncomingMessage,
+  type ServerResponse,
+  type Server
+} from 'node:http'
 
 import type { Config } from './config.js'
 import { isAuthorized } from './auth.js'
@@ -27,8 +32,16 @@ const routes: Route[] = [
   { method: 'GET', segments: ['blueprints', ':id'], handler: getBlueprint },
   { method: 'POST', segments: ['blueprints'], handler: createBlueprint },
   { method: 'PATCH', segments: ['blueprints', ':id'], handler: patchBlueprint },
-  { method: 'DELETE', segments: ['blueprints', ':id'], handler: deleteBlueprint },
-  { method: 'POST', segments: ['blueprints', ':id', 'render'], handler: renderStored },
+  {
+    method: 'DELETE',
+    segments: ['blueprints', ':id'],
+    handler: deleteBlueprint
+  },
+  {
+    method: 'POST',
+    segments: ['blueprints', ':id', 'render'],
+    handler: renderStored
+  },
   { method: 'GET', segments: ['healthz'], handler: healthz }
 ]
 
@@ -57,7 +70,10 @@ function matchRoute(
   return undefined
 }
 
-async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+async function handleRequest(
+  req: IncomingMessage,
+  res: ServerResponse
+): Promise<void> {
   const pathname = new URL(req.url ?? '/', 'http://localhost').pathname
   const segments = pathname.split('/').filter(Boolean)
 

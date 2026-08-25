@@ -6,7 +6,7 @@ register that keeps those sessions from colliding.
 
 **Status when written:** Phase 1 and Phase 2 complete — core, CLI, store, MCP (15 tools),
 HTTP (8 routes), 187 tests. `feat/scope-next-features` at parity with `main`.
-*(As of F13: MCP is 18 tools and the suite is 584 tests.)*
+_(As of F13: MCP is 18 tools and the suite is 584 tests.)_
 
 ---
 
@@ -44,13 +44,13 @@ and spacing became configurable.
 Probe documents compiled through the installed Tectonic (0.17.0) with `--untrusted`, then
 extracted with `pdftotext`:
 
-| Requested font | Free equivalent | CTAN package | In Tectonic bundle | Extracts clean |
-|---|---|---|---|---|
-| Calibri | Carlito (metric-compatible) | `carlito` | yes | yes |
-| Arial | Arimo (metric-compatible) | `arimo` | yes | yes |
-| Helvetica | TeX Gyre Heros (URW Nimbus Sans) | `tgheros` | yes | yes |
-| Garamond | EB Garamond | `ebgaramond` | yes | yes |
-| Georgia | **Gelasio** (metric-compatible) | `gelasio` | **NO — `gelasio.sty` not found** | n/a |
+| Requested font | Free equivalent                  | CTAN package | In Tectonic bundle               | Extracts clean |
+| -------------- | -------------------------------- | ------------ | -------------------------------- | -------------- |
+| Calibri        | Carlito (metric-compatible)      | `carlito`    | yes                              | yes            |
+| Arial          | Arimo (metric-compatible)        | `arimo`      | yes                              | yes            |
+| Helvetica      | TeX Gyre Heros (URW Nimbus Sans) | `tgheros`    | yes                              | yes            |
+| Garamond       | EB Garamond                      | `ebgaramond` | yes                              | yes            |
+| Georgia        | **Gelasio** (metric-compatible)  | `gelasio`    | **NO — `gelasio.sty` not found** | n/a            |
 
 Four of the five need **no vendored assets and no licensing exposure** — they resolve from
 Tectonic's bundle. Georgia is the exception: Gelasio is vendored as OFL TTFs, matching the
@@ -59,7 +59,7 @@ existing precedent in `assets/templates/template{2,4,6}/fonts/`.
 Also confirmed, and load-bearing for the sequencing:
 
 - **`LaTeXOpts.cmd` is never read.** `compileTex` always spawns one binary and Tectonic is
-  XeTeX-derived, so `fontspec` is available in *every* template, not only the four that
+  XeTeX-derived, so `fontspec` is available in _every_ template, not only the four that
   currently use it. (`packages/core/src/types.ts`, `packages/core/src/render/tectonic.ts`)
 - **`--untrusted` disables `-Z search-path`.** Fonts reach a document only via bundle
   packages, or via `opts.fonts` staged into `<tmpdir>/fonts/` and referenced `Path=fonts/`.
@@ -132,6 +132,7 @@ verified none of the ATS claims.** Every feature after this one changes template
 CI is what makes those changes reviewable.
 
 **Scope.**
+
 - `.github/workflows/ci.yml` — Node 20 and 22, install Tectonic and poppler, `npm ci`,
   `npm run build`, `npm test`. Cache the Tectonic bundle; the first compile of each
   template downloads packages and is slow.
@@ -163,6 +164,7 @@ which is the lowest-scoring axis in the review. Fix the instrument before trusti
 grade F5 and F6.
 
 **Scope.**
+
 - New fixtures beside `fixtures/dense.json`:
   - `fixtures/multipage.json` — 8 jobs, 400-character summary; probes page-break clipping.
   - `fixtures/grid.json` — many short awards and many skill categories; reproduces both
@@ -185,7 +187,7 @@ memoize per fixture × template rather than per template), `fixtures/*.json`.
 **Conflicts.** Expect some templates to **fail the new gates on arrival** — that is the
 point, and it is the evidence base for F5. Record failures in `TEMPLATE_PROFILES`; fixing
 them is F5's job, not this one. Flag any template that fails the geometry gate at its
-*current* hardcoded margin, because F3 then needs a per-template default that clears 0.5in.
+_current_ hardcoded margin, because F3 then needs a per-template default that clears 0.5in.
 
 **Exit criteria.** New gates run over 4 fixtures × 9 templates; the catalog assertion still
 holds; failures are recorded, not silenced.
@@ -203,18 +205,18 @@ defaults into a `ResolvedDocumentConfig` and threaded into each template's pream
 
 ### Identified variables
 
-| Variable | Type | Global default | Range / values | Applies to |
-|---|---|---|---|---|
-| `fontFamily` | enum | `template` | `template` \| `calibri` \| `arial` \| `helvetica` \| `garamond` \| `georgia` | all (F4) |
-| `fontSize` | enum (pt) | per-template | `10` \| `10.5` \| `11` \| `11.5` \| `12` | all |
-| `paper` | enum | `letter` | `letter` \| `a4` | all |
-| `margin` | length string | `0.75in` | **clamped, hard floor `0.5in`** | all |
-| `lineSpacing` | number | `1.0` | clamped `1.0`–`1.15` | all |
-| `sectionSpacing` | number (pt) | `3` | `0`–`12` | all |
-| `bulletSpacing` | number (pt) | `2` | `0`–`12` | all |
-| `accentColor` | hex string | per-template | `#RRGGBB`, validated | 2, 3, 7, 9 |
-| `contactLayout` | enum | `row` | `row` \| `stacked` | all |
-| `linkStyle` | enum | `hidden` | `hidden` \| `colored` | all |
+| Variable         | Type          | Global default | Range / values                                                               | Applies to |
+| ---------------- | ------------- | -------------- | ---------------------------------------------------------------------------- | ---------- |
+| `fontFamily`     | enum          | `template`     | `template` \| `calibri` \| `arial` \| `helvetica` \| `garamond` \| `georgia` | all (F4)   |
+| `fontSize`       | enum (pt)     | per-template   | `10` \| `10.5` \| `11` \| `11.5` \| `12`                                     | all        |
+| `paper`          | enum          | `letter`       | `letter` \| `a4`                                                             | all        |
+| `margin`         | length string | `0.75in`       | **clamped, hard floor `0.5in`**                                              | all        |
+| `lineSpacing`    | number        | `1.0`          | clamped `1.0`–`1.15`                                                         | all        |
+| `sectionSpacing` | number (pt)   | `3`            | `0`–`12`                                                                     | all        |
+| `bulletSpacing`  | number (pt)   | `2`            | `0`–`12`                                                                     | all        |
+| `accentColor`    | hex string    | per-template   | `#RRGGBB`, validated                                                         | 2, 3, 7, 9 |
+| `contactLayout`  | enum          | `row`          | `row` \| `stacked`                                                           | all        |
+| `linkStyle`      | enum          | `hidden`       | `hidden` \| `colored`                                                        | all        |
 
 The `margin` floor and the `lineSpacing` ceiling encode the external feedback's universal
 rules **in the schema**, so an agent physically cannot shrink margins to 0.4in to force a
@@ -233,7 +235,7 @@ tuning for length should not get a validation failure it cannot interpret.
   lost `basics.label` and `work[].summary`.
 - New `templates/documentConfig.ts` — `TEMPLATE_DEFAULTS: Record<TemplateId, Partial<DocumentConfig>>`
   and `resolveDocumentConfig(templateId, config)`. Per-template defaults are each
-  template's *current* hardcoded values, so **golden output must not change when
+  template's _current_ hardcoded values, so **golden output must not change when
   `document` is omitted.** That is this feature's regression guard.
 - `templates/index.ts` — resolve once, pass to `templateN(data, config)`.
 
@@ -274,6 +276,7 @@ pass F2's gates.
 templates — 54 combinations — rather than five more fixed templates.
 
 **Scope.**
+
 - New `templates/fonts.ts` — `FONT_FAMILIES`, mapping each value to its LaTeX mechanism.
   - **NFSS route** (templates 1, 3, 5, 7, 9): `\usepackage{carlito|arimo|tgheros|ebgaramond}`,
     plus `\renewcommand{\familydefault}{\sfdefault}` for the three sans families. Load
@@ -313,6 +316,7 @@ unsupported rather than silently falling back.
 lowest of the four graded axes on both reviewed resumes.
 
 **Scope.**
+
 - **Single-column `Category: Skills` rows.** Category headers currently sit adjacent to
   skill blocks in parallel columns, which merges text in legacy ATS. Convert
   `skillsSection` to one row per category across all nine templates.
@@ -441,7 +445,7 @@ running `escapeLatex` over it would emit `\&` to a human reader.
 
 ## F10 — Job-description keyword targeting · P3 · medium
 
-**Why.** The highest-leverage *resume* feature, and entirely greenfield: "ATS" in this repo
+**Why.** The highest-leverage _resume_ feature, and entirely greenfield: "ATS" in this repo
 currently means parse fidelity only, with nothing about content match. The feedback's
 praise for "keyword density" was a human judgement with no tooling behind it.
 
@@ -477,7 +481,7 @@ absent on the dev machine), and `flock(2)` has no Node binding without a native 
 Reusing git's actual `.git/index.lock` was also rejected — `commitFile()`'s own `git
 add`/`git commit` calls already touch that exact path, so locking there would race
 git's internal locking rather than avoid it. The mechanism actually used is the same
-*primitive* git's `index.lock` is built on: an atomic exclusive-create,
+_primitive_ git's `index.lock` is built on: an atomic exclusive-create,
 `open(path, 'wx')` (`O_CREAT|O_EXCL`), against a distinct file, `<home>/.store.lock`.
 
 `withLock` (`packages/store/src/lock.ts`) now composes two layers: the original
@@ -589,7 +593,7 @@ top-level string-format move, because every text field is a bare `z.string()` by
 
 **One user-visible change**: zod reworded its default messages, so validation output now
 reads `Invalid input: expected string, received number` where it read `Expected string,
-received number`. Issue *paths* are unchanged, which is why no assertion needed editing.
+received number`. Issue _paths_ are unchanged, which is why no assertion needed editing.
 
 584 tests, none edited to accommodate the migration — the exit criterion Plan A's Gate 0
 set, and the one part of it that transferred cleanly.
@@ -600,16 +604,16 @@ set, and the one part of it that transferred cleanly.
 
 Reviewed before starting. Each row is a real collision, not a hypothetical.
 
-| # | Conflict | Resolution |
-|---|---|---|
-| C1 | F3, F4, F5, F6, F7 all rewrite `fixtures/golden/*.tex` | Strictly serial, one per session; re-baseline at the end of each |
-| C2 | F3 and F6 both change `BlueprintSchema` | Never concurrent, never on parallel branches; F3 first |
-| C3 | F3 changes the `Generator.resumeHeader` signature | Breaking for any in-flight template work. Land F3 before touching a template for any other reason |
-| C4 | F2's 0.5in geometry gate vs. templates whose current hardcoded margin is smaller | Record failures in F2, decide per-template in F3's `TEMPLATE_DEFAULTS`. **Golden output will change for those templates** — the one place F3's byte-identical guarantee is knowingly broken |
-| C5 | F5's certifications fix vs. F6's `certificates` schema | Certifications excluded from F5 by design; all of it lands in F6. Doing it twice is the waste this ordering exists to prevent |
-| C6 | F7 widens `TEMPLATE_IDS` | Ripples to `packages/mcp/src/schemas.ts` `TemplateId` and the README template table |
-| C7 | F13 (zod 4) vs. every schema feature | ~~Deferred until after F8, then done alone~~ **Resolved** — F13 landed after F8 with the tree otherwise quiet, exactly as this row prescribed |
-| C8 | F3's `document` block vs. the ATS harness's `collectLeaves()` | Exclude `document` alongside `sections`/`headings`/`selectedTemplate`, or config values get hunted for in the PDF text layer |
+| #   | Conflict                                                                         | Resolution                                                                                                                                                                                  |
+| --- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1  | F3, F4, F5, F6, F7 all rewrite `fixtures/golden/*.tex`                           | Strictly serial, one per session; re-baseline at the end of each                                                                                                                            |
+| C2  | F3 and F6 both change `BlueprintSchema`                                          | Never concurrent, never on parallel branches; F3 first                                                                                                                                      |
+| C3  | F3 changes the `Generator.resumeHeader` signature                                | Breaking for any in-flight template work. Land F3 before touching a template for any other reason                                                                                           |
+| C4  | F2's 0.5in geometry gate vs. templates whose current hardcoded margin is smaller | Record failures in F2, decide per-template in F3's `TEMPLATE_DEFAULTS`. **Golden output will change for those templates** — the one place F3's byte-identical guarantee is knowingly broken |
+| C5  | F5's certifications fix vs. F6's `certificates` schema                           | Certifications excluded from F5 by design; all of it lands in F6. Doing it twice is the waste this ordering exists to prevent                                                               |
+| C6  | F7 widens `TEMPLATE_IDS`                                                         | Ripples to `packages/mcp/src/schemas.ts` `TemplateId` and the README template table                                                                                                         |
+| C7  | F13 (zod 4) vs. every schema feature                                             | ~~Deferred until after F8, then done alone~~ **Resolved** — F13 landed after F8 with the tree otherwise quiet, exactly as this row prescribed                                               |
+| C8  | F3's `document` block vs. the ATS harness's `collectLeaves()`                    | Exclude `document` alongside `sections`/`headings`/`selectedTemplate`, or config values get hunted for in the PDF text layer                                                                |
 
 **Non-conflicting by construction.** F0, F1, F11, and F12 touch no template file and no
 schema. F9 and F10 add new paths rather than changing existing ones.
@@ -622,7 +626,7 @@ Checked against CLAUDE.md, because three of these features add TeX-interpolating
 
 1. **Store raw, sanitize at render.** F3's `document` block is enums, clamped numbers, and
    a validated hex string — no free text, so nothing new enters the non-idempotent escape
-   path. F8's citation stripper runs *before* validation, never after sanitization.
+   path. F8's citation stripper runs _before_ validation, never after sanitization.
 2. **MCP never writes stdout, never returns PDF bytes.** F8's `resume_import` and F10's
    `resume_target` return structured data only.
 3. **Core stays free of adapter and UI concerns.** F8's parser takes a string, not a path —
@@ -643,7 +647,7 @@ MVP. It lives in `qa/`:
 
 - `qa/contract.md` — the cross-adapter expectation matrix. Every feature above was
   built and tested inside one package; this is the first artifact that states what
-  the *same* blueprint should do through the CLI, HTTP, MCP and the markdown
+  the _same_ blueprint should do through the CLI, HTTP, MCP and the markdown
   importer, and it is executable.
 - `qa/findings.md` — fifteen gaps surfaced by reading those four surfaces against
   each other. None was fixed as part of building the harness, so they triage on

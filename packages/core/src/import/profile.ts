@@ -1,4 +1,10 @@
-import type { BlueprintInput, Basics, Certificate, Education, Skill } from '../schema.js'
+import type {
+  BlueprintInput,
+  Basics,
+  Certificate,
+  Education,
+  Skill
+} from '../schema.js'
 import { stripCitations, countCitations } from './citations.js'
 
 /**
@@ -129,7 +135,8 @@ const INSTITUTION_ACRONYM = /^[A-Z0-9&.]{2,8}$/
  *  contains "link" and would otherwise be swallowed by it -- and since the
  *  portfolio line comes after LinkedIn in every profile, the URL was not just
  *  misfiled but overwritten and lost. */
-const NETWORK_LABEL = /linkedin|github|gitlab|stack\s*overflow|twitter|mastodon|medium|dribbble|behance|^x$/i
+const NETWORK_LABEL =
+  /linkedin|github|gitlab|stack\s*overflow|twitter|mastodon|medium|dribbble|behance|^x$/i
 
 const NETWORK_ALIASES: ReadonlyArray<readonly [RegExp, string]> = [
   [/linkedin\./i, 'LinkedIn'],
@@ -199,9 +206,16 @@ function networkFor(url: string): string {
  *  enforces no date format and every template interpolates the string straight
  *  into the document, so normalizing to `YYYY-MM` would typeset "2025-10".
  *  `fixtures/sample.json` already uses this style. */
-function parseDateRange(range: string): { startDate?: string; endDate?: string } {
-  const parts = range.split(DATE_RANGE_SPLIT).map((part) => part.trim()).filter(Boolean)
-  if (parts.length >= 2) return { startDate: parts[0], endDate: parts[parts.length - 1] }
+function parseDateRange(range: string): {
+  startDate?: string
+  endDate?: string
+} {
+  const parts = range
+    .split(DATE_RANGE_SPLIT)
+    .map((part) => part.trim())
+    .filter(Boolean)
+  if (parts.length >= 2)
+    return { startDate: parts[0], endDate: parts[parts.length - 1] }
   if (parts.length === 1) return { startDate: parts[0] }
   return {}
 }
@@ -229,7 +243,8 @@ export function profileToBlueprint(markdown: string): ProfileImportResult {
   let skipping = false
   let current: WorkInput | undefined
 
-  const warn = (line: number, message: string) => warnings.push(`line ${line}: ${message}`)
+  const warn = (line: number, message: string) =>
+    warnings.push(`line ${line}: ${message}`)
 
   for (const [index, raw] of lines.entries()) {
     const lineNumber = index + 1
@@ -245,9 +260,14 @@ export function profileToBlueprint(markdown: string): ProfileImportResult {
       if (level === 1) {
         // "# Master Profile: Software Engineer & .NET Specialist" -- the part
         // after the colon is a targeting label, which is what basics.label is.
-        const label = /(?:master\s+profile|profile|resume|cv)\s*:\s*(.+)$/i.exec(text)
+        const label =
+          /(?:master\s+profile|profile|resume|cv)\s*:\s*(.+)$/i.exec(text)
         if (label) basics.label = label[1]!.trim()
-        else warn(lineNumber, `title "${text}" has no "Profile:" prefix; not used as basics.label`)
+        else
+          warn(
+            lineNumber,
+            `title "${text}" has no "Profile:" prefix; not used as basics.label`
+          )
         continue
       }
 
@@ -260,7 +280,10 @@ export function profileToBlueprint(markdown: string): ProfileImportResult {
           // BlueprintSchema has no volunteer/publications/languages/references,
           // and zod objects are non-strict -- so anything here would disappear
           // without a trace if it were not reported.
-          warn(lineNumber, `unrecognized section "${text}" -- skipped, it has no home in the schema`)
+          warn(
+            lineNumber,
+            `unrecognized section "${text}" -- skipped, it has no home in the schema`
+          )
         }
         continue
       }
@@ -268,12 +291,17 @@ export function profileToBlueprint(markdown: string): ProfileImportResult {
       if (skipping) continue
 
       if (level === 3 && section === 'work') {
-        current = compact(parseWorkHeading(text, lines[index + 1], lineNumber, warn))
+        current = compact(
+          parseWorkHeading(text, lines[index + 1], lineNumber, warn)
+        )
         work.push(current)
         continue
       }
 
-      warn(lineNumber, `unexpected heading "${text}" in the ${section ?? 'preamble'} section -- skipped`)
+      warn(
+        lineNumber,
+        `unexpected heading "${text}" in the ${section ?? 'preamble'} section -- skipped`
+      )
       continue
     }
 
@@ -293,7 +321,10 @@ export function profileToBlueprint(markdown: string): ProfileImportResult {
         const labelled = LABELLED_BULLET.exec(line)
         if (labelled) {
           skills.push(
-            compact({ name: labelled[1]!.trim(), keywords: splitTopLevel(labelled[2]!, ',') })
+            compact({
+              name: labelled[1]!.trim(),
+              keywords: splitTopLevel(labelled[2]!, ',')
+            })
           )
           break
         }
@@ -301,16 +332,25 @@ export function profileToBlueprint(markdown: string): ProfileImportResult {
         if (plain) {
           // A bullet with no "Category:" prefix. Still skills, just uncategorized.
           skills.push(compact({ keywords: splitTopLevel(plain[1]!, ',') }))
-          warn(lineNumber, 'skill bullet has no "**Category:**" label; imported without a category name')
+          warn(
+            lineNumber,
+            'skill bullet has no "**Category:**" label; imported without a category name'
+          )
           break
         }
-        warn(lineNumber, `unparsed line in the skills section: "${truncate(line)}"`)
+        warn(
+          lineNumber,
+          `unparsed line in the skills section: "${truncate(line)}"`
+        )
         break
       }
 
       case 'work': {
         if (!current) {
-          warn(lineNumber, `"${truncate(line)}" appears before any "###" entry -- skipped`)
+          warn(
+            lineNumber,
+            `"${truncate(line)}" appears before any "###" entry -- skipped`
+          )
           break
         }
 
@@ -322,11 +362,17 @@ export function profileToBlueprint(markdown: string): ProfileImportResult {
 
         const bullet = PLAIN_BULLET.exec(line)
         if (bullet) {
-          current.highlights = [...(current.highlights ?? []), bullet[1]!.trim()]
+          current.highlights = [
+            ...(current.highlights ?? []),
+            bullet[1]!.trim()
+          ]
           break
         }
 
-        warn(lineNumber, `unparsed line in work entry "${current.name ?? current.position ?? '?'}": "${truncate(line)}"`)
+        warn(
+          lineNumber,
+          `unparsed line in work entry "${current.name ?? current.position ?? '?'}": "${truncate(line)}"`
+        )
         break
       }
 
@@ -355,7 +401,9 @@ export function profileToBlueprint(markdown: string): ProfileImportResult {
   }
 
   if (removed) {
-    warnings.unshift(`removed ${removed} citation artifact${removed === 1 ? '' : 's'} before parsing`)
+    warnings.unshift(
+      `removed ${removed} citation artifact${removed === 1 ? '' : 's'} before parsing`
+    )
   }
 
   return { blueprint, warnings }
@@ -381,7 +429,10 @@ function parseWorkHeading(
 ): WorkInput {
   const parts = text.split(NAME_LOCATION_SPLIT)
   if (parts.length >= 2) {
-    return { name: parts[0]!.trim(), location: parts.slice(1).join(' - ').trim() }
+    return {
+      name: parts[0]!.trim(),
+      location: parts.slice(1).join(' - ').trim()
+    }
   }
 
   const role = next ? ROLE_LINE.exec(next.trimEnd()) : null
@@ -420,7 +471,10 @@ function applyRoleLine(
     entry.name = parts[0]!.trim()
     if (parts.length >= 2) entry.location = parts.slice(1).join(' - ').trim()
   } else if (entry.position) {
-    warn(lineNumber, `work entry "${entry.name ?? entry.position}" has a second role line; "${truncate(bold)}" ignored`)
+    warn(
+      lineNumber,
+      `work entry "${entry.name ?? entry.position}" has a second role line; "${truncate(bold)}" ignored`
+    )
   } else {
     entry.position = bold
   }
@@ -445,7 +499,10 @@ function readMetadata(
 ): void {
   const bullet = LABELLED_BULLET.exec(line)
   if (!bullet) {
-    warn(lineNumber, `unparsed line in the metadata section: "${truncate(line)}"`)
+    warn(
+      lineNumber,
+      `unparsed line in the metadata section: "${truncate(line)}"`
+    )
     return
   }
 
@@ -457,12 +514,14 @@ function readMetadata(
   // https:// for bare domains at render time, and invariant 1 says storage
   // holds raw user text.
   if (/^name$/i.test(label)) basics.name = value
-  else if (/location|address|city/i.test(label)) basics.location = { address: value }
+  else if (/location|address|city/i.test(label))
+    basics.location = { address: value }
   else if (/e-?mail/i.test(label)) basics.email = value
   else if (/phone|mobile|tel/i.test(label)) basics.phone = value
   else if (NETWORK_LABEL.test(label)) {
     // The label is the network name a human wrote; trust it over the hostname.
-    for (const url of splitTopLevel(value, '|')) profiles.push({ network: label, url })
+    for (const url of splitTopLevel(value, '|'))
+      profiles.push({ network: label, url })
   } else if (/portfolio|website|links?|labs|site|blog/i.test(label)) {
     // The "Portfolio / Labs" field is the one multi-value entry: two URLs
     // joined by " | ". First becomes the website, the rest become profiles.
@@ -470,8 +529,12 @@ function readMetadata(
     if (first) basics.website = first
     for (const url of rest) profiles.push({ network: networkFor(url), url })
   } else {
-    warn(lineNumber, `unrecognized metadata label "${truncate(label)}" -- kept as a profile link`)
-    for (const url of splitTopLevel(value, '|')) profiles.push({ network: label, url })
+    warn(
+      lineNumber,
+      `unrecognized metadata label "${truncate(label)}" -- kept as a profile link`
+    )
+    for (const url of splitTopLevel(value, '|'))
+      profiles.push({ network: label, url })
   }
 }
 
@@ -496,10 +559,20 @@ function readEducation(
   if (!bullet) {
     const plain = PLAIN_BULLET.exec(line)
     if (plain) {
-      education.push(compact(splitYear(plain[1]!.trim(), (institution, endDate) => ({ institution, endDate }))))
+      education.push(
+        compact(
+          splitYear(plain[1]!.trim(), (institution, endDate) => ({
+            institution,
+            endDate
+          }))
+        )
+      )
       return
     }
-    warn(lineNumber, `unparsed line in the education section: "${truncate(line)}"`)
+    warn(
+      lineNumber,
+      `unparsed line in the education section: "${truncate(line)}"`
+    )
     return
   }
 
@@ -510,7 +583,11 @@ function readEducation(
     for (const item of splitTopLevel(rest, ',')) {
       const year = TRAILING_YEAR.exec(item)
       const name = year ? item.slice(0, year.index).trim() : item
-      if (!year) warn(lineNumber, `certificate "${truncate(name)}" has no year in parentheses`)
+      if (!year)
+        warn(
+          lineNumber,
+          `certificate "${truncate(name)}" has no year in parentheses`
+        )
       certificates.push(compact({ name, date: year?.[1] }))
     }
     return
@@ -522,7 +599,10 @@ function readEducation(
   const descriptor = /\s+[—–-]\s+\*(.+?)\*\s*$/.exec(rest)
   if (descriptor) {
     rest = rest.slice(0, descriptor.index).trim()
-    warn(lineNumber, `dropped "${truncate(descriptor[1]!)}" -- EducationSchema has no field for it`)
+    warn(
+      lineNumber,
+      `dropped "${truncate(descriptor[1]!)}" -- EducationSchema has no field for it`
+    )
   }
 
   const year = TRAILING_YEAR.exec(rest)
@@ -532,7 +612,8 @@ function readEducation(
   // Three signals, weakest last. Each is only decisive when exactly one side
   // carries it -- when both do, or neither does, it tells us nothing and we
   // fall through to the next.
-  const acronym = (a: string, b: string) => INSTITUTION_ACRONYM.test(a) && /\s/.test(b)
+  const acronym = (a: string, b: string) =>
+    INSTITUTION_ACRONYM.test(a) && /\s/.test(b)
   const decided =
     decide(CREDENTIAL_WORDS.test(tail), CREDENTIAL_WORDS.test(label)) ??
     decide(INSTITUTION_WORDS.test(label), INSTITUTION_WORDS.test(tail)) ??
@@ -562,7 +643,10 @@ function decide(labelWins: boolean, tailWins: boolean): boolean | undefined {
 }
 
 /** Pulls a trailing `(year)` off a string and hands both to `build`. */
-function splitYear<T>(text: string, build: (head: string, year?: string) => T): T {
+function splitYear<T>(
+  text: string,
+  build: (head: string, year?: string) => T
+): T {
   const year = TRAILING_YEAR.exec(text)
   return year ? build(text.slice(0, year.index).trim(), year[1]) : build(text)
 }

@@ -58,57 +58,96 @@ function runChild(args: string[]): Promise<ChildResult> {
 }
 
 describe('conflicting concurrent patches from two real processes', () => {
-  test('exactly one succeeds, the other conflicts, nothing is torn', { timeout: 20_000 }, async () => {
-    const { rev: baseRev } = await store.create('default', {
-      basics: { name: 'seed' },
-      selectedTemplate: 1
-    })
+  test(
+    'exactly one succeeds, the other conflicts, nothing is torn',
+    { timeout: 20_000 },
+    async () => {
+      const { rev: baseRev } = await store.create('default', {
+        basics: { name: 'seed' },
+        selectedTemplate: 1
+      })
 
-    // Fire both children before awaiting either, so they race for real.
-    const childA = runChild(['patch', 'default', 'child-a', baseRev])
-    const childB = runChild(['patch', 'default', 'child-b', baseRev])
-    const [a, b] = await Promise.all([childA, childB])
+      // Fire both children before awaiting either, so they race for real.
+      const childA = runChild(['patch', 'default', 'child-a', baseRev])
+      const childB = runChild(['patch', 'default', 'child-b', baseRev])
+      const [a, b] = await Promise.all([childA, childB])
 
-    const results = [a, b]
-    const succeeded = results.filter((r) => r.stdout?.ok)
-    const failed = results.filter((r) => !r.stdout?.ok)
+      const results = [a, b]
+      const succeeded = results.filter((r) => r.stdout?.ok)
+      const failed = results.filter((r) => !r.stdout?.ok)
 
-    assert.equal(succeeded.length, 1, `expected exactly one success, got ${JSON.stringify(results)}`)
-    assert.equal(failed.length, 1)
-    assert.equal(failed[0].code, 1)
-    assert.equal(failed[0].stdout?.error, 'ConflictError')
+      assert.equal(
+        succeeded.length,
+        1,
+        `expected exactly one success, got ${JSON.stringify(results)}`
+      )
+      assert.equal(failed.length, 1)
+      assert.equal(failed[0].code, 1)
+      assert.equal(failed[0].stdout?.error, 'ConflictError')
 
-    const { blueprint } = await store.get('default')
-    assert.ok(
-      blueprint.basics?.name === 'child-a' || blueprint.basics?.name === 'child-b',
-      `expected the winner's name on disk, got ${JSON.stringify(blueprint.basics?.name)}`
-    )
+      const { blueprint } = await store.get('default')
+      assert.ok(
+        blueprint.basics?.name === 'child-a' ||
+          blueprint.basics?.name === 'child-b',
+        `expected the winner's name on disk, got ${JSON.stringify(blueprint.basics?.name)}`
+      )
 
-    const commits = await store.history('default')
-    assert.equal(commits.length, 2, 'create + exactly one winning patch')
-  })
+      const commits = await store.history('default')
+      assert.equal(commits.length, 2, 'create + exactly one winning patch')
+    }
+  )
 })
 
 describe('unconstrained concurrent appends from many real processes', () => {
-  test('every append lands — no losses, no duplicates, no torn writes', { timeout: 20_000 }, async () => {
-    const N = 8
-    await store.create('stress', { basics: { name: 'seed' }, selectedTemplate: 1, work: [] })
+  test(
+    'every append lands — no losses, no duplicates, no torn writes',
+    { timeout: 20_000 },
+    async () => {
+      const N = 8
+      await store.create('stress', {
+        basics: { name: 'seed' },
+        selectedTemplate: 1,
+        work: []
+      })
 
-    const children = Array.from({ length: N }, (_, i) => runChild(['append', 'stress', `worker-${i}`]))
-    const results = await Promise.all(children)
+      const children = Array.from({ length: N }, (_, i) =>
+        runChild(['append', 'stress', `worker-${i}`])
+      )
+      const results = await Promise.all(children)
 
-    for (const [i, result] of results.entries()) {
-      assert.equal(result.code, 0, `worker-${i} should succeed: ${JSON.stringify(result)}`)
-      assert.equal(result.stdout?.ok, true, `worker-${i}: ${JSON.stringify(result)}`)
+      for (const [i, result] of results.entries()) {
+        assert.equal(
+          result.code,
+          0,
+          `worker-${i} should succeed: ${JSON.stringify(result)}`
+        )
+        assert.equal(
+          result.stdout?.ok,
+          true,
+          `worker-${i}: ${JSON.stringify(result)}`
+        )
+      }
+
+      const { blueprint } = await store.get('stress')
+      const names = (blueprint.work ?? []).map((entry) => entry.name)
+      const expected = Array.from({ length: N }, (_, i) => `worker-${i}`)
+      assert.equal(
+        names.length,
+        N,
+        `expected ${N} entries, got ${JSON.stringify(names)}`
+      )
+      assert.deepEqual(
+        [...names].sort(),
+        [...expected].sort(),
+        "every worker's append must land exactly once"
+      )
+
+      const commits = await store.history('stress', N + 5)
+      assert.equal(
+        commits.length,
+        N + 1,
+        'create + one commit per worker append'
+      )
     }
-
-    const { blueprint } = await store.get('stress')
-    const names = (blueprint.work ?? []).map((entry) => entry.name)
-    const expected = Array.from({ length: N }, (_, i) => `worker-${i}`)
-    assert.equal(names.length, N, `expected ${N} entries, got ${JSON.stringify(names)}`)
-    assert.deepEqual([...names].sort(), [...expected].sort(), 'every worker\'s append must land exactly once')
-
-    const commits = await store.history('stress', N + 5)
-    assert.equal(commits.length, N + 1, 'create + one commit per worker append')
-  })
+  )
 })

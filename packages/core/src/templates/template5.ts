@@ -3,7 +3,11 @@ import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks, joinContactInfo } from './profiles.js'
 import { certificateLine, defaultCertificatesSection } from './certificates.js'
 import { nfssFontPreamble } from './fonts.js'
-import type { FormValues, GeneratorWithSummary, ResolvedDocumentConfig } from '../types.js'
+import type {
+  FormValues,
+  GeneratorWithSummary,
+  ResolvedDocumentConfig
+} from '../types.js'
 
 const generator: GeneratorWithSummary = {
   profileSection(basics) {
@@ -31,8 +35,18 @@ const generator: GeneratorWithSummary = {
       return ''
     }
 
-    const { label, summary, email, phone, location = {}, website, profiles } = basics
-    const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
+    const {
+      label,
+      summary,
+      email,
+      phone,
+      location = {},
+      website,
+      profiles
+    } = basics
+    const websiteLine = website
+      ? `\\href{${website}}{${breakableUrl(website)}}`
+      : ''
 
     const contacts = joinContactInfo(
       [email, phone, location.address, websiteLine, ...profileLinks(profiles)],
@@ -262,8 +276,8 @@ const generator: GeneratorWithSummary = {
 
         return stripIndent`
             \\textbf{${title || ''}}, {\\sl ${awarder || ''}} \\hfill ${
-          date || ''
-        } \\\\
+              date || ''
+            } \\\\
             ${summary || ''} \\\\\\\\
         `
       })}
@@ -292,8 +306,12 @@ const generator: GeneratorWithSummary = {
   // instead, where the raw `document` input is available to gate on.
   resumeHeader(config) {
     return [
-      config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+      config.lineSpacing !== 1.0
+        ? `\\linespread{${config.lineSpacing}}\\selectfont`
+        : '',
+      config.linkStyle === 'colored'
+        ? '\\hypersetup{colorlinks=true,allcolors=blue}'
+        : '',
       nfssFontPreamble(5, config)
     ]
       .filter(Boolean)
@@ -312,7 +330,11 @@ function template5(values: FormValues, config: ResolvedDocumentConfig) {
   // comment: a vendored class that already loads geometry internally turns
   // the latter into a hard "Option clash" error.
   const geometryOptions = [
-    values.document.paper !== undefined ? (config.paper === 'a4' ? 'a4paper' : 'letterpaper') : '',
+    values.document.paper !== undefined
+      ? config.paper === 'a4'
+        ? 'a4paper'
+        : 'letterpaper'
+      : '',
     values.document.margin !== undefined ? `margin=${config.margin}` : ''
   ].filter(Boolean)
   const geometryLines = geometryOptions.length
@@ -355,7 +377,11 @@ function template5(values: FormValues, config: ResolvedDocumentConfig) {
                 return generator.workSection(values.work, headings.work, config)
 
               case 'skills':
-                return generator.skillsSection(values.skills, headings.skills, config)
+                return generator.skillsSection(
+                  values.skills,
+                  headings.skills,
+                  config
+                )
 
               case 'projects':
                 return generator.projectsSection(
@@ -365,7 +391,11 @@ function template5(values: FormValues, config: ResolvedDocumentConfig) {
                 )
 
               case 'awards':
-                return generator.awardsSection(values.awards, headings.awards, config)
+                return generator.awardsSection(
+                  values.awards,
+                  headings.awards,
+                  config
+                )
 
               case 'certificates':
                 return (
@@ -374,7 +404,11 @@ function template5(values: FormValues, config: ResolvedDocumentConfig) {
                     headings.certificates,
                     config
                   ) ??
-                  defaultCertificatesSection(values.certificates, headings.certificates, config)
+                  defaultCertificatesSection(
+                    values.certificates,
+                    headings.certificates,
+                    config
+                  )
                 )
 
               default:

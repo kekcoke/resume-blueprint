@@ -51,7 +51,10 @@ export type Generator = {
    * `resumeHeader` instead, and consume `config` here only for
    * `bulletSpacing`, if at all), but the seam stays uniform across all nine.
    */
-  profileSection: (basics: Basics | undefined, config: ResolvedDocumentConfig) => string
+  profileSection: (
+    basics: Basics | undefined,
+    config: ResolvedDocumentConfig
+  ) => string
   /**
    * `basics.label` and `basics.summary` belong to the profile, but templates 5,
    * 7, and 8 emit their headers from the preamble through class-level macros
@@ -59,7 +62,10 @@ export type Generator = {
    * go. Those three implement this instead, and their body calls it directly
    * below the header. Every other template renders both inside `profileSection`.
    */
-  summarySection?: (basics: Basics | undefined, config: ResolvedDocumentConfig) => string
+  summarySection?: (
+    basics: Basics | undefined,
+    config: ResolvedDocumentConfig
+  ) => string
   educationSection: (
     education: Array<Education> | undefined,
     heading: string | undefined,
@@ -126,7 +132,10 @@ export type LaTeXOpts = {
  * required for them while it stays optional for everyone else.
  */
 export type GeneratorWithSummary = Generator & {
-  summarySection: (basics: Basics | undefined, config: ResolvedDocumentConfig) => string
+  summarySection: (
+    basics: Basics | undefined,
+    config: ResolvedDocumentConfig
+  ) => string
 }
 
 export type TemplateData = {

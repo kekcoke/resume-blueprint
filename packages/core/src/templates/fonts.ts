@@ -97,12 +97,33 @@ export const GELASIO_FILES: readonly string[] = [
 const GELASIO_FONTSPEC_OPTIONS =
   'Path=fonts/,UprightFont=*-Regular,ItalicFont=*-Italic,BoldFont=*-Bold,BoldItalicFont=*-BoldItalic'
 
-export const FONT_FAMILIES: Record<Exclude<FontFamily, 'template'>, FontSpec> = {
-  calibri: { mechanism: 'nfss', package: 'carlito', packageOptions: 'lining', resetFamilyDefault: true },
+export const FONT_FAMILIES: Record<
+  Exclude<FontFamily, 'template'>,
+  FontSpec
+> = {
+  calibri: {
+    mechanism: 'nfss',
+    package: 'carlito',
+    packageOptions: 'lining',
+    resetFamilyDefault: true
+  },
   arial: { mechanism: 'nfss', package: 'arimo', resetFamilyDefault: true },
-  helvetica: { mechanism: 'nfss', package: 'tgheros', resetFamilyDefault: true },
-  garamond: { mechanism: 'nfss', package: 'ebgaramond', packageOptions: 'type1', resetFamilyDefault: false },
-  georgia: { mechanism: 'fontspec-vendored', family: 'Gelasio', files: GELASIO_FILES }
+  helvetica: {
+    mechanism: 'nfss',
+    package: 'tgheros',
+    resetFamilyDefault: true
+  },
+  garamond: {
+    mechanism: 'nfss',
+    package: 'ebgaramond',
+    packageOptions: 'type1',
+    resetFamilyDefault: false
+  },
+  georgia: {
+    mechanism: 'fontspec-vendored',
+    family: 'Gelasio',
+    files: GELASIO_FILES
+  }
 }
 
 /**
@@ -117,7 +138,9 @@ export const FONT_FAMILIES: Record<Exclude<FontFamily, 'template'>, FontSpec> = 
  * vendored class, it never calls `\setmainfont`, so all five families work
  * there via the plain NFSS route (finding 1).
  */
-export const UNSUPPORTED_FONTS: Partial<Record<TemplateId, readonly FontFamily[]>> = {
+export const UNSUPPORTED_FONTS: Partial<
+  Record<TemplateId, readonly FontFamily[]>
+> = {
   2: ['calibri', 'arial', 'helvetica', 'garamond'],
   4: ['calibri', 'arial', 'helvetica', 'garamond'],
   6: ['calibri', 'arial', 'helvetica', 'garamond']
@@ -139,7 +162,10 @@ export function isFontSupported(id: TemplateId, family: FontFamily): boolean {
  * combo (never actually reached today — every family is supported on every
  * template this function is called for).
  */
-export function nfssFontPreamble(id: TemplateId, config: ResolvedDocumentConfig): string {
+export function nfssFontPreamble(
+  id: TemplateId,
+  config: ResolvedDocumentConfig
+): string {
   const { fontFamily } = config
   if (fontFamily === 'template' || !isFontSupported(id, fontFamily)) return ''
 
@@ -148,13 +174,18 @@ export function nfssFontPreamble(id: TemplateId, config: ResolvedDocumentConfig)
     const opt = spec.packageOptions ? `[${spec.packageOptions}]` : ''
     return [
       `\\usepackage${opt}{${spec.package}}`,
-      spec.resetFamilyDefault ? '\\renewcommand{\\familydefault}{\\sfdefault}' : ''
+      spec.resetFamilyDefault
+        ? '\\renewcommand{\\familydefault}{\\sfdefault}'
+        : ''
     ]
       .filter(Boolean)
       .join('\n')
   }
 
-  return ['\\usepackage{fontspec}', `\\setmainfont[${GELASIO_FONTSPEC_OPTIONS}]{${spec.family}}`].join('\n')
+  return [
+    '\\usepackage{fontspec}',
+    `\\setmainfont[${GELASIO_FONTSPEC_OPTIONS}]{${spec.family}}`
+  ].join('\n')
 }
 
 /**
@@ -185,7 +216,9 @@ export function georgiaFontspecTarget(): string {
  * `georgiaFontspecTarget` maps — the same weight-collapsing trade-off
  * already accepted for template 2.
  */
-export function georgiaFileBasename(weight: 'regular' | 'bold' = 'regular'): string {
+export function georgiaFileBasename(
+  weight: 'regular' | 'bold' = 'regular'
+): string {
   return weight === 'bold' ? 'Gelasio-Bold' : 'Gelasio-Regular'
 }
 

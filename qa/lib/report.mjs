@@ -25,7 +25,11 @@ export class Report {
   #record(status, suite, id, label, detail) {
     this.results.push({ id, suite, status, label, detail })
     const tag =
-      status === 'PASS' ? paint(GREEN, 'PASS') : status === 'FAIL' ? paint(RED, 'FAIL') : paint(YELLOW, 'SKIP')
+      status === 'PASS'
+        ? paint(GREEN, 'PASS')
+        : status === 'FAIL'
+          ? paint(RED, 'FAIL')
+          : paint(YELLOW, 'SKIP')
     process.stdout.write(`  ${tag}  ${paint(DIM, id.padEnd(5))} ${label}\n`)
     if (detail && status !== 'PASS') {
       for (const line of String(detail).trimEnd().split('\n')) {
@@ -75,7 +79,9 @@ export class Report {
     for (const id of this.ids) {
       out[id] = {}
       for (const suite of this.suites) {
-        const hits = this.results.filter((r) => r.id === id && r.suite === suite)
+        const hits = this.results.filter(
+          (r) => r.id === id && r.suite === suite
+        )
         if (!hits.length) continue
         if (hits.some((h) => h.status === 'FAIL')) out[id][suite] = 'FAIL'
         else if (hits.every((h) => h.status === 'SKIP')) out[id][suite] = 'SKIP'
@@ -118,7 +124,9 @@ export class Report {
       const cells = suites.map((suite) => {
         const cell = matrix[id][suite]
         if (!cell) return '-'.padEnd(9)
-        const count = this.results.filter((r) => r.id === id && r.suite === suite).length
+        const count = this.results.filter(
+          (r) => r.id === id && r.suite === suite
+        ).length
         if (cell === 'FAIL') return paintCell(RED, 'FAIL', count)
         if (cell === 'SKIP') return paintCell(YELLOW, 'skip', count)
         return paintCell(GREEN, 'ok', count)
@@ -137,8 +145,12 @@ export class Report {
       for (const f of this.failed) {
         process.stdout.write(`  ${f.id} [${f.suite}] ${f.label}\n`)
       }
-      process.stdout.write('\nEach row is either a real regression or a contract row that has gone\n')
-      process.stdout.write('stale. Decide which, and say so — do not edit qa/contract.md to go green.\n')
+      process.stdout.write(
+        '\nEach row is either a real regression or a contract row that has gone\n'
+      )
+      process.stdout.write(
+        'stale. Decide which, and say so — do not edit qa/contract.md to go green.\n'
+      )
     }
 
     return this.failed.length ? 1 : 0

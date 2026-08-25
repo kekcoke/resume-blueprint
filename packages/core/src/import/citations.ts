@@ -142,6 +142,7 @@ export function findCitations(value: unknown): CitationSite[] {
  */
 export function citationWarnings(value: unknown): string[] {
   return findCitations(value).map(
-    ({ path, count }) => `${path} carries ${count} citation artifact${count === 1 ? '' : 's'}`
+    ({ path, count }) =>
+      `${path} carries ${count} citation artifact${count === 1 ? '' : 's'}`
   )
 }

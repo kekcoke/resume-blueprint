@@ -85,7 +85,11 @@ function formatHeading(text: string): string {
  * the body came back empty — matching every template's own
  * `if (!education) return ''` guard, just decided after formatting instead
  * of before, since "every field is blank" is a real way to end up empty. */
-function withHeading(body: string, heading: string | undefined, defaultHeading: string): string {
+function withHeading(
+  body: string,
+  heading: string | undefined,
+  defaultHeading: string
+): string {
   if (!body) return ''
   return `${formatHeading(heading || defaultHeading)}\n\n${body}`
 }
@@ -105,11 +109,15 @@ function formatProfileLinks(profiles: Basics['profiles']): string[] {
     const cleanUrl = present(url)
 
     if (!cleanUrl) {
-      const text = [present(network), present(username)].filter(Boolean).join(': ')
+      const text = [present(network), present(username)]
+        .filter(Boolean)
+        .join(': ')
       return text ? [text] : []
     }
 
-    const shown = cleanUrl.replace(/^(?:https?:\/\/|mailto:)/i, '').replace(/\/$/, '')
+    const shown = cleanUrl
+      .replace(/^(?:https?:\/\/|mailto:)/i, '')
+      .replace(/\/$/, '')
     const host = shown.split('/')[0]
     const key = alphanumeric(network)
     const label = key && !alphanumeric(host).includes(key) ? `${network}: ` : ''
@@ -138,36 +146,53 @@ function formatProfile(basics: Basics | undefined): string {
   const links = formatProfileLinks(basics.profiles)
 
   const nameLine = [name, label].filter(Boolean).join('\n')
-  const contactLine = [address, email, phone, website, ...links].filter(Boolean).join(' | ')
+  const contactLine = [address, email, phone, website, ...links]
+    .filter(Boolean)
+    .join(' | ')
 
   return [nameLine, contactLine, summary].filter(Boolean).join('\n\n')
 }
 
 function formatEducation(education: Array<Education> | undefined): string {
-  const blocks = (education ?? []).map(({ institution, location, studyType, area, score, startDate, endDate }) => {
-    const line1 = [present(institution), present(location)].filter(Boolean).join(' — ')
+  const blocks = (education ?? []).map(
+    ({ institution, location, studyType, area, score, startDate, endDate }) => {
+      const line1 = [present(institution), present(location)]
+        .filter(Boolean)
+        .join(' — ')
 
-    const studyPresent = present(studyType)
-    const areaPresent = present(area)
-    const degree = studyPresent && areaPresent ? `${studyPresent}, ${areaPresent}` : studyPresent || (areaPresent ? `Degree in ${areaPresent}` : '')
-    const gpa = present(score) ? `GPA: ${present(score)}` : ''
-    const dates = formatDateRange(startDate, endDate)
-    const line2 = [degree, gpa, dates].filter(Boolean).join(' | ')
+      const studyPresent = present(studyType)
+      const areaPresent = present(area)
+      const degree =
+        studyPresent && areaPresent
+          ? `${studyPresent}, ${areaPresent}`
+          : studyPresent || (areaPresent ? `Degree in ${areaPresent}` : '')
+      const gpa = present(score) ? `GPA: ${present(score)}` : ''
+      const dates = formatDateRange(startDate, endDate)
+      const line2 = [degree, gpa, dates].filter(Boolean).join(' | ')
 
-    return [line1, line2].filter(Boolean).join('\n')
-  })
+      return [line1, line2].filter(Boolean).join('\n')
+    }
+  )
 
   return blocks.filter(Boolean).join('\n\n')
 }
 
 function formatWork(work: Array<Work> | undefined): string {
-  const blocks = (work ?? []).map(({ name, location, position, startDate, endDate, summary, highlights }) => {
-    const line1 = [present(name), present(location)].filter(Boolean).join(' — ')
-    const line2 = [present(position), formatDateRange(startDate, endDate)].filter(Boolean).join(' | ')
-    const bullets = presentAll(highlights).map((h) => `- ${h}`)
+  const blocks = (work ?? []).map(
+    ({ name, location, position, startDate, endDate, summary, highlights }) => {
+      const line1 = [present(name), present(location)]
+        .filter(Boolean)
+        .join(' — ')
+      const line2 = [present(position), formatDateRange(startDate, endDate)]
+        .filter(Boolean)
+        .join(' | ')
+      const bullets = presentAll(highlights).map((h) => `- ${h}`)
 
-    return [line1, line2, present(summary), ...bullets].filter(Boolean).join('\n')
-  })
+      return [line1, line2, present(summary), ...bullets]
+        .filter(Boolean)
+        .join('\n')
+    }
+  )
 
   return blocks.filter(Boolean).join('\n\n')
 }
@@ -190,13 +215,17 @@ function formatSkills(skills: Array<Skill> | undefined): string {
  * budget forcing that omission, so there is no reason to repeat it.
  */
 function formatProjects(projects: Array<Project> | undefined): string {
-  const blocks = (projects ?? []).map(({ name, description, url, keywords, highlights }) => {
-    const line1 = [present(name), present(url)].filter(Boolean).join(' — ')
-    const line2 = presentAll(keywords).join(', ')
-    const bullets = presentAll(highlights).map((h) => `- ${h}`)
+  const blocks = (projects ?? []).map(
+    ({ name, description, url, keywords, highlights }) => {
+      const line1 = [present(name), present(url)].filter(Boolean).join(' — ')
+      const line2 = presentAll(keywords).join(', ')
+      const bullets = presentAll(highlights).map((h) => `- ${h}`)
 
-    return [line1, line2, present(description), ...bullets].filter(Boolean).join('\n')
-  })
+      return [line1, line2, present(description), ...bullets]
+        .filter(Boolean)
+        .join('\n')
+    }
+  )
 
   return blocks.filter(Boolean).join('\n\n')
 }
@@ -214,9 +243,13 @@ function formatAwards(awards: Array<Award> | undefined): string {
 /** "Name | Issuer (Date) | url" — the same flat shape F6 introduced for the
  * TeX templates (`templates/certificates.ts#certificateLine`), reimplemented
  * without the `\href{}{}` wrapper. */
-function formatCertificates(certificates: Array<Certificate> | undefined): string {
+function formatCertificates(
+  certificates: Array<Certificate> | undefined
+): string {
   const lines = (certificates ?? []).map(({ name, issuer, date, url }) => {
-    const meta = [present(issuer), present(date) ? `(${present(date)})` : ''].filter(Boolean).join(' ')
+    const meta = [present(issuer), present(date) ? `(${present(date)})` : '']
+      .filter(Boolean)
+      .join(' ')
     return [present(name), meta, present(url)].filter(Boolean).join(' | ')
   })
 
@@ -287,7 +320,9 @@ export function renderText(blueprint: Blueprint): string {
   const { headings } = blueprint
 
   const blocks = sectionBodies(blueprint).map(({ section, text }) =>
-    section === 'profile' ? text : withHeading(text, headings[section], DEFAULT_HEADINGS[section]!)
+    section === 'profile'
+      ? text
+      : withHeading(text, headings[section], DEFAULT_HEADINGS[section]!)
   )
 
   return blocks.filter(Boolean).join('\n\n')

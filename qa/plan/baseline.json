@@ -1,12 +1,7 @@
 {
   "generated": "2026-08-24T18:58:00.795Z",
   "note": "Expected status per contract row per suite. Committed, so a change to it is reviewable. Regenerate deliberately — a baseline refreshed to make --check-baseline quiet is the same failure as editing qa/contract.md to go green.",
-  "suites": [
-    "cli",
-    "markdown",
-    "http",
-    "mcp"
-  ],
+  "suites": ["cli", "markdown", "http", "mcp"],
   "matrix": {
     "C1": {
       "cli": "PASS",
