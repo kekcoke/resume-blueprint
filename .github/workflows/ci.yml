@@ -23,20 +23,33 @@ jobs:
     # path is what quadrupled.
     timeout-minutes: 45
 
+    env:
+      # One pinned location, not the two OS-dependent defaults
+      # (~/.cache/Tectonic on Linux, ~/Library/Caches/TectonicProject.Tectonic
+      # on macOS) the old cache block papered over. Setting this env var makes
+      # Tectonic use exactly this path regardless of OS.
+      TECTONIC_CACHE_DIR: ${{ github.workspace }}/.tectonic-cache
+      # Where the warmed cache is published. .github/workflows/warm-tectonic-cache.yml
+      # writes these; re-run it and update the three lines below when the
+      # bundle moves (see docs/decisions/g10-a.md).
+      TECTONIC_CACHE_RELEASE_TAG: tectonic-cache-PENDING-G10-B-WARM-RUN
+      TECTONIC_CACHE_ASSET: tectonic-cache-PENDING-G10-B-WARM-RUN.tar.gz
+      TECTONIC_CACHE_SHA256: PENDING-G10-B-WARM-RUN
+
     strategy:
       fail-fast: false
-      # Serialized because both jobs share one Tectonic package cache and, on a
-      # cold key, start by fetching the same bundle at the same moment. Cheap
-      # hygiene, and it costs wall-clock only on a cold key.
+      # Serialized so a cold cache doesn't have both matrix jobs downloading
+      # the same release asset from GitHub at once. Cheap hygiene, and it
+      # costs wall-clock only on a cold key.
       #
-      # It is NOT a fix for the bundle-fetch failures on this repo, which is
-      # what it was originally added for. Those turned out to have two distinct
-      # signatures -- exit 1 with `429 Too Many Requests` on a moving subset of
-      # templates, then exit 101 (a Rust panic) within 350ms on all ten, with
-      # the package cache never populated in either case. Serializing changed
-      # neither. The real dependency is `relay.fullyjustified.net` being
-      # reachable and unthrottled from the runner, and the durable fix is to
-      # stop fetching per-run: pin the bundle and pass `--bundle <path>`.
+      # This used to guard against relay.fullyjustified.net specifically --
+      # a redirector that 429'd on a moving subset of templates, and
+      # separately panicked (exit 101) within 350ms on all ten, cache never
+      # populated either way. Serializing never fixed that; the durable fix
+      # (docs/decisions/g10-a.md, Option D) is that this job no longer talks
+      # to that host at all. It restores a pre-warmed cache published as a
+      # GitHub Release asset and runs Tectonic with `--only-cached`, so a
+      # miss it can't repair is a hard failure rather than a fetch.
       max-parallel: 1
       matrix:
         # Not Node 20: the suite runs `.ts` files directly through Node's type
@@ -64,26 +77,70 @@ jobs:
 
       # Tectonic downloads TeX packages on the first compile of each document
       # class. That download, not the binary, is what makes a cold run slow.
+      #
+      # Keyed on the published cache asset's own sha256 -- not on
+      # hashFiles(templates, assets) like before, which invalidated the cache
+      # on every template edit: precisely the change most likely to be under
+      # test. The bundle is TeX Live packages, unrelated to this repo's
+      # content, so a template edit no longer forces a refetch.
       - name: Cache the Tectonic package bundle
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/Tectonic
-            ~/.cache/TectonicProject.Tectonic
-          key: tectonic-${{ runner.os }}-0.17.0-${{ hashFiles('packages/core/src/templates/*.ts', 'packages/core/assets/**') }}
-          restore-keys: |
-            tectonic-${{ runner.os }}-0.17.0-
+          path: ${{ env.TECTONIC_CACHE_DIR }}
+          key: tectonic-sealed-${{ runner.os }}-${{ env.TECTONIC_CACHE_SHA256 }}
+
+      # On a cache hit this is a no-op. On a miss, restore the cache this repo
+      # publishes itself -- via GitHub Releases, a host CI already depends on
+      # for its source, rather than relay.fullyjustified.net. See
+      # docs/decisions/g10-a.md (Option D) for why: we use ~64MB of the
+      # upstream bundle's 2.88GB, so publishing our own warmed cache changes
+      # the failure class instead of just making the old one less likely.
+      - name: Restore the Tectonic cache from the published release
+        run: |
+          mkdir -p "$TECTONIC_CACHE_DIR"
+          if [ -z "$(ls -A "$TECTONIC_CACHE_DIR" 2>/dev/null)" ]; then
+            echo "cache miss -- fetching the published bundle cache from GitHub Releases"
+            curl -fsSL --retry 3 -o tectonic-cache.tar.gz \
+              "https://github.com/${{ github.repository }}/releases/download/${TECTONIC_CACHE_RELEASE_TAG}/${TECTONIC_CACHE_ASSET}"
+            echo "${TECTONIC_CACHE_SHA256}  tectonic-cache.tar.gz" | sha256sum -c -
+            tar xzf tectonic-cache.tar.gz -C "$TECTONIC_CACHE_DIR"
+            rm tectonic-cache.tar.gz
+          fi
 
       # Installed from the project's own release rather than a third-party
       # action, and pinned: 0.17.0 is the version the golden snapshots and
       # parse-fidelity expectations in this repo were measured against.
-      - name: Install Tectonic 0.17.0
+      #
+      # The real binary is installed as tectonic-real, and `tectonic` on PATH
+      # becomes a wrapper that always passes --only-cached, so this job can
+      # never reach a bundle host over the network -- it only ever reads the
+      # cache restored above. This wrapper is CI-only: local development still
+      # runs the unwrapped binary and fetches through the default bundle
+      # resolution. See docs/decisions/g10-a.md for why this is a shim rather
+      # than a flag threaded through packages/core (core reads no environment
+      # and hardcodes tectonic's argv -- CLAUDE.md invariant 3).
+      - name: Install Tectonic 0.17.0 (sealed to the local cache)
         run: |
           curl -fsSL --retry 3 -o tectonic.tar.gz \
             'https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.17.0/tectonic-0.17.0-x86_64-unknown-linux-gnu.tar.gz'
           sudo tar xzf tectonic.tar.gz -C /usr/local/bin tectonic
+          sudo mv /usr/local/bin/tectonic /usr/local/bin/tectonic-real
           rm tectonic.tar.gz
-          tectonic --version
+
+          sudo tee /usr/local/bin/tectonic > /dev/null <<'SHIM'
+          #!/usr/bin/env bash
+          # CI-only: this job never fetches the TeX package bundle over the
+          # network. `--only-cached` fails hard instead of reaching a bundle
+          # host -- see the step comment above and docs/decisions/g10-a.md
+          # (Option D). A failure here means the published cache is missing a
+          # package this compile needs: re-run
+          # .github/workflows/warm-tectonic-cache.yml to republish it, rather
+          # than editing this shim.
+          exec /usr/local/bin/tectonic-real --only-cached "$@"
+          SHIM
+          sudo chmod +x /usr/local/bin/tectonic
+
+          tectonic-real --version
 
       - run: npm ci
 
