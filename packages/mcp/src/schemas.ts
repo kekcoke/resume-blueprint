@@ -1,5 +1,9 @@
 import { z } from 'zod'
-import { DocumentConfigSchema, SECTION_NAMES, TEMPLATE_IDS } from '@resume-blueprint/core'
+import {
+  DocumentConfigSchema,
+  SECTION_NAMES,
+  TEMPLATE_IDS
+} from '@resume-blueprint/core'
 
 export const SectionEnum = z.enum(SECTION_NAMES)
 
@@ -247,10 +251,14 @@ export const ResumeTargetOutput = z.object({
   missing: z.array(
     z.object({
       ...CoverageTermFields,
-      suggestions: z.array(z.object({ section: SectionEnum, reason: z.string() }))
+      suggestions: z.array(
+        z.object({ section: SectionEnum, reason: z.string() })
+      )
     })
   ),
-  sections: z.array(z.object({ section: SectionEnum, matched: z.number().int().nonnegative() })),
+  sections: z.array(
+    z.object({ section: SectionEnum, matched: z.number().int().nonnegative() })
+  ),
   notes: z.array(z.string()),
   ...CitationWarnings
 })

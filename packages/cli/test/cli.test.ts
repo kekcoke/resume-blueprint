@@ -45,10 +45,19 @@ interface Run {
  */
 function invoke(command: string, args: string[], stdin?: string): Promise<Run> {
   return new Promise((resolvePromise, rejectPromise) => {
-    const child = execFile(command, args, { maxBuffer: 8 << 20 }, (error, stdout, stderr) => {
-      if (error && typeof error.code !== 'number') return rejectPromise(error)
-      resolvePromise({ code: error ? (error.code as number) : 0, stdout, stderr })
-    })
+    const child = execFile(
+      command,
+      args,
+      { maxBuffer: 8 << 20 },
+      (error, stdout, stderr) => {
+        if (error && typeof error.code !== 'number') return rejectPromise(error)
+        resolvePromise({
+          code: error ? (error.code as number) : 0,
+          stdout,
+          stderr
+        })
+      }
+    )
 
     if (stdin !== undefined) {
       child.stdin?.end(stdin)
@@ -60,7 +69,8 @@ function invoke(command: string, args: string[], stdin?: string): Promise<Run> {
 }
 
 /** Through `node`, as `npm run` and most CI invocations do. */
-const cli = (...args: string[]): Promise<Run> => invoke(process.execPath, [BIN, ...args])
+const cli = (...args: string[]): Promise<Run> =>
+  invoke(process.execPath, [BIN, ...args])
 
 /** Directly, as a shell does after `npm i -g`. Needs shebang + executable bit. */
 const cliDirect = (...args: string[]): Promise<Run> => invoke(BIN, [...args])
@@ -103,7 +113,11 @@ describe('usage and exit codes', () => {
     test(`\`${flag}\` prints usage and succeeds`, async () => {
       const { code, stdout } = await cli(flag)
 
-      assert.equal(code, 0, `${flag} exited ${code}; asking for help is not an error`)
+      assert.equal(
+        code,
+        0,
+        `${flag} exited ${code}; asking for help is not an error`
+      )
       assert.match(stdout, /Usage:/)
     })
   }
@@ -111,7 +125,11 @@ describe('usage and exit codes', () => {
   test('no arguments at all prints usage and fails', async () => {
     const { code, stdout } = await cli()
 
-    assert.equal(code, 1, 'a bare invocation is a usage error, not a help request')
+    assert.equal(
+      code,
+      1,
+      'a bare invocation is a usage error, not a help request'
+    )
     assert.match(stdout, /Usage:/)
   })
 
@@ -141,7 +159,12 @@ describe('list-templates', () => {
     assert.equal(rows.length, TEMPLATE_PROFILES.length)
 
     for (const [index, profile] of TEMPLATE_PROFILES.entries()) {
-      assert.match(rows[index], new RegExp(`^${profile.id}\\s+${profile.name.replace(/[.()]/g, '\\$&')}\\s`))
+      assert.match(
+        rows[index],
+        new RegExp(
+          `^${profile.id}\\s+${profile.name.replace(/[.()]/g, '\\$&')}\\s`
+        )
+      )
     }
   })
 
@@ -149,9 +172,14 @@ describe('list-templates', () => {
     const { stdout } = await cli('list-templates')
 
     for (const profile of TEMPLATE_PROFILES) {
-      const row = stdout.split('\n').find((line) => line.startsWith(`${profile.id} `))
+      const row = stdout
+        .split('\n')
+        .find((line) => line.startsWith(`${profile.id} `))
       assert.ok(row, `no row for template${profile.id}`)
-      assert.match(row, profile.atsGrade ? /ATS-grade$/ : /icon-labeled contacts$/)
+      assert.match(
+        row,
+        profile.atsGrade ? /ATS-grade$/ : /icon-labeled contacts$/
+      )
     }
   })
 })
@@ -179,22 +207,37 @@ describe('validate', () => {
   })
 
   test('malformed JSON fails with a parse error naming the source', async () => {
-    const { code, stderr } = await invoke(process.execPath, [BIN, 'validate', '-'], 'not json')
+    const { code, stderr } = await invoke(
+      process.execPath,
+      [BIN, 'validate', '-'],
+      'not json'
+    )
 
     assert.equal(code, 1)
     assert.match(stderr, /stdin is not valid JSON/)
   })
 
   test('a missing file fails without a stack trace', async () => {
-    const { code, stderr } = await cli('validate', resolve(FIXTURES, 'does-not-exist.json'))
+    const { code, stderr } = await cli(
+      'validate',
+      resolve(FIXTURES, 'does-not-exist.json')
+    )
 
     assert.equal(code, 1)
-    assert.doesNotMatch(stderr, /at \w+ \(/, 'a missing file is a user error, not a crash')
+    assert.doesNotMatch(
+      stderr,
+      /at \w+ \(/,
+      'a missing file is a user error, not a crash'
+    )
   })
 
   test('reading a blueprint from stdin works', async () => {
     const raw = await readFile(SAMPLE, 'utf8')
-    const { code, stderr } = await invoke(process.execPath, [BIN, 'validate', '-'], raw)
+    const { code, stderr } = await invoke(
+      process.execPath,
+      [BIN, 'validate', '-'],
+      raw
+    )
 
     assert.equal(code, 0)
     assert.match(stderr, /blueprint is valid/)
@@ -240,7 +283,10 @@ describe('tex', () => {
     const { code, stderr } = await cli('tex', SAMPLE, '-t', '99')
 
     assert.equal(code, 1)
-    assert.match(stderr, new RegExp(`--template must be one of ${TEMPLATE_IDS.join(', ')}`))
+    assert.match(
+      stderr,
+      new RegExp(`--template must be one of ${TEMPLATE_IDS.join(', ')}`)
+    )
   })
 })
 
@@ -279,7 +325,11 @@ describe('text', () => {
 
   test('reads from stdin via "-"', async () => {
     const raw = await readFile(SAMPLE, 'utf8')
-    const { code, stdout } = await invoke(process.execPath, [BIN, 'text', '-'], raw)
+    const { code, stdout } = await invoke(
+      process.execPath,
+      [BIN, 'text', '-'],
+      raw
+    )
 
     assert.equal(code, 0)
     assert.match(stdout, /^Ada Lovelace$/m)
@@ -310,12 +360,25 @@ describe('target', () => {
     assert.ok(Array.isArray(report.missing) && report.missing.length > 0)
     assert.ok(report.missing[0].suggestions.length > 0)
     // Ranked highest first.
-    const scores = report.missing.map((t: { prominence: number }) => t.prominence)
-    assert.deepEqual(scores, [...scores].sort((a: number, b: number) => b - a))
+    const scores = report.missing.map(
+      (t: { prominence: number }) => t.prominence
+    )
+    assert.deepEqual(
+      scores,
+      [...scores].sort((a: number, b: number) => b - a)
+    )
   })
 
   test('--max-terms caps the report', async () => {
-    const { code, stdout } = await cli('target', SAMPLE, '--jd', JOB, '--max-terms', '5', '--json')
+    const { code, stdout } = await cli(
+      'target',
+      SAMPLE,
+      '--jd',
+      JOB,
+      '--max-terms',
+      '5',
+      '--json'
+    )
     const report = JSON.parse(stdout)
 
     assert.equal(code, 0)
@@ -324,14 +387,22 @@ describe('target', () => {
 
   test('reads the posting from stdin via "-"', async () => {
     const jd = await readFile(JOB, 'utf8')
-    const { code, stdout } = await invoke(process.execPath, [BIN, 'target', SAMPLE, '--jd', '-'], jd)
+    const { code, stdout } = await invoke(
+      process.execPath,
+      [BIN, 'target', SAMPLE, '--jd', '-'],
+      jd
+    )
 
     assert.equal(code, 0)
     assert.match(stdout, /^coverage /m)
   })
 
   test('refuses to read both the blueprint and the posting from stdin', async () => {
-    const { code, stderr } = await invoke(process.execPath, [BIN, 'target', '-', '--jd', '-'], '{}')
+    const { code, stderr } = await invoke(
+      process.execPath,
+      [BIN, 'target', '-', '--jd', '-'],
+      '{}'
+    )
 
     assert.equal(code, 1)
     assert.match(stderr, /only one of/)
@@ -352,28 +423,56 @@ describe('target', () => {
 
 describe('document flags', () => {
   test('--font-size merges into document and reaches the TeX source', async () => {
-    const { code, stdout } = await cli('tex', SAMPLE, '-t', '3', '--font-size', '12')
+    const { code, stdout } = await cli(
+      'tex',
+      SAMPLE,
+      '-t',
+      '3',
+      '--font-size',
+      '12'
+    )
 
     assert.equal(code, 0)
     assert.match(stdout, /\\documentclass\[12pt\]\{article\}/)
   })
 
   test('--line-spacing merges into document and reaches the TeX source', async () => {
-    const { code, stdout } = await cli('tex', SAMPLE, '-t', '1', '--line-spacing', '1.1')
+    const { code, stdout } = await cli(
+      'tex',
+      SAMPLE,
+      '-t',
+      '1',
+      '--line-spacing',
+      '1.1'
+    )
 
     assert.equal(code, 0)
     assert.match(stdout, /\\linespread\{1\.1\}\\selectfont/)
   })
 
   test('--margin below the 0.5in floor is clamped, not rejected', async () => {
-    const { code, stdout } = await cli('tex', SAMPLE, '-t', '1', '--margin', '0.1in')
+    const { code, stdout } = await cli(
+      'tex',
+      SAMPLE,
+      '-t',
+      '1',
+      '--margin',
+      '0.1in'
+    )
 
     assert.equal(code, 0)
     assert.match(stdout, /left=0\.5in,right=0\.5in,bottom=0\.5in,top=0\.5in/)
   })
 
   test('an out-of-enum --font-size fails with a formatted validation error, not a crash', async () => {
-    const { code, stderr } = await cli('tex', SAMPLE, '-t', '1', '--font-size', '99')
+    const { code, stderr } = await cli(
+      'tex',
+      SAMPLE,
+      '-t',
+      '1',
+      '--font-size',
+      '99'
+    )
 
     assert.equal(code, 1)
     assert.match(stderr, /invalid blueprint/)
@@ -381,7 +480,14 @@ describe('document flags', () => {
   })
 
   test('a non-numeric --font-size is rejected before any work happens', async () => {
-    const { code, stderr } = await cli('tex', SAMPLE, '-t', '1', '--font-size', 'banana')
+    const { code, stderr } = await cli(
+      'tex',
+      SAMPLE,
+      '-t',
+      '1',
+      '--font-size',
+      'banana'
+    )
 
     assert.equal(code, 1)
     assert.match(stderr, /--font-size must be a number/)
@@ -404,7 +510,11 @@ describe('import', () => {
     // The importer returns BlueprintInput, not Blueprint -- this is what
     // asserts that the un-defaulted shape is still valid input.
     const { stdout } = await cli('import', PROFILE)
-    const validated = await invoke(process.execPath, [BIN, 'validate', '-'], stdout)
+    const validated = await invoke(
+      process.execPath,
+      [BIN, 'validate', '-'],
+      stdout
+    )
 
     assert.equal(validated.code, 0)
     assert.match(validated.stderr, /blueprint is valid/)
@@ -417,7 +527,11 @@ describe('import', () => {
 
   test('reads markdown from stdin', async () => {
     const markdown = await readFile(PROFILE, 'utf8')
-    const { code, stdout } = await invoke(process.execPath, [BIN, 'import', '-'], markdown)
+    const { code, stdout } = await invoke(
+      process.execPath,
+      [BIN, 'import', '-'],
+      markdown
+    )
 
     assert.equal(code, 0)
     assert.equal(JSON.parse(stdout).basics.name, 'Ada Lovelace')
@@ -435,7 +549,10 @@ describe('import', () => {
   })
 
   test('an unreadable path fails with the errno, not a stack trace', async () => {
-    const { code, stdout, stderr } = await cli('import', resolve(FIXTURES, 'does-not-exist.md'))
+    const { code, stdout, stderr } = await cli(
+      'import',
+      resolve(FIXTURES, 'does-not-exist.md')
+    )
 
     assert.equal(code, 1)
     assert.equal(stdout, '')
@@ -464,11 +581,15 @@ describe('citation warnings', () => {
   /** Written to a temp file per test rather than piped, so the `-o` and
    *  redirect paths are both exercised the way a user hits them. */
   const DIRTY = JSON.stringify({
-    basics: { name: 'Ada[cite: 1, 2, 3]', summary: '[cite_start]Led the group.' },
+    basics: {
+      name: 'Ada[cite: 1, 2, 3]',
+      summary: '[cite_start]Led the group.'
+    },
     headings: { work: 'Experience[cite: 5]' }
   })
 
-  const validateDirty = () => invoke(process.execPath, [BIN, 'validate', '-'], DIRTY)
+  const validateDirty = () =>
+    invoke(process.execPath, [BIN, 'validate', '-'], DIRTY)
 
   test('validate reports artifacts on stderr while still calling the blueprint valid', async () => {
     // A leftover placeholder is legal content, not a schema violation, so
@@ -486,7 +607,11 @@ describe('citation warnings', () => {
   test('tex keeps stdout pure TeX, warnings on stderr', async () => {
     // `resume tex x.json > out.tex` must not weld status chatter into the
     // document. This is the case that decides warnings go to stderr.
-    const { code, stdout, stderr } = await invoke(process.execPath, [BIN, 'tex', '-'], DIRTY)
+    const { code, stdout, stderr } = await invoke(
+      process.execPath,
+      [BIN, 'tex', '-'],
+      DIRTY
+    )
 
     assert.equal(code, 0)
     assert.match(stderr, /citation artifacts at 3 sites/)
@@ -495,7 +620,11 @@ describe('citation warnings', () => {
   })
 
   test('text keeps stdout pure plain text, warnings on stderr', async () => {
-    const { code, stdout, stderr } = await invoke(process.execPath, [BIN, 'text', '-'], DIRTY)
+    const { code, stdout, stderr } = await invoke(
+      process.execPath,
+      [BIN, 'text', '-'],
+      DIRTY
+    )
 
     assert.equal(code, 0)
     assert.match(stderr, /citation artifacts at 3 sites/)
@@ -505,7 +634,11 @@ describe('citation warnings', () => {
 
   test('--strict turns citation warnings into a non-zero exit', async () => {
     const lenient = await validateDirty()
-    const strict = await invoke(process.execPath, [BIN, 'validate', '-', '--strict'], DIRTY)
+    const strict = await invoke(
+      process.execPath,
+      [BIN, 'validate', '-', '--strict'],
+      DIRTY
+    )
 
     assert.equal(lenient.code, 0)
     assert.equal(strict.code, 1)
@@ -532,7 +665,10 @@ describe('citation warnings', () => {
     const { code, stderr } = await invoke(
       process.execPath,
       [BIN, 'validate', '-'],
-      JSON.stringify({ basics: { name: 123 }, work: [{ summary: 'x[cite: 1]' }] })
+      JSON.stringify({
+        basics: { name: 123 },
+        work: [{ summary: 'x[cite: 1]' }]
+      })
     )
 
     assert.equal(code, 1)

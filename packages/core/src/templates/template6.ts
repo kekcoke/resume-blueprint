@@ -2,7 +2,11 @@ import { stripIndent, source } from 'common-tags'
 import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks, joinContactInfo } from './profiles.js'
 import { certificateLine, defaultCertificatesSection } from './certificates.js'
-import { isFontSupported, georgiaFontspecTarget, georgiaFileBasename } from './fonts.js'
+import {
+  isFontSupported,
+  georgiaFontspecTarget,
+  georgiaFileBasename
+} from './fonts.js'
 import type { FormValues, Generator, ResolvedDocumentConfig } from '../types.js'
 
 const generator: Generator = {
@@ -21,7 +25,9 @@ const generator: Generator = {
       website,
       profiles
     } = basics
-    const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
+    const websiteLine = website
+      ? `\\href{${website}}{${breakableUrl(website)}}`
+      : ''
 
     const info = [
       email,
@@ -185,7 +191,10 @@ const generator: Generator = {
           const { name = '', keywords = [] } = skill
           const keywordsLine = keywords.join(', ')
 
-          const item = name && keywordsLine ? `${name}: ${keywordsLine}` : name || keywordsLine
+          const item =
+            name && keywordsLine
+              ? `${name}: ${keywordsLine}`
+              : name || keywordsLine
 
           return `\\item ${item}`
         })}
@@ -316,8 +325,12 @@ const generator: Generator = {
         : ''
 
     return [
-      config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+      config.lineSpacing !== 1.0
+        ? `\\linespread{${config.lineSpacing}}\\selectfont`
+        : '',
+      config.linkStyle === 'colored'
+        ? '\\hypersetup{colorlinks=true,allcolors=blue}'
+        : '',
       fontLines
     ]
       .filter(Boolean)
@@ -376,13 +389,25 @@ function template6(values: FormValues, config: ResolvedDocumentConfig) {
             return generator.workSection(values.work, headings.work, config)
 
           case 'skills':
-            return generator.skillsSection(values.skills, headings.skills, config)
+            return generator.skillsSection(
+              values.skills,
+              headings.skills,
+              config
+            )
 
           case 'projects':
-            return generator.projectsSection(values.projects, headings.projects, config)
+            return generator.projectsSection(
+              values.projects,
+              headings.projects,
+              config
+            )
 
           case 'awards':
-            return generator.awardsSection(values.awards, headings.awards, config)
+            return generator.awardsSection(
+              values.awards,
+              headings.awards,
+              config
+            )
 
           case 'certificates':
             return (
@@ -390,7 +415,12 @@ function template6(values: FormValues, config: ResolvedDocumentConfig) {
                 values.certificates,
                 headings.certificates,
                 config
-              ) ?? defaultCertificatesSection(values.certificates, headings.certificates, config)
+              ) ??
+              defaultCertificatesSection(
+                values.certificates,
+                headings.certificates,
+                config
+              )
             )
 
           default:

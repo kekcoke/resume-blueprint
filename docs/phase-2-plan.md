@@ -17,12 +17,12 @@ MCP, HTTP, or argv** — every interface is a thin adapter over the same call pa
 
 **Decisions already made:**
 
-| Decision | Choice |
-|---|---|
-| MCP SDK | `@modelcontextprotocol/server` v2, **core migrates to zod 4** for one zod version workspace-wide |
-| Store backend | Git-backed JSON files |
-| Edit API | JSON Merge Patch + typed array helpers |
-| Sequencing | Store → MCP → HTTP, gated, **one session per gate** |
+| Decision      | Choice                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------ |
+| MCP SDK       | `@modelcontextprotocol/server` v2, **core migrates to zod 4** for one zod version workspace-wide |
+| Store backend | Git-backed JSON files                                                                            |
+| Edit API      | JSON Merge Patch + typed array helpers                                                           |
+| Sequencing    | Store → MCP → HTTP, gated, **one session per gate**                                              |
 
 The MCP V1 SDK (`@modelcontextprotocol/sdk`, 51.7M weekly downloads) was considered and
 rejected: it accepts zod 3 or 4, but pulls express, hono, cors, jose, ajv, eventsource and
@@ -67,7 +67,7 @@ characters of base64, spent conveying a document the agent cannot read. Return
 >    majors at runtime, so core migrated with the SDK left untouched.
 > 2. Its scope is too narrow. It names only `packages/core`, because it predates
 >    `packages/mcp/src/schemas.ts` — which holds seven single-argument `z.record()` calls,
->    a hard break in v4, and which must migrate in the *same commit* as core.
+>    a hard break in v4, and which must migrate in the _same commit_ as core.
 > 3. Breaking change 2 below is not a break at all — `{ message }` still works in v4 as a
 >    deprecated alias. Two genuine breaks it misses are `.refine()` no longer narrowing
 >    through a type predicate, and `.default()` now returning a shared instance.
@@ -158,18 +158,18 @@ dependency; a real `~/.resume-blueprint` git log is inspectable by hand.
 
 stdio MCP server on `@modelcontextprotocol/server` v2.
 
-| Tool | Purpose |
-|---|---|
-| `resume_list` | List blueprints with id, name, last modified |
-| `resume_get` | Full blueprint + rev |
-| `resume_create` | New blueprint, optionally seeded |
-| `resume_patch` | Merge patch |
-| `resume_section_append` / `_update` / `_remove` | Array-aware section edits |
-| `resume_validate` | Validate without writing; readable errors |
-| `resume_render` | Render to PDF → `{ path, pageCount, byteSize }` |
-| `resume_tex` | LaTeX source (text is legitimately useful to an agent) |
-| `resume_history` / `resume_diff` / `resume_revert` | Version control |
-| `resume_templates` | List the nine template IDs |
+| Tool                                               | Purpose                                                |
+| -------------------------------------------------- | ------------------------------------------------------ |
+| `resume_list`                                      | List blueprints with id, name, last modified           |
+| `resume_get`                                       | Full blueprint + rev                                   |
+| `resume_create`                                    | New blueprint, optionally seeded                       |
+| `resume_patch`                                     | Merge patch                                            |
+| `resume_section_append` / `_update` / `_remove`    | Array-aware section edits                              |
+| `resume_validate`                                  | Validate without writing; readable errors              |
+| `resume_render`                                    | Render to PDF → `{ path, pageCount, byteSize }`        |
+| `resume_tex`                                       | LaTeX source (text is legitimately useful to an agent) |
+| `resume_history` / `resume_diff` / `resume_revert` | Version control                                        |
+| `resume_templates`                                 | List the nine template IDs                             |
 
 Tool input schemas are zod 4, validated by the SDK before handlers run. Handlers stay
 thin: parse args → call store or core → format a compact result.
@@ -244,7 +244,7 @@ Per-gate checklist:
 - [ ] Prior gates' tests pass **unmodified**; a changed old test means changed behavior, which needs a decision
 - [ ] The injection fixture is exercised through the new surface
 - [ ] Manual smoke test performed (real MCP client / real curl), not just unit tests
-- [ ] Committed with a conventional-commit message explaining *why*
+- [ ] Committed with a conventional-commit message explaining _why_
 
 ---
 
@@ -258,7 +258,7 @@ parent. The retired upstream clone sits beside it at `~/Desktop/tools/resumake.i
 starting from the parent puts two near-identical template sets in scope and invites
 confusion between the vendored originals and the fixed copies.
 
-**Open narrowly.** *"Read CLAUDE.md and docs/phase-2-plan.md, then start Gate 1"* beats
+**Open narrowly.** _"Read CLAUDE.md and docs/phase-2-plan.md, then start Gate 1"_ beats
 "look at the project", which invites an expensive crawl through 4.5MB of font binaries.
 
 **Commit at each gate**, so any session can be abandoned without losing work.

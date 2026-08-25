@@ -3,7 +3,7 @@ Use the qa-runner agent.
 qa/contract.md row {{row}} is failing. Reproduce it standalone — every script in
 qa/ runs by itself — then answer the only question that matters:
 
-  is this a regression, or a stale contract row?
+is this a regression, or a stale contract row?
 
 A regression means the code moved and the contract did not: fix the code.
 A stale row means the behaviour changed deliberately and the table did not

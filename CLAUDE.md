@@ -69,7 +69,7 @@ dependencies are `zod` and `common-tags` — adding another needs a real justifi
 - Tests live in `packages/*/test/` and import from `../dist/`, not `../src/` — Node's type
   stripping does not remap `.js` specifiers to `.ts`, and this exercises what ships
 - Conventional commits (`feat:`, `fix:`, `test:`, `docs:`, `chore:`). Commit messages
-  explain *why*; they are the primary way context survives between sessions
+  explain _why_; they are the primary way context survives between sessions
 - Prettier style: no semicolons, single quotes, no trailing commas
 
 ## Where the context lives

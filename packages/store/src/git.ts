@@ -23,9 +23,15 @@ export class GitError extends Error {
  * @throws {GitError} if git is not on PATH, the process times out, or exits
  *   non-zero, with captured stderr attached.
  */
-export function git(cwd: string, args: string[], timeoutMs = 30_000): Promise<string> {
+export function git(
+  cwd: string,
+  args: string[],
+  timeoutMs = 30_000
+): Promise<string> {
   return new Promise((resolvePromise, rejectPromise) => {
-    const child = spawn('git', ['-C', cwd, ...args], { stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = spawn('git', ['-C', cwd, ...args], {
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
 
     let stdout = ''
     let stderr = ''
@@ -57,11 +63,17 @@ export function git(cwd: string, args: string[], timeoutMs = 30_000): Promise<st
       clearTimeout(timer)
       if (timedOut) {
         rejectPromise(
-          new GitError(`git ${args.join(' ')} timed out after ${timeoutMs}ms`, stderr)
+          new GitError(
+            `git ${args.join(' ')} timed out after ${timeoutMs}ms`,
+            stderr
+          )
         )
       } else if (code !== 0) {
         rejectPromise(
-          new GitError(`git ${args.join(' ')} exited with code ${code}: ${stderr.trim()}`, stderr)
+          new GitError(
+            `git ${args.join(' ')} exited with code ${code}: ${stderr.trim()}`,
+            stderr
+          )
         )
       } else {
         resolvePromise(stdout)

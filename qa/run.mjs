@@ -29,7 +29,9 @@ import { startHttpServer } from './lib/http.mjs'
 const SUITES = ['cli', 'markdown', 'http', 'mcp']
 
 const argv = process.argv.slice(2)
-const flags = new Set(argv.filter((a) => a.startsWith('--')).map((a) => a.split('=')[0]))
+const flags = new Set(
+  argv.filter((a) => a.startsWith('--')).map((a) => a.split('=')[0])
+)
 const requested = argv.filter((a) => !a.startsWith('--'))
 
 /** The value of `--name=value`, or `fallback`. */
@@ -43,7 +45,9 @@ const BASELINE = join(PLAN_DIR, 'baseline.json')
 
 for (const name of requested) {
   if (!SUITES.includes(name)) {
-    process.stderr.write(`unknown suite "${name}" — expected one of: ${SUITES.join(', ')}\n`)
+    process.stderr.write(
+      `unknown suite "${name}" — expected one of: ${SUITES.join(', ')}\n`
+    )
     process.exit(2)
   }
 }
@@ -85,7 +89,9 @@ function runScript(path, env, report, suite, rows) {
       let emitted = 0
 
       for (let i = 0; i < lines.length; i++) {
-        const match = lines[i].match(/^RESULT\s+(\S+)\s+(PASS|FAIL|SKIP)\s+(.*)$/)
+        const match = lines[i].match(
+          /^RESULT\s+(\S+)\s+(PASS|FAIL|SKIP)\s+(.*)$/
+        )
         if (!match) continue
         emitted++
         const [, id, status, label] = match
@@ -101,7 +107,12 @@ function runScript(path, env, report, suite, rows) {
             : `the script exited ${code} without emitting any RESULT line`
         const rowsToBlame = rows.length ? rows : ['C?']
         for (const id of rowsToBlame) {
-          report.fail(suite, id, `${path.replace(`${REPO_ROOT}/`, '')} did not run`, `${why}\n${stderr.trim()}`)
+          report.fail(
+            suite,
+            id,
+            `${path.replace(`${REPO_ROOT}/`, '')} did not run`,
+            `${why}\n${stderr.trim()}`
+          )
         }
       }
       resolve()
@@ -127,7 +138,12 @@ async function runPlainSuite(suite, report, extraEnv = {}) {
     // script would make those rows lie.
     const scratch = await makeScratchHome()
     try {
-      const env = { ...process.env, RESUME_BLUEPRINT_HOME: scratch.home, REPO_ROOT, ...extraEnv }
+      const env = {
+        ...process.env,
+        RESUME_BLUEPRINT_HOME: scratch.home,
+        REPO_ROOT,
+        ...extraEnv
+      }
       assertIsolated(env)
       await runScript(script, env, report, suite, await declaredRows(script))
     } finally {
@@ -189,7 +205,12 @@ async function runHttpSuite(report) {
     // Invariant check, free of charge: the server logs to stderr and leaves
     // stdout to whatever a caller pipes it into.
     if (open.stdout.trim()) {
-      report.fail('http', 'C1', 'the server writes nothing to stdout', open.stdout.slice(0, 400))
+      report.fail(
+        'http',
+        'C1',
+        'the server writes nothing to stdout',
+        open.stdout.slice(0, 400)
+      )
     } else {
       report.pass('http', 'C1', 'the server writes nothing to stdout')
     }
@@ -225,7 +246,9 @@ async function emitCollection() {
       if (!/\b(qa_curl|curl -sS)\b/.test(line)) continue
       if (line.trim().startsWith('#')) continue
 
-      const url = line.match(/\$\{?(BASE_URL|AUTH_BASE_URL|NOTEX_BASE_URL)\}?(\/[^"'\s]*)/)
+      const url = line.match(
+        /\$\{?(BASE_URL|AUTH_BASE_URL|NOTEX_BASE_URL)\}?(\/[^"'\s]*)/
+      )
       if (!url) continue
 
       const method = (line.match(/-X\s+([A-Z]+)/) ?? [, 'GET'])[1]
@@ -233,7 +256,9 @@ async function emitCollection() {
       let body
       const single = line.match(/-d\s+'([^']*)'/)
       const double = line.match(/-d\s+"((?:[^"\\]|\\.)*)"/)
-      const fromFixture = line.match(/--data-binary\s+"@\$\{?FIXTURES\}?\/([^"]+)"/)
+      const fromFixture = line.match(
+        /--data-binary\s+"@\$\{?FIXTURES\}?\/([^"]+)"/
+      )
       const fromScratch = line.match(/--data-binary\s+"@\$\{?(\w+)\}?"/)
 
       if (single) {
@@ -244,12 +269,16 @@ async function emitCollection() {
       } else if (fromFixture) {
         // Inlined so the collection is self-contained — an import into Postman
         // has no $FIXTURES to resolve.
-        body = (await readFile(join(REPO_ROOT, 'fixtures', fromFixture[1]), 'utf8')).trim()
+        body = (
+          await readFile(join(REPO_ROOT, 'fixtures', fromFixture[1]), 'utf8')
+        ).trim()
       } else if (fromScratch) {
         // A body generated at run time (the 6 MiB oversize probe, the 40-deep
         // patch). There is nothing to inline and a request with the body
         // silently dropped would be worse than no request at all.
-        skipped.push(`${name}: ${method} ${url[2]} (body built at run time from $${fromScratch[1]})`)
+        skipped.push(
+          `${name}: ${method} ${url[2]} (body built at run time from $${fromScratch[1]})`
+        )
         continue
       }
 
@@ -266,7 +295,9 @@ async function emitCollection() {
       // Shell variables become Postman variables rather than leaking through
       // as a literal "$id" that 404s the moment someone hits Send.
       const toPostmanVar = (value) =>
-        value.replace(/\$\{?id\}?/g, '{{blueprintId}}').replace(/\$\{?rev\}?/g, '{{rev}}')
+        value
+          .replace(/\$\{?id\}?/g, '{{blueprintId}}')
+          .replace(/\$\{?rev\}?/g, '{{rev}}')
       const path = toPostmanVar(url[2]).replace(/^\//, '')
       if (body) body = toPostmanVar(body).replace(/\$\$/g, '1')
 
@@ -275,7 +306,15 @@ async function emitCollection() {
         request: {
           method,
           header: headers,
-          ...(body ? { body: { mode: 'raw', raw: body, options: { raw: { language: 'json' } } } } : {}),
+          ...(body
+            ? {
+                body: {
+                  mode: 'raw',
+                  raw: body,
+                  options: { raw: { language: 'json' } }
+                }
+              }
+            : {}),
           url: {
             raw: `{{baseUrl}}/${path}`,
             host: ['{{baseUrl}}'],
@@ -309,9 +348,13 @@ async function emitCollection() {
         (skipped.length
           ? ` Not represented here, because their bodies are generated at run time: ${skipped.join('; ')}.`
           : ''),
-      schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json'
+      schema:
+        'https://schema.getpostman.com/json/collection/v2.1.0/collection.json'
     },
-    auth: { type: 'bearer', bearer: [{ key: 'token', value: '{{token}}', type: 'string' }] },
+    auth: {
+      type: 'bearer',
+      bearer: [{ key: 'token', value: '{{token}}', type: 'string' }]
+    },
     variable: [
       { key: 'baseUrl', value: 'http://127.0.0.1:8787' },
       { key: 'token', value: '' },
@@ -324,7 +367,11 @@ async function emitCollection() {
   const out = join(REPO_ROOT, 'qa', 'http', 'collection.json')
   await writeFile(out, `${JSON.stringify(collection, null, 2)}\n`)
   process.stdout.write(`wrote ${out} (${unique.length} requests`)
-  process.stdout.write(skipped.length ? `, ${skipped.length} skipped as run-time-generated)\n` : ')\n')
+  process.stdout.write(
+    skipped.length
+      ? `, ${skipped.length} skipped as run-time-generated)\n`
+      : ')\n'
+  )
 }
 
 // --- machine-readable output ------------------------------------------------
@@ -356,7 +403,9 @@ async function emitBaseline(report) {
     matrix: report.matrix()
   }
   await writeFile(BASELINE, `${JSON.stringify(baseline, null, 2)}\n`)
-  process.stdout.write(`\nwrote ${BASELINE.replace(`${REPO_ROOT}/`, '')} (${Object.keys(baseline.matrix).length} rows)\n`)
+  process.stdout.write(
+    `\nwrote ${BASELINE.replace(`${REPO_ROOT}/`, '')} (${Object.keys(baseline.matrix).length} rows)\n`
+  )
 }
 
 /**
@@ -375,7 +424,9 @@ async function checkBaseline(report) {
   try {
     baseline = JSON.parse(await readFile(BASELINE, 'utf8'))
   } catch {
-    process.stdout.write(`\nno baseline at ${BASELINE.replace(`${REPO_ROOT}/`, '')} — run --emit-baseline on a known-good tree first.\n`)
+    process.stdout.write(
+      `\nno baseline at ${BASELINE.replace(`${REPO_ROOT}/`, '')} — run --emit-baseline on a known-good tree first.\n`
+    )
     return 1
   }
 
@@ -391,14 +442,22 @@ async function checkBaseline(report) {
 
   process.stdout.write(`\n${'-'.repeat(60)}\nbaseline diff\n\n`)
   if (!flips.length) {
-    process.stdout.write('no flips — every row covered by this run matches the baseline.\n')
+    process.stdout.write(
+      'no flips — every row covered by this run matches the baseline.\n'
+    )
     return 0
   }
   for (const f of flips) {
-    process.stdout.write(`  ${f.id.padEnd(5)} ${f.suite.padEnd(9)} ${f.from} -> ${f.to}\n`)
+    process.stdout.write(
+      `  ${f.id.padEnd(5)} ${f.suite.padEnd(9)} ${f.from} -> ${f.to}\n`
+    )
   }
-  process.stdout.write('\nEach flip is either a real regression, a deliberate change whose contract\n')
-  process.stdout.write('row has not caught up, or a pinned assertion doing its job. Say which.\n')
+  process.stdout.write(
+    '\nEach flip is either a real regression, a deliberate change whose contract\n'
+  )
+  process.stdout.write(
+    'row has not caught up, or a pinned assertion doing its job. Say which.\n'
+  )
   return 1
 }
 
@@ -411,7 +470,10 @@ async function checkBaseline(report) {
  */
 async function recordEvidence(report) {
   const path = join(PLAN_DIR, 'evidence.json')
-  let evidence = { note: 'Rows observed FAIL at least once, and when. A row absent from here has never been seen red — it is not yet known to test anything.', seenRed: {} }
+  let evidence = {
+    note: 'Rows observed FAIL at least once, and when. A row absent from here has never been seen red — it is not yet known to test anything.',
+    seenRed: {}
+  }
   try {
     evidence = JSON.parse(await readFile(path, 'utf8'))
   } catch {
@@ -440,7 +502,9 @@ async function main() {
   printPreflight(env)
 
   if (env.fatal) {
-    process.stdout.write('\npreflight failed — fix the items marked FAIL above and re-run.\n')
+    process.stdout.write(
+      '\npreflight failed — fix the items marked FAIL above and re-run.\n'
+    )
     return 1
   }
 
@@ -461,7 +525,8 @@ async function main() {
   await recordEvidence(report)
   if (flags.has('--json')) await writeJson(report)
   if (flags.has('--emit-baseline')) await emitBaseline(report)
-  if (flags.has('--check-baseline')) return (await checkBaseline(report)) || code
+  if (flags.has('--check-baseline'))
+    return (await checkBaseline(report)) || code
 
   return code
 }

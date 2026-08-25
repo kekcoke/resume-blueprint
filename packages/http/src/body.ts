@@ -25,7 +25,10 @@ function taggedError(message: string, httpStatus: number): HttpTaggedError {
  * closed on the 413 response this produces, which is the piece that
  * actually keeps that connection from lingering.
  */
-export async function readJsonBody(req: IncomingMessage, maxBytes = 5 * 1024 * 1024): Promise<unknown> {
+export async function readJsonBody(
+  req: IncomingMessage,
+  maxBytes = 5 * 1024 * 1024
+): Promise<unknown> {
   const chunks: Buffer[] = []
   let total = 0
   let exceeded = false

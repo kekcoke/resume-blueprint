@@ -54,10 +54,7 @@ export default function getTemplateData(data: FormValues): TemplateData {
         texDoc: template2(data, config),
         opts: {
           cmd: 'xelatex',
-          inputs: [
-            'template2/awesome-cv.cls',
-            'template2/fontawesome.sty'
-          ],
+          inputs: ['template2/awesome-cv.cls', 'template2/fontawesome.sty'],
           fonts: [
             'template2/fonts/FontAwesome.otf',
             'template2/fonts/Roboto-Bold.ttf',
@@ -118,10 +115,7 @@ export default function getTemplateData(data: FormValues): TemplateData {
         texDoc: template5(data, config),
         opts: {
           cmd: 'xelatex',
-          inputs: [
-            'template5/helvetica.sty',
-            'template5/res.cls'
-          ],
+          inputs: ['template5/helvetica.sty', 'template5/res.cls'],
           fonts: [...fontFiles(config)]
         }
       }

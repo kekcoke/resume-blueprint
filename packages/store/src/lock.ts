@@ -86,7 +86,9 @@ async function acquireLock(lockPath: string): Promise<void> {
     try {
       const handle = await open(lockPath, 'wx')
       try {
-        await handle.writeFile(`pid=${process.pid}\nstarted=${new Date().toISOString()}\n`)
+        await handle.writeFile(
+          `pid=${process.pid}\nstarted=${new Date().toISOString()}\n`
+        )
       } finally {
         await handle.close()
       }
@@ -114,7 +116,10 @@ async function releaseLock(lockPath: string): Promise<void> {
   })
 }
 
-async function withProcessLock<T>(home: string, fn: () => Promise<T>): Promise<T> {
+async function withProcessLock<T>(
+  home: string,
+  fn: () => Promise<T>
+): Promise<T> {
   const lockPath = join(home, LOCK_FILE_NAME)
   await acquireLock(lockPath)
   activeLocks.add(lockPath)

@@ -20,7 +20,13 @@ import {
 
 const execFileAsync = promisify(execFile)
 
-const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'fixtures')
+const FIXTURES = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  'fixtures'
+)
 const GOLDEN = resolve(FIXTURES, 'golden')
 
 /** Set UPDATE_GOLDEN=1 to rewrite the snapshots after an intentional change. */
@@ -127,7 +133,10 @@ describe('TeX generation is stable across contactLayout overrides', () => {
         selectedTemplate: id,
         document: { contactLayout }
       })
-      const goldenPath = resolve(GOLDEN, `template${id}-contact-${contactLayout}.tex`)
+      const goldenPath = resolve(
+        GOLDEN,
+        `template${id}-contact-${contactLayout}.tex`
+      )
 
       if (UPDATE_GOLDEN || !existsSync(goldenPath)) {
         await writeFile(goldenPath, texDoc, 'utf8')
@@ -161,7 +170,11 @@ describe('every template branches on contactLayout', () => {
         document: { contactLayout: 'stacked' }
       }).texDoc
 
-      assert.notEqual(row, stacked, `template${id} ignores document.contactLayout`)
+      assert.notEqual(
+        row,
+        stacked,
+        `template${id} ignores document.contactLayout`
+      )
     })
   }
 })
@@ -177,12 +190,19 @@ describe('every template compiles to a valid PDF', () => {
           { timeoutMs: COMPILE_TIMEOUT_MS }
         )
 
-        assert.equal(pdf.subarray(0, 5).toString(), '%PDF-', 'missing PDF magic bytes')
+        assert.equal(
+          pdf.subarray(0, 5).toString(),
+          '%PDF-',
+          'missing PDF magic bytes'
+        )
         assert.ok(
           pdf.subarray(-1024).toString('latin1').includes('%%EOF'),
           'PDF is truncated'
         )
-        assert.ok(pdf.length > 5_000, `PDF suspiciously small: ${pdf.length} bytes`)
+        assert.ok(
+          pdf.length > 5_000,
+          `PDF suspiciously small: ${pdf.length} bytes`
+        )
 
         const pages = countPages(pdf)
         assert.ok(pages >= 1, 'could not find any page in the PDF')
@@ -221,7 +241,9 @@ describe('content the original silently dropped now renders', () => {
     const { texDoc } = blueprintToTex({ ...sample, selectedTemplate: 2 })
 
     assert.ok(
-      texDoc.includes('\\headerpositionstyle{Principal Engineer \\& Numerical Analyst}'),
+      texDoc.includes(
+        '\\headerpositionstyle{Principal Engineer \\& Numerical Analyst}'
+      ),
       'template2 dropped basics.label from the header'
     )
     assert.ok(
@@ -280,7 +302,9 @@ describe('content the original silently dropped now renders', () => {
       const { texDoc } = blueprintToTex({ ...sample, selectedTemplate: id })
 
       assert.ok(
-        texDoc.includes('\\href{https://linkedin.com/in/ada-lovelace}{linkedin.'),
+        texDoc.includes(
+          '\\href{https://linkedin.com/in/ada-lovelace}{linkedin.'
+        ),
         `template${id} dropped basics.profiles[0], or rendered it without linking it`
       )
     })
@@ -307,7 +331,9 @@ describe('adversarial input still compiles safely', () => {
         await readFile(resolve(FIXTURES, 'injection.json'), 'utf8')
       )
 
-      const pdf = await renderBlueprint(fixture, { timeoutMs: COMPILE_TIMEOUT_MS })
+      const pdf = await renderBlueprint(fixture, {
+        timeoutMs: COMPILE_TIMEOUT_MS
+      })
       assert.equal(pdf.subarray(0, 5).toString(), '%PDF-')
 
       // If \write18 had executed, this is where the evidence would be.
@@ -337,7 +363,13 @@ describe('font family overrides compile and extract clean', () => {
   }
 
   const POPPLER = hasBinary('pdftotext')
-  const FAMILIES: FontFamily[] = ['calibri', 'arial', 'helvetica', 'garamond', 'georgia']
+  const FAMILIES: FontFamily[] = [
+    'calibri',
+    'arial',
+    'helvetica',
+    'garamond',
+    'georgia'
+  ]
 
   for (const id of TEMPLATE_IDS) {
     const families = FAMILIES.filter((f) => !UNSUPPORTED_FONTS[id]?.includes(f))
@@ -364,12 +396,18 @@ describe('font family overrides compile and extract clean', () => {
           try {
             const pdfPath = join(dir, `template${id}-${fontFamily}.pdf`)
             await writeFile(pdfPath, pdf)
-            const { stdout: text } = await execFileAsync('pdftotext', [pdfPath, '-'], {
-              maxBuffer: 8 << 20
-            })
+            const { stdout: text } = await execFileAsync(
+              'pdftotext',
+              [pdfPath, '-'],
+              {
+                maxBuffer: 8 << 20
+              }
+            )
 
             const PRIVATE_USE_AREA_RE = /[\uE000-\uF8FF]/
-            const iconLabeled = TEMPLATE_PROFILES.find((p) => p.id === id)?.iconLabeledContacts
+            const iconLabeled = TEMPLATE_PROFILES.find(
+              (p) => p.id === id
+            )?.iconLabeledContacts
 
             // Private-use-area codepoints are how an icon font (template2's
             // FontAwesome, template7's moderncv icons — see catalog.ts's

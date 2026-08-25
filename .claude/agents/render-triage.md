@@ -34,7 +34,7 @@ five packages.
 **Know what each symptom usually means.**
 
 - `tectonic not found on PATH` — the binary, not the document. `brew install
-  tectonic`.
+tectonic`.
 - `Tectonic timed out after Nms` — either a genuinely slow first compile
   (Tectonic downloads TeX packages the first time it sees a document class;
   later runs are sub-second) or `--timeout` was given garbage and became `NaN`
@@ -48,7 +48,7 @@ five packages.
 **Golden snapshots.** `fixtures/golden/` holds generated `.tex` — do not read it
 into context, and do not hand-edit it. When a diff is legitimate,
 `npm run test:update-golden --workspace @resume-blueprint/core` re-baselines it.
-Re-baselining to make a test pass without first explaining *why* the output
+Re-baselining to make a test pass without first explaining _why_ the output
 changed is how a real regression gets committed as a snapshot.
 
 Template-specific notes worth checking before rewriting anything: template9 uses

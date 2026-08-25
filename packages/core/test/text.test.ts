@@ -7,7 +7,13 @@ import { dirname, resolve } from 'node:path'
 import { blueprintToText } from '../dist/index.js'
 import { parseBlueprint } from '../dist/schema.js'
 
-const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'fixtures')
+const FIXTURES = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  'fixtures'
+)
 
 describe('blueprintToText', () => {
   test('honours section order and omits sections not listed', () => {
@@ -18,8 +24,15 @@ describe('blueprintToText', () => {
       work: [{ name: 'Should not appear', position: 'x' }]
     })
 
-    assert.ok(text.indexOf('SKILLS') < text.indexOf('Ada Lovelace'), 'skills should render before profile')
-    assert.doesNotMatch(text, /EXPERIENCE/, 'work is not in `sections`, so it must not render')
+    assert.ok(
+      text.indexOf('SKILLS') < text.indexOf('Ada Lovelace'),
+      'skills should render before profile'
+    )
+    assert.doesNotMatch(
+      text,
+      /EXPERIENCE/,
+      'work is not in `sections`, so it must not render'
+    )
     assert.doesNotMatch(text, /Should not appear/)
   })
 
@@ -40,7 +53,12 @@ describe('blueprintToText', () => {
   test('drops whitespace-only fields rather than emitting blank lines', () => {
     const text = blueprintToText({
       sections: ['profile'],
-      basics: { name: '  Ada Lovelace  ', label: '   ', email: '', summary: '\n\t ' }
+      basics: {
+        name: '  Ada Lovelace  ',
+        label: '   ',
+        email: '',
+        summary: '\n\t '
+      }
     })
 
     assert.equal(text, 'Ada Lovelace')
@@ -79,7 +97,9 @@ describe('blueprintToText', () => {
   })
 
   test('renders the sample fixture end to end without throwing', async () => {
-    const sample = JSON.parse(await readFile(resolve(FIXTURES, 'sample.json'), 'utf8'))
+    const sample = JSON.parse(
+      await readFile(resolve(FIXTURES, 'sample.json'), 'utf8')
+    )
     const text = blueprintToText(sample)
 
     assert.match(text, /^Ada Lovelace$/m)
@@ -96,7 +116,9 @@ describe('blueprintToText', () => {
   })
 
   test('never sanitizes: LaTeX specials pass through unescaped', async () => {
-    const injection = JSON.parse(await readFile(resolve(FIXTURES, 'injection.json'), 'utf8'))
+    const injection = JSON.parse(
+      await readFile(resolve(FIXTURES, 'injection.json'), 'utf8')
+    )
     const text = blueprintToText(injection)
 
     // The concrete difference from blueprintToTex: nothing here goes through
@@ -109,7 +131,10 @@ describe('blueprintToText', () => {
   test('accepts unvalidated input the same way blueprintToTex does', () => {
     // `blueprintToText` runs `parseBlueprint` itself; a pre-parsed `Blueprint`
     // is still valid `unknown` input.
-    const blueprint = parseBlueprint({ basics: { name: 'Ada Lovelace' }, sections: ['profile'] })
+    const blueprint = parseBlueprint({
+      basics: { name: 'Ada Lovelace' },
+      sections: ['profile']
+    })
     assert.equal(blueprintToText(blueprint), 'Ada Lovelace')
   })
 })

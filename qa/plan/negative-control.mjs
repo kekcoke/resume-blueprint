@@ -33,7 +33,9 @@ const rows = argv.filter((a) => !a.startsWith('--'))
 
 /** Refuses on a dirty tree: this script edits source in place and reverts it. */
 async function assertCleanTree() {
-  const { stdout } = await run('git', ['status', '--porcelain'], { cwd: REPO_ROOT })
+  const { stdout } = await run('git', ['status', '--porcelain'], {
+    cwd: REPO_ROOT
+  })
   const dirty = stdout
     .split('\n')
     .filter(Boolean)
@@ -51,17 +53,28 @@ async function assertCleanTree() {
 
 async function shell(command, args) {
   try {
-    const { stdout, stderr } = await run(command, args, { cwd: REPO_ROOT, maxBuffer: 32 * 1024 * 1024 })
+    const { stdout, stderr } = await run(command, args, {
+      cwd: REPO_ROOT,
+      maxBuffer: 32 * 1024 * 1024
+    })
     return { code: 0, stdout, stderr }
   } catch (error) {
-    return { code: error.code ?? 1, stdout: error.stdout ?? '', stderr: error.stderr ?? String(error) }
+    return {
+      code: error.code ?? 1,
+      stdout: error.stdout ?? '',
+      stderr: error.stderr ?? String(error)
+    }
   }
 }
 
 /** Runs the scoped suites and returns the collapsed status of one row. */
 async function statusOfRow(row, suites) {
   const out = join(PLAN_DIR, 'negative-control-run.json')
-  await shell('node', [join(REPO_ROOT, 'qa', 'run.mjs'), ...suites, `--json=${out}`])
+  await shell('node', [
+    join(REPO_ROOT, 'qa', 'run.mjs'),
+    ...suites,
+    `--json=${out}`
+  ])
   const report = JSON.parse(await readFile(out, 'utf8'))
   const cells = report.matrix?.[row] ?? {}
   const statuses = Object.values(cells)
@@ -74,16 +87,23 @@ async function statusOfRow(row, suites) {
 async function apply(mutation, direction) {
   const path = join(REPO_ROOT, mutation.file)
   const text = await readFile(path, 'utf8')
-  const [from, to] = direction === 'break' ? [mutation.find, mutation.replace] : [mutation.replace, mutation.find]
+  const [from, to] =
+    direction === 'break'
+      ? [mutation.find, mutation.replace]
+      : [mutation.replace, mutation.find]
   if (!text.includes(from)) {
-    throw new Error(`${mutation.file} does not contain the ${direction === 'break' ? 'find' : 'replace'} string:\n  ${from}\nThe registry has drifted from the source. Re-grep it.`)
+    throw new Error(
+      `${mutation.file} does not contain the ${direction === 'break' ? 'find' : 'replace'} string:\n  ${from}\nThe registry has drifted from the source. Re-grep it.`
+    )
   }
   await writeFile(path, text.replace(from, to))
 }
 
 async function proveOne(mutation) {
   const { row, suites } = mutation
-  process.stdout.write(`\n${'='.repeat(64)}\n${row} — ${mutation.file}\n${'='.repeat(64)}\n`)
+  process.stdout.write(
+    `\n${'='.repeat(64)}\n${row} — ${mutation.file}\n${'='.repeat(64)}\n`
+  )
   process.stdout.write(`  ${mutation.note}\n\n`)
 
   let broken = 'not reached'
@@ -104,7 +124,9 @@ async function proveOne(mutation) {
 
   const ok = broken === 'FAIL' && restored === 'PASS'
   if (ok) {
-    process.stdout.write(`\n  PROVEN — ${row} goes red when the behaviour breaks and green when it is restored.\n`)
+    process.stdout.write(
+      `\n  PROVEN — ${row} goes red when the behaviour breaks and green when it is restored.\n`
+    )
   } else if (broken !== 'FAIL') {
     process.stdout.write(
       `\n  VACUOUS — ${row} stayed ${broken} with the behaviour deliberately broken.\n` +
@@ -121,11 +143,15 @@ async function proveOne(mutation) {
 }
 
 async function main() {
-  const registry = JSON.parse(await readFile(join(PLAN_DIR, 'mutations.json'), 'utf8'))
+  const registry = JSON.parse(
+    await readFile(join(PLAN_DIR, 'mutations.json'), 'utf8')
+  )
 
   if (flags.has('--list')) {
     for (const m of registry.mutations) {
-      process.stdout.write(`${m.row.padEnd(5)} ${m.suites.join(',').padEnd(10)} ${m.file}\n`)
+      process.stdout.write(
+        `${m.row.padEnd(5)} ${m.suites.join(',').padEnd(10)} ${m.file}\n`
+      )
     }
     return 0
   }
@@ -147,10 +173,12 @@ async function main() {
   await assertCleanTree()
 
   const results = []
-  for (const mutation of wanted) results.push([mutation.row, await proveOne(mutation)])
+  for (const mutation of wanted)
+    results.push([mutation.row, await proveOne(mutation)])
 
   process.stdout.write(`\n${'-'.repeat(64)}\n`)
-  for (const [row, ok] of results) process.stdout.write(`  ${ok ? 'PROVEN ' : 'FAILED '} ${row}\n`)
+  for (const [row, ok] of results)
+    process.stdout.write(`  ${ok ? 'PROVEN ' : 'FAILED '} ${row}\n`)
   const failed = results.filter(([, ok]) => !ok).length
   process.stdout.write(`\n${results.length - failed} proven, ${failed} not\n`)
   return failed ? 1 : 0
@@ -159,6 +187,8 @@ async function main() {
 main()
   .then((code) => process.exit(code))
   .catch((error) => {
-    process.stderr.write(`\nnegative-control failed: ${error?.message ?? error}\n`)
+    process.stderr.write(
+      `\nnegative-control failed: ${error?.message ?? error}\n`
+    )
     process.exit(1)
   })

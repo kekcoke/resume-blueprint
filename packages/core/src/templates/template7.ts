@@ -4,11 +4,23 @@ import { breakableUrl, profileLinks } from './profiles.js'
 import { certificateLine, defaultCertificatesSection } from './certificates.js'
 import { accentColorToTeX, GLOBAL_DEFAULTS } from './documentConfig.js'
 import { nfssFontPreamble } from './fonts.js'
-import type { FormValues, GeneratorWithSummary, ResolvedDocumentConfig } from '../types.js'
+import type {
+  FormValues,
+  GeneratorWithSummary,
+  ResolvedDocumentConfig
+} from '../types.js'
 
 const generator: GeneratorWithSummary = {
   profileSection(basics = {}, config) {
-    const { name, label, email, phone, location = {}, website, profiles } = basics
+    const {
+      name,
+      label,
+      email,
+      phone,
+      location = {},
+      website,
+      profiles
+    } = basics
 
     // moderncv has no general-purpose "one line of contact info" slot — each
     // kind (\address, \phone, \email, \homepage) is its own macro, and
@@ -19,7 +31,13 @@ const generator: GeneratorWithSummary = {
     // several fields on a shared line.
     if (config.contactLayout === 'row') {
       const websiteLine = website ? breakableUrl(website) : ''
-      const info = [location.address, phone, email, websiteLine, ...profileLinks(profiles)]
+      const info = [
+        location.address,
+        phone,
+        email,
+        websiteLine,
+        ...profileLinks(profiles)
+      ]
         .filter(Boolean)
         .join(' | ')
 
@@ -302,15 +320,21 @@ const generator: GeneratorWithSummary = {
     // interpolated on its own line, so an unset accentColor contributes no
     // line at all, not a blank one.
     const styleBlock = [
-      '\\moderncvstyle{banking}                             % style options are \'casual\' (default), \'classic\', \'oldstyle\' and \'banking\'',
-      config.accentColor ? `\\definecolor{blue}{HTML}{${accentColorToTeX(config.accentColor)}}` : ''
+      "\\moderncvstyle{banking}                             % style options are 'casual' (default), 'classic', 'oldstyle' and 'banking'",
+      config.accentColor
+        ? `\\definecolor{blue}{HTML}{${accentColorToTeX(config.accentColor)}}`
+        : ''
     ]
       .filter(Boolean)
       .join('\n')
 
     const extraLines = [
-      config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-      config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+      config.lineSpacing !== 1.0
+        ? `\\linespread{${config.lineSpacing}}\\selectfont`
+        : '',
+      config.linkStyle === 'colored'
+        ? '\\hypersetup{colorlinks=true,allcolors=blue}'
+        : '',
       nfssFontPreamble(7, config)
     ]
       .filter(Boolean)
@@ -369,13 +393,25 @@ function template7(values: FormValues, config: ResolvedDocumentConfig) {
             return generator.workSection(values.work, headings.work, config)
 
           case 'skills':
-            return generator.skillsSection(values.skills, headings.skills, config)
+            return generator.skillsSection(
+              values.skills,
+              headings.skills,
+              config
+            )
 
           case 'projects':
-            return generator.projectsSection(values.projects, headings.projects, config)
+            return generator.projectsSection(
+              values.projects,
+              headings.projects,
+              config
+            )
 
           case 'awards':
-            return generator.awardsSection(values.awards, headings.awards, config)
+            return generator.awardsSection(
+              values.awards,
+              headings.awards,
+              config
+            )
 
           case 'certificates':
             return (
@@ -383,7 +419,12 @@ function template7(values: FormValues, config: ResolvedDocumentConfig) {
                 values.certificates,
                 headings.certificates,
                 config
-              ) ?? defaultCertificatesSection(values.certificates, headings.certificates, config)
+              ) ??
+              defaultCertificatesSection(
+                values.certificates,
+                headings.certificates,
+                config
+              )
             )
 
           default:

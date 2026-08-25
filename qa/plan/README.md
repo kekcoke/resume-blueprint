@@ -40,11 +40,11 @@ because it is trusted.
 
 **One claim file per node, in the git common dir.** Two separate points.
 
-*One file per node* — a single `state.json` would be exactly the shared mutable
+_One file per node_ — a single `state.json` would be exactly the shared mutable
 artifact A4 warns about: an interface between lanes, with the last writer
 silently winning. Three worktrees writing three paths cannot collide.
 
-*In the common dir, not the working tree* — load-bearing, and wrong in the first
+_In the common dir, not the working tree_ — load-bearing, and wrong in the first
 cut of this directory. `git worktree` gives each lane its own checkout, so a
 claim written under `qa/plan/claims/` is invisible to every other lane: the
 mutex would stop working precisely when three lanes are open, which is the only
@@ -53,29 +53,29 @@ time it does anything. Every worktree of a clone shares one
 `<common-dir>/qa-plan-claims/` and are visible everywhere instantly, no commit
 required.
 
-That also settles what a claim *is*: ephemeral coordination state, like a lock
+That also settles what a claim _is_: ephemeral coordination state, like a lock
 file. Not a reviewable artifact, and not something to commit. `--where` prints
 the directory in effect.
 
 **Run `--ready` and `--claim` from anywhere in the clone.** Because claims are
 shared, the primary checkout on `main` and any lane worktree give the same
-answer. Do the *work* on a branch; the coordination call is
+answer. Do the _work_ on a branch; the coordination call is
 location-independent.
 
 ## What transcribing the graph found
 
 B3's conflict register was written from a `grep -l` + `comm -12` pass, and K9
 records a collision that pass caught. Encoding the same information as data,
-with `next.mjs --check` looking for the K9 *shape* rather than for K9 itself,
+with `next.mjs --check` looking for the K9 _shape_ rather than for K9 itself,
 found four more — all of them cross-lane, all of them in the lanes B3 calls
 "non-conflicting by construction":
 
-| | Collision | Consequence |
-|---|---|---|
-| K10 | G2 (lane A) edits `qa/contract.md`, which K1 reserves for lane B | its own acceptance test says "C15's MCP row updated" |
-| K11 | G11 (lane B) edits `packages/http/src/routes.ts` | K9 caught G6/G14 on this file and moved G14; it did not look at G11 |
-| K12 | G2 and G11 both edit `packages/mcp/src/tools.ts` | different lanes, same file |
-| K13 | G5, G4 and G1 all rewrite regions of `packages/cli/src/index.ts` | G5 is lane A; G4 and G1 are lane B |
+|     | Collision                                                        | Consequence                                                         |
+| --- | ---------------------------------------------------------------- | ------------------------------------------------------------------- |
+| K10 | G2 (lane A) edits `qa/contract.md`, which K1 reserves for lane B | its own acceptance test says "C15's MCP row updated"                |
+| K11 | G11 (lane B) edits `packages/http/src/routes.ts`                 | K9 caught G6/G14 on this file and moved G14; it did not look at G11 |
+| K12 | G2 and G11 both edit `packages/mcp/src/tools.ts`                 | different lanes, same file                                          |
+| K13 | G5, G4 and G1 all rewrite regions of `packages/cli/src/index.ts` | G5 is lane A; G4 and G1 are lane B                                  |
 
 Together these say something the prose graph could not: **Phase 2's three-lane
 parallelism does not survive contact with the file sets.** G5 alone holds

@@ -28,7 +28,9 @@ const generator: Generator = {
     const { name, label, summary, email, phone, location, website, profiles } =
       basics
     const address = location?.address || ''
-    const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
+    const websiteLine = website
+      ? `\\href{${website}}{${breakableUrl(website)}}`
+      : ''
 
     const lines = [
       name ? `{\\Large \\bfseries ${name}}` : '',
@@ -132,8 +134,15 @@ const generator: Generator = {
       \\header{${heading || 'Experience'}}
 
       ${work.map((job) => {
-        const { name, position, location, startDate, endDate, summary, highlights } =
-          job
+        const {
+          name,
+          position,
+          location,
+          startDate,
+          endDate,
+          summary,
+          highlights
+        } = job
 
         let line1 = ''
         let line2 = ''
@@ -329,8 +338,12 @@ function template10(values: FormValues, config: ResolvedDocumentConfig) {
     // GLOBAL_DEFAULTS.lineSpacing is 1.0; TEMPLATE_DEFAULTS[10].lineSpacing
     // is 1.15, so this line is emitted whenever `document.lineSpacing` is
     // left unset — the external feedback's "1.0-1.15" ask, as a default.
-    config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-    config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+    config.lineSpacing !== 1.0
+      ? `\\linespread{${config.lineSpacing}}\\selectfont`
+      : '',
+    config.linkStyle === 'colored'
+      ? '\\hypersetup{colorlinks=true,allcolors=blue}'
+      : '',
     // fontFamily defaults to 'calibri' here (unlike every other template,
     // where it defaults to 'template'), so this line is not merely reachable
     // but emitted by default: \usepackage[lining]{carlito} +
@@ -374,13 +387,25 @@ function template10(values: FormValues, config: ResolvedDocumentConfig) {
             return generator.workSection(values.work, headings.work, config)
 
           case 'skills':
-            return generator.skillsSection(values.skills, headings.skills, config)
+            return generator.skillsSection(
+              values.skills,
+              headings.skills,
+              config
+            )
 
           case 'projects':
-            return generator.projectsSection(values.projects, headings.projects, config)
+            return generator.projectsSection(
+              values.projects,
+              headings.projects,
+              config
+            )
 
           case 'awards':
-            return generator.awardsSection(values.awards, headings.awards, config)
+            return generator.awardsSection(
+              values.awards,
+              headings.awards,
+              config
+            )
 
           case 'certificates':
             return (
@@ -388,7 +413,12 @@ function template10(values: FormValues, config: ResolvedDocumentConfig) {
                 values.certificates,
                 headings.certificates,
                 config
-              ) ?? defaultCertificatesSection(values.certificates, headings.certificates, config)
+              ) ??
+              defaultCertificatesSection(
+                values.certificates,
+                headings.certificates,
+                config
+              )
             )
 
           default:

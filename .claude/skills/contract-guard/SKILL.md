@@ -21,16 +21,16 @@ each one is expensive to break quietly.
 
 **1. The three invariants in CLAUDE.md.** Walk them explicitly; do not assume.
 
-- *Store raw, sanitize only at render time.* `sanitizeBlueprint` is **not
+- _Store raw, sanitize only at render time._ `sanitizeBlueprint` is **not
   idempotent** — `R&D` → `R\&D` → `R\textbackslash{}\&D`. Any surface that
   writes to storage must write raw user text. If your change moves data toward
   persistence, this is the invariant it is most likely to break, and the damage
   compounds silently on every later edit.
-- *MCP never writes to stdout, and never returns PDF bytes.* stdout **is** the
+- _MCP never writes to stdout, and never returns PDF bytes._ stdout **is** the
   JSON-RPC transport; one `console.log` corrupts the stream and fails
   confusingly. Diagnostics go to stderr. PDFs are returned as
   `{path, pageCount, byteSize}`.
-- *Core stays free of adapter and UI concerns.* `packages/core` knows nothing
+- _Core stays free of adapter and UI concerns._ `packages/core` knows nothing
   about MCP, HTTP or argv and performs no I/O it was not handed. Its runtime
   dependencies are `zod` and `common-tags`; a third needs a real justification.
 
@@ -40,7 +40,7 @@ you are changing. If a surface has no way to express it, write **no surface** an
 open a finding in `qa/findings.md`. Writing `—` for a gap is how G3 became
 invisible for as long as it did.
 
-**3. Test against the injection fixture.** CLAUDE.md requires it: *any* new
+**3. Test against the injection fixture.** CLAUDE.md requires it: _any_ new
 surface that accepts blueprints must route through the same sanitize path and be
 tested against `fixtures/injection.json`. Add the assertion to the relevant
 `qa/<suite>/*.sh` — and note that `fixtures/injection-document.json` is the
@@ -54,8 +54,8 @@ Tag it with the contract id in its `# contract:` header so a crash is attributed
 to the right row. If you touched HTTP, regenerate the Postman collection with
 `npm run qa:collection` in the same commit.
 
-**5. Check the symmetry.** The question that catches the most: *does the other
-adapter do this too, and if not, why not?* Most findings in `qa/findings.md` are
+**5. Check the symmetry.** The question that catches the most: _does the other
+adapter do this too, and if not, why not?_ Most findings in `qa/findings.md` are
 one surface having a guard, a limit or a capability another lacks. A new limit
 on one adapter is a decision about all of them.
 

@@ -8,15 +8,15 @@ mechanism for this phase: not a prompt an agent might skip, not a convention in
 a document, but a missing file that makes the node unreachable.
 
 Four nodes are gated, and each for the reason A5 gives — a wrong answer is
-expensive *and* no test would catch it:
+expensive _and_ no test would catch it:
 
-| Record | Node | The question |
-|---|---|---|
-| `g10-a.md` | G10-a | Where is the Tectonic bundle hosted, and how is it checksummed? |
-| `g3.md` | G3 | Is HTTP a deliberate subset, or an incomplete adapter? |
-| `g2.md` | G2 | Should MCP queue renders or reject them, unlike HTTP? |
-| `g1.md` | G1 | Do CLI exit codes become a taxonomy, breaking anything branching on 1? |
-| `g8.md` | G8 | (gate *after* the report) What did typechecking the tests surface, and what is in scope to fix? |
+| Record     | Node  | The question                                                                                    |
+| ---------- | ----- | ----------------------------------------------------------------------------------------------- |
+| `g10-a.md` | G10-a | Where is the Tectonic bundle hosted, and how is it checksummed?                                 |
+| `g3.md`    | G3    | Is HTTP a deliberate subset, or an incomplete adapter?                                          |
+| `g2.md`    | G2    | Should MCP queue renders or reject them, unlike HTTP?                                           |
+| `g1.md`    | G1    | Do CLI exit codes become a taxonomy, breaking anything branching on 1?                          |
+| `g8.md`    | G8    | (gate _after_ the report) What did typechecking the tests surface, and what is in scope to fix? |
 
 ## Writing one
 
@@ -25,7 +25,7 @@ a **draft** — the question, two or three real options with consequences, a
 recommendation, what the choice commits us to that is hard to walk back, and
 whether a test would have caught a wrong answer.
 
-That last point is the one worth checking on every record. If a test *would*
+That last point is the one worth checking on every record. If a test _would_
 catch it, the node should have been a review, not a gate — and A5 is blunt
 about why that matters: a gate on every node is a serial process wearing a
 graph costume.

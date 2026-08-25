@@ -12,7 +12,11 @@ const lockPath = () => join(dir, '.store.lock')
 
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), 'resume-blueprint-lock-test-'))
-  __configureLockTimingForTests({ timeoutMs: 35_000, pollInitialMs: 20, pollMaxMs: 200 })
+  __configureLockTimingForTests({
+    timeoutMs: 35_000,
+    pollInitialMs: 20,
+    pollMaxMs: 200
+  })
 })
 
 afterEach(async () => {
@@ -58,14 +62,19 @@ describe('lock file content', () => {
       assert.match(contents, new RegExp(`pid=${process.pid}\\n`))
       const match = contents.match(/started=(.+)\n/)
       assert.ok(match, 'expected a started= timestamp line')
-      assert.ok(!Number.isNaN(Date.parse(match![1])), 'started= value should be a parseable date')
+      assert.ok(
+        !Number.isNaN(Date.parse(match![1])),
+        'started= value should be a parseable date'
+      )
     })
   })
 })
 
 describe('different keys', () => {
   test('do not block each other', async () => {
-    const otherDir = await mkdtemp(join(tmpdir(), 'resume-blueprint-lock-test-'))
+    const otherDir = await mkdtemp(
+      join(tmpdir(), 'resume-blueprint-lock-test-')
+    )
     try {
       let aReleased = false
       let releaseA: () => void = () => {}
@@ -80,7 +89,11 @@ describe('different keys', () => {
       const b = withLock(otherDir, async () => {
         // If this lock were sharing state with `a`'s (keyed by an unrelated
         // home dir), it would still be waiting on `a`'s gate here.
-        assert.equal(aReleased, false, 'b should not need to wait for a to release')
+        assert.equal(
+          aReleased,
+          false,
+          'b should not need to wait for a to release'
+        )
       })
 
       await b
@@ -106,13 +119,22 @@ describe('in-process FIFO ordering', () => {
       order.push('second-end')
     })
     await Promise.all([first, second])
-    assert.deepEqual(order, ['first-start', 'first-end', 'second-start', 'second-end'])
+    assert.deepEqual(order, [
+      'first-start',
+      'first-end',
+      'second-start',
+      'second-end'
+    ])
   })
 })
 
 describe('stale-lock timeout', () => {
   test('withLock rejects with LockTimeoutError naming the file, and fn never runs', async () => {
-    __configureLockTimingForTests({ timeoutMs: 200, pollInitialMs: 10, pollMaxMs: 20 })
+    __configureLockTimingForTests({
+      timeoutMs: 200,
+      pollInitialMs: 10,
+      pollMaxMs: 20
+    })
     // Simulate a lock orphaned by a killed process.
     await writeFile(lockPath(), 'pid=1\nstarted=1970-01-01T00:00:00.000Z\n')
 
@@ -123,7 +145,10 @@ describe('stale-lock timeout', () => {
       }),
       (error: unknown) => {
         assert.ok(error instanceof LockTimeoutError)
-        assert.equal((error as InstanceType<typeof LockTimeoutError>).lockFile, lockPath())
+        assert.equal(
+          (error as InstanceType<typeof LockTimeoutError>).lockFile,
+          lockPath()
+        )
         return true
       }
     )

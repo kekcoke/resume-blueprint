@@ -59,7 +59,10 @@ export const GLOBAL_DEFAULTS: ResolvedDocumentConfig = {
  * floor with room for that overrun, and are the one place golden `.tex` output
  * is knowingly allowed to change by this feature (see F3's exit criteria).
  */
-export const TEMPLATE_DEFAULTS: Record<(typeof TEMPLATE_IDS)[number], Partial<ResolvedDocumentConfig>> = {
+export const TEMPLATE_DEFAULTS: Record<
+  (typeof TEMPLATE_IDS)[number],
+  Partial<ResolvedDocumentConfig>
+> = {
   1: {
     // a4paper was already the hardcoded value; margin rises from 0.8in to
     // clear the floor despite the header's -40pt/-18pt negative spacing.
@@ -159,21 +162,38 @@ export function resolveDocumentConfig(
   templateId: number,
   config: DocumentConfig = {}
 ): ResolvedDocumentConfig {
-  const template = (TEMPLATE_DEFAULTS as Record<number, Partial<ResolvedDocumentConfig> | undefined>)[
-    templateId
-  ]
+  const template = (
+    TEMPLATE_DEFAULTS as Record<
+      number,
+      Partial<ResolvedDocumentConfig> | undefined
+    >
+  )[templateId]
 
   return {
-    fontFamily: config.fontFamily ?? template?.fontFamily ?? GLOBAL_DEFAULTS.fontFamily,
+    fontFamily:
+      config.fontFamily ?? template?.fontFamily ?? GLOBAL_DEFAULTS.fontFamily,
     fontSize: config.fontSize ?? template?.fontSize ?? GLOBAL_DEFAULTS.fontSize,
     paper: config.paper ?? template?.paper ?? GLOBAL_DEFAULTS.paper,
     margin: config.margin ?? template?.margin ?? GLOBAL_DEFAULTS.margin,
-    lineSpacing: config.lineSpacing ?? template?.lineSpacing ?? GLOBAL_DEFAULTS.lineSpacing,
-    sectionSpacing: config.sectionSpacing ?? template?.sectionSpacing ?? GLOBAL_DEFAULTS.sectionSpacing,
-    bulletSpacing: config.bulletSpacing ?? template?.bulletSpacing ?? GLOBAL_DEFAULTS.bulletSpacing,
+    lineSpacing:
+      config.lineSpacing ??
+      template?.lineSpacing ??
+      GLOBAL_DEFAULTS.lineSpacing,
+    sectionSpacing:
+      config.sectionSpacing ??
+      template?.sectionSpacing ??
+      GLOBAL_DEFAULTS.sectionSpacing,
+    bulletSpacing:
+      config.bulletSpacing ??
+      template?.bulletSpacing ??
+      GLOBAL_DEFAULTS.bulletSpacing,
     accentColor: config.accentColor ?? template?.accentColor,
-    contactLayout: config.contactLayout ?? template?.contactLayout ?? GLOBAL_DEFAULTS.contactLayout,
-    linkStyle: config.linkStyle ?? template?.linkStyle ?? GLOBAL_DEFAULTS.linkStyle
+    contactLayout:
+      config.contactLayout ??
+      template?.contactLayout ??
+      GLOBAL_DEFAULTS.contactLayout,
+    linkStyle:
+      config.linkStyle ?? template?.linkStyle ?? GLOBAL_DEFAULTS.linkStyle
   }
 }
 

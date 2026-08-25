@@ -3,7 +3,11 @@ import { WHITESPACE } from './constants.js'
 import { breakableUrl, profileLinks } from './profiles.js'
 import { certificateLine, defaultCertificatesSection } from './certificates.js'
 import { nfssFontPreamble } from './fonts.js'
-import type { FormValues, GeneratorWithSummary, ResolvedDocumentConfig } from '../types.js'
+import type {
+  FormValues,
+  GeneratorWithSummary,
+  ResolvedDocumentConfig
+} from '../types.js'
 
 const generator: GeneratorWithSummary = {
   profileSection(basics, config) {
@@ -12,13 +16,16 @@ const generator: GeneratorWithSummary = {
     }
 
     const { name, email, phone = '', location = {}, website, profiles } = basics
-    const websiteLine = website ? `\\href{${website}}{${breakableUrl(website)}}` : ''
+    const websiteLine = website
+      ? `\\href{${website}}{${breakableUrl(website)}}`
+      : ''
 
     // mcdowellcv's \address/\contacts macros take one free-text argument
     // each — the class doesn't stack the lines itself, this template's own
     // `\linebreak` joins do. 'stacked' (the recorded default) keeps that;
     // an explicit 'row' override switches the join separator instead.
-    const itemSeparator = config.contactLayout === 'row' ? ' | ' : ' \\linebreak '
+    const itemSeparator =
+      config.contactLayout === 'row' ? ' | ' : ' \\linebreak '
 
     let addressLine = ''
     let contactsLine = ''
@@ -29,7 +36,9 @@ const generator: GeneratorWithSummary = {
       addressLine = `\\address{${location.address || phone}}`
     }
 
-    const contacts = [email, websiteLine, ...profileLinks(profiles)].filter(Boolean)
+    const contacts = [email, websiteLine, ...profileLinks(profiles)].filter(
+      Boolean
+    )
 
     if (contacts.length) {
       contactsLine = `\\contacts{${contacts.join(itemSeparator)}}`
@@ -115,8 +124,8 @@ const generator: GeneratorWithSummary = {
 
         return stripIndent`
           \\begin{cvsubsection}{${location || ''}}{${institution || ''}}{${
-          dateRange || ''
-        }}
+            dateRange || ''
+          }}
             ${degreeBlock}
           \\end{cvsubsection}
         `
@@ -166,8 +175,8 @@ const generator: GeneratorWithSummary = {
 
         return stripIndent`
           \\begin{cvsubsection}{${position || ''}}{${name || ''}}{${
-          dateRange || ''
-        }}
+            dateRange || ''
+          }}
             ${location || ''}
             ${summary ? `\\par ${summary}` : ''}
             ${highlightLines || ''}
@@ -334,7 +343,11 @@ function template8(values: FormValues, config: ResolvedDocumentConfig) {
   // second options-bearing `\usepackage[...]{geometry}` — see template4's
   // comment for the confirmed "Option clash" this avoids.
   const geometryOptions = [
-    values.document.paper !== undefined ? (config.paper === 'a4' ? 'a4paper' : 'letterpaper') : '',
+    values.document.paper !== undefined
+      ? config.paper === 'a4'
+        ? 'a4paper'
+        : 'letterpaper'
+      : '',
     values.document.margin !== undefined ? `margin=${config.margin}` : ''
   ].filter(Boolean)
   const geometryLines = geometryOptions.length
@@ -342,8 +355,12 @@ function template8(values: FormValues, config: ResolvedDocumentConfig) {
     : []
   const extraLines = [
     ...geometryLines,
-    config.lineSpacing !== 1.0 ? `\\linespread{${config.lineSpacing}}\\selectfont` : '',
-    config.linkStyle === 'colored' ? '\\hypersetup{colorlinks=true,allcolors=blue}' : '',
+    config.lineSpacing !== 1.0
+      ? `\\linespread{${config.lineSpacing}}\\selectfont`
+      : '',
+    config.linkStyle === 'colored'
+      ? '\\hypersetup{colorlinks=true,allcolors=blue}'
+      : '',
     // mcdowellcv.cls loads `fontspec` but never calls it (its `calibri`
     // class option only ever redefined an unused \mainfontface macro) —
     // confirmed by compiling: re-declaring `fontspec` here and adding
@@ -396,7 +413,11 @@ function template8(values: FormValues, config: ResolvedDocumentConfig) {
               return generator.workSection(values.work, headings.work, config)
 
             case 'skills':
-              return generator.skillsSection(values.skills, headings.skills, config)
+              return generator.skillsSection(
+                values.skills,
+                headings.skills,
+                config
+              )
 
             case 'projects':
               return generator.projectsSection(
@@ -406,7 +427,11 @@ function template8(values: FormValues, config: ResolvedDocumentConfig) {
               )
 
             case 'awards':
-              return generator.awardsSection(values.awards, headings.awards, config)
+              return generator.awardsSection(
+                values.awards,
+                headings.awards,
+                config
+              )
 
             case 'certificates':
               return (
@@ -415,7 +440,11 @@ function template8(values: FormValues, config: ResolvedDocumentConfig) {
                   headings.certificates,
                   config
                 ) ??
-                defaultCertificatesSection(values.certificates, headings.certificates, config)
+                defaultCertificatesSection(
+                  values.certificates,
+                  headings.certificates,
+                  config
+                )
               )
 
             default:

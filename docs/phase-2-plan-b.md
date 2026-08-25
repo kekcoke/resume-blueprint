@@ -29,28 +29,28 @@ discipline — but core stays on `zod@3.25.76` and nothing in Phase 1 is modifie
 
 ### Decisions
 
-| Decision | Choice |
-|---|---|
-| MCP SDK | `@modelcontextprotocol/sdk` **1.30.0** (V1) |
-| zod | **Core untouched at 3.25.76**, one version workspace-wide |
-| Store backend | Git-backed JSON files |
-| Edit API | JSON Merge Patch + typed array helpers |
-| Sequencing | Store → MCP → HTTP, gated, **one session per gate** |
+| Decision      | Choice                                                    |
+| ------------- | --------------------------------------------------------- |
+| MCP SDK       | `@modelcontextprotocol/sdk` **1.30.0** (V1)               |
+| zod           | **Core untouched at 3.25.76**, one version workspace-wide |
+| Store backend | Git-backed JSON files                                     |
+| Edit API      | JSON Merge Patch + typed array helpers                    |
+| Sequencing    | Store → MCP → HTTP, gated, **one session per gate**       |
 
 ### Why V1 works here (verified against npm and the shipped types)
 
-- V1's zod peer range is **`^3.25 || ^4.0`**, declared as a *required* (non-optional) peer
+- V1's zod peer range is **`^3.25 || ^4.0`**, declared as a _required_ (non-optional) peer
   dependency. Core's `zod@3.25.76` satisfies `^3.25` exactly, so the workspace's existing
   zod is used directly — **no second copy, no nested resolution**.
 - V1 is **actively maintained**: 1.30.0 published 2026-07-27. Not deprecated. It remains
   npm's `latest` tag at ~51.7M weekly downloads, against V2's ~2.2M — far more
   documentation and examples to draw on.
 - `@modelcontextprotocol/server-legacy` is **not** a rename of V1. It is frozen SSE and
-  OAuth Authorization Server helpers belonging to the *V2* line. V1's status is unaffected
+  OAuth Authorization Server helpers belonging to the _V2_ line. V1's status is unaffected
   by it.
 - From the shipped 1.30.0 type definitions, `registerTool`'s config accepts
   `inputSchema?: InputArgs` where `InputArgs extends undefined | ZodRawShapeCompat |
-  AnySchema` — **a raw shape or a full `z.object()`, both valid**. It also exposes
+AnySchema` — **a raw shape or a full `z.object()`, both valid**. It also exposes
   `outputSchema` and `annotations`.
 
 ### The win beyond avoiding the migration
@@ -64,13 +64,13 @@ import { SectionSchema } from '@resume-blueprint/core'
 
 const SectionAppendInput = z.object({
   id: z.string(),
-  section: SectionSchema,        // the same enum that validates persistence
+  section: SectionSchema, // the same enum that validates persistence
   item: z.record(z.unknown())
 })
 ```
 
 The agent-facing tool contract is derived from the schema that validates storage, so the
-two cannot drift. Plan A gets this too, via zod 4 everywhere — it is the *rejected*
+two cannot drift. Plan A gets this too, via zod 4 everywhere — it is the _rejected_
 "isolated zod 4 in packages/mcp" variant that loses it. Noted here so nobody reintroduces
 a version split later thinking it is free.
 
@@ -84,7 +84,7 @@ stdio server will not use. For a local-first tool that is disk and install time,
 runtime risk, but it is real and it is the price.
 
 **Migration debt.** V2 is the direction of travel. If V1 is eventually retired, the move
-is contained to `packages/mcp` *plus* the zod 4 migration deferred here — Plan A becomes
+is contained to `packages/mcp` _plus_ the zod 4 migration deferred here — Plan A becomes
 the migration path, later, with the store and HTTP adapter already proven.
 
 > **Half of this debt is now settled, and the two halves turned out to be unrelated.** F13
@@ -188,18 +188,18 @@ dependency; a real `~/.resume-blueprint` git log is inspectable by hand.
 
 stdio MCP server on `@modelcontextprotocol/sdk` 1.30.0, using the workspace's zod 3.
 
-| Tool | Purpose |
-|---|---|
-| `resume_list` | List blueprints with id, name, last modified |
-| `resume_get` | Full blueprint + rev |
-| `resume_create` | New blueprint, optionally seeded |
-| `resume_patch` | Merge patch |
-| `resume_section_append` / `_update` / `_remove` | Array-aware section edits |
-| `resume_validate` | Validate without writing; readable errors |
-| `resume_render` | Render to PDF → `{ path, pageCount, byteSize }` |
-| `resume_tex` | LaTeX source (text is legitimately useful to an agent) |
-| `resume_history` / `resume_diff` / `resume_revert` | Version control |
-| `resume_templates` | List the nine template IDs |
+| Tool                                               | Purpose                                                |
+| -------------------------------------------------- | ------------------------------------------------------ |
+| `resume_list`                                      | List blueprints with id, name, last modified           |
+| `resume_get`                                       | Full blueprint + rev                                   |
+| `resume_create`                                    | New blueprint, optionally seeded                       |
+| `resume_patch`                                     | Merge patch                                            |
+| `resume_section_append` / `_update` / `_remove`    | Array-aware section edits                              |
+| `resume_validate`                                  | Validate without writing; readable errors              |
+| `resume_render`                                    | Render to PDF → `{ path, pageCount, byteSize }`        |
+| `resume_tex`                                       | LaTeX source (text is legitimately useful to an agent) |
+| `resume_history` / `resume_diff` / `resume_revert` | Version control                                        |
+| `resume_templates`                                 | List the nine template IDs                             |
 
 **V1 wiring**
 
@@ -215,7 +215,7 @@ server.registerTool(
   {
     title: 'Get blueprint',
     description: 'Fetch a blueprint and its current revision.',
-    inputSchema: z.object({ id: z.string() }),   // full z.object(); raw shape also valid
+    inputSchema: z.object({ id: z.string() }), // full z.object(); raw shape also valid
     annotations: { readOnlyHint: true }
   },
   async ({ id }) => {
@@ -331,7 +331,7 @@ Per-gate checklist:
 - [ ] Prior gates' tests pass **unmodified**; a changed old test means changed behavior, which needs a decision
 - [ ] The injection fixture is exercised through the new surface
 - [ ] Manual smoke test performed (real MCP client / real curl), not just unit tests
-- [ ] Committed with a conventional-commit message explaining *why*
+- [ ] Committed with a conventional-commit message explaining _why_
 
 ---
 
@@ -345,7 +345,7 @@ parent. The retired upstream clone sits beside it at `~/Desktop/tools/resumake.i
 starting from the parent puts two near-identical template sets in scope and invites
 confusion between the vendored originals and the fixed copies.
 
-**Open narrowly.** *"Read CLAUDE.md and docs/phase-2-plan-b.md, then start Gate 1"* beats
+**Open narrowly.** _"Read CLAUDE.md and docs/phase-2-plan-b.md, then start Gate 1"_ beats
 "look at the project", which invites an expensive crawl through 4.5MB of font binaries.
 
 **Commit at each gate**, so any session can be abandoned without losing work.

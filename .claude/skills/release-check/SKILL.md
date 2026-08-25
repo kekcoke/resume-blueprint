@@ -38,7 +38,7 @@ Run in order, and stop at the first failure rather than collecting them:
    show no commits from the run, and `git -C ~/.resume-blueprint status` must be
    clean. The harness mints a temp `RESUME_BLUEPRINT_HOME` per script and refuses
    to start without one, but this is the check that proves it worked. If the real
-   store *did* pick up commits, stop and report it — that is a harness defect
+   store _did_ pick up commits, stop and report it — that is a harness defect
    with real consequences for the user's data.
 7. **Collection freshness.** If `qa/http/*.sh` changed, `npm run qa:collection`
    and confirm `qa/http/collection.json` has no uncommitted diff. It is generated

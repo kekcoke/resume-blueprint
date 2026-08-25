@@ -7,22 +7,40 @@ import { dirname, resolve } from 'node:path'
 import { analyzeCoverage } from '../dist/index.js'
 import type { CoverageReport, MissingTerm } from '../dist/coverage.js'
 
-const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'fixtures')
+const FIXTURES = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  'fixtures'
+)
 
 /** A blueprint with something in every section the suggestions can name. */
 const RESUME = {
-  sections: ['profile', 'education', 'work', 'skills', 'projects', 'certificates'],
+  sections: [
+    'profile',
+    'education',
+    'work',
+    'skills',
+    'projects',
+    'certificates'
+  ],
   basics: { name: 'Ada Lovelace', label: 'Platform Engineer' },
   education: [{ institution: 'MIT', studyType: 'BSc', area: 'Mathematics' }],
   work: [
     {
       name: 'Acme',
       position: 'Engineer',
-      highlights: ['Operated distributed systems on Kubernetes', 'Owned the microservice fleet']
+      highlights: [
+        'Operated distributed systems on Kubernetes',
+        'Owned the microservice fleet'
+      ]
     }
   ],
   skills: [{ name: 'Platform', keywords: ['Kubernetes', 'Terraform', 'Go'] }],
-  projects: [{ name: 'Analytical Engine', description: 'A mechanical computer.' }],
+  projects: [
+    { name: 'Analytical Engine', description: 'A mechanical computer.' }
+  ],
   certificates: [{ name: 'CKA', issuer: 'CNCF', date: '2024' }]
 }
 
@@ -30,7 +48,10 @@ function terms(report: CoverageReport): string[] {
   return [...report.matched, ...report.missing].map((t) => t.term)
 }
 
-function missing(report: CoverageReport, term: string): MissingTerm | undefined {
+function missing(
+  report: CoverageReport,
+  term: string
+): MissingTerm | undefined {
   return report.missing.find((t) => t.term.toLowerCase() === term.toLowerCase())
 }
 
@@ -48,7 +69,10 @@ describe('analyzeCoverage — term extraction', () => {
     const report = analyzeCoverage({ sections: [] }, jd)
     const ranked = report.missing.map((t) => t.term.toLowerCase())
 
-    assert.ok(ranked.indexOf('kubernetes') < ranked.indexOf('terraform'), ranked.join(', '))
+    assert.ok(
+      ranked.indexOf('kubernetes') < ranked.indexOf('terraform'),
+      ranked.join(', ')
+    )
     const kubernetes = missing(report, 'Kubernetes')!
     assert.equal(kubernetes.count, 3)
     assert.equal(kubernetes.firstIndex, 0)
@@ -69,11 +93,26 @@ describe('analyzeCoverage — term extraction', () => {
   })
 
   test('drops stopwords, JD boilerplate, and bare numbers', () => {
-    const jd = 'The ideal candidate has 5 years of experience and strong skills. Responsibilities include Rust.'
-    const found = terms(analyzeCoverage({ sections: [] }, jd)).map((t) => t.toLowerCase())
+    const jd =
+      'The ideal candidate has 5 years of experience and strong skills. Responsibilities include Rust.'
+    const found = terms(analyzeCoverage({ sections: [] }, jd)).map((t) =>
+      t.toLowerCase()
+    )
 
-    for (const noise of ['the', 'and', 'candidate', 'experience', 'skills', 'responsibilities', '5', 'years']) {
-      assert.ok(!found.includes(noise), `${noise} should not be a term; got ${found.join(', ')}`)
+    for (const noise of [
+      'the',
+      'and',
+      'candidate',
+      'experience',
+      'skills',
+      'responsibilities',
+      '5',
+      'years'
+    ]) {
+      assert.ok(
+        !found.includes(noise),
+        `${noise} should not be a term; got ${found.join(', ')}`
+      )
     }
     assert.ok(found.includes('rust'))
   })
@@ -91,16 +130,26 @@ describe('analyzeCoverage — term extraction', () => {
     // Three overlapping trigrams, one occurrence each, identical rank. Only the
     // best-ranked survives -- see dropOverlapping.
     const jd = 'AWS Certified Solutions Architect certification preferred.'
-    const trigrams = terms(analyzeCoverage({ sections: [] }, jd)).filter((t) => t.split(' ').length === 3)
+    const trigrams = terms(analyzeCoverage({ sections: [] }, jd)).filter(
+      (t) => t.split(' ').length === 3
+    )
 
     assert.equal(trigrams.length, 1, trigrams.join(' | '))
   })
 
   test('does not split on an apostrophe', () => {
-    const found = terms(analyzeCoverage({ sections: [] }, "Bachelor's degree in Computer Science required."))
+    const found = terms(
+      analyzeCoverage(
+        { sections: [] },
+        "Bachelor's degree in Computer Science required."
+      )
+    )
 
     assert.ok(found.includes("Bachelor's degree"), found.join(' | '))
-    assert.ok(!found.some((t) => t.startsWith('s ')), `orphaned "s" leaked: ${found.join(' | ')}`)
+    assert.ok(
+      !found.some((t) => t.startsWith('s ')),
+      `orphaned "s" leaked: ${found.join(' | ')}`
+    )
   })
 })
 
@@ -111,14 +160,24 @@ describe('analyzeCoverage — matching', () => {
 
     assert.ok(kubernetes, 'Kubernetes should be matched')
     assert.deepEqual(kubernetes.sections, ['work', 'skills'])
-    assert.equal(kubernetes.matchedAs, undefined, 'an exact hit needs no alternative wording')
+    assert.equal(
+      kubernetes.matchedAs,
+      undefined,
+      'an exact hit needs no alternative wording'
+    )
   })
 
   test('folds plurals, and says so via matchedAs', () => {
-    const report = analyzeCoverage(RESUME, 'Microservices, Kubernetes, and Terraform.')
+    const report = analyzeCoverage(
+      RESUME,
+      'Microservices, Kubernetes, and Terraform.'
+    )
     const term = report.matched.find((t) => t.term === 'Microservices')
 
-    assert.ok(term, `microservices should match "microservice"; missing: ${report.missing.map((m) => m.term)}`)
+    assert.ok(
+      term,
+      `microservices should match "microservice"; missing: ${report.missing.map((m) => m.term)}`
+    )
     assert.deepEqual(term.sections, ['work'])
     assert.equal(term.matchedAs, 'microservice')
   })
@@ -126,14 +185,19 @@ describe('analyzeCoverage — matching', () => {
   test('matches a phrase only when the resume has it adjacent', () => {
     const present = analyzeCoverage(RESUME, 'Distributed systems at scale.')
     assert.ok(
-      present.matched.some((t) => t.term.toLowerCase() === 'distributed systems'),
+      present.matched.some(
+        (t) => t.term.toLowerCase() === 'distributed systems'
+      ),
       'the resume says "distributed systems" verbatim'
     )
 
     // "Terraform" and "Go" are both in skills, but a comma separates them
     // there, so the pair is never adjacent. Said twice in the posting so the
     // bigram outlives dropRedundant and reaches the report on its own.
-    const absent = analyzeCoverage(RESUME, 'Terraform Go tooling. Also Terraform Go pipelines.')
+    const absent = analyzeCoverage(
+      RESUME,
+      'Terraform Go tooling. Also Terraform Go pipelines.'
+    )
     assert.ok(
       absent.missing.some((t) => t.term === 'Terraform Go'),
       `adjacency is required; matched: ${absent.matched.map((m) => m.term)}`
@@ -145,10 +209,17 @@ describe('analyzeCoverage — matching', () => {
     // headings precisely so a posting's "skills" cannot match a label the
     // applicant never wrote -- here proven with a heading override, since the
     // word itself is JD boilerplate.
-    const blueprint = { ...RESUME, headings: { skills: 'Terraform' }, skills: [{ name: 'Cloud', keywords: ['AWS'] }] }
+    const blueprint = {
+      ...RESUME,
+      headings: { skills: 'Terraform' },
+      skills: [{ name: 'Cloud', keywords: ['AWS'] }]
+    }
     const report = analyzeCoverage(blueprint, 'Terraform is required.')
 
-    assert.ok(missing(report, 'Terraform'), 'the heading must not count as content')
+    assert.ok(
+      missing(report, 'Terraform'),
+      'the heading must not count as content'
+    )
   })
 
   test('coverage is the share of reported terms already present', () => {
@@ -163,41 +234,65 @@ describe('analyzeCoverage — matching', () => {
     const skills = report.sections.find((s) => s.section === 'skills')
 
     assert.equal(skills?.matched, 2)
-    assert.equal(report.sections.find((s) => s.section === 'projects')?.matched, 0)
+    assert.equal(
+      report.sections.find((s) => s.section === 'projects')?.matched,
+      0
+    )
   })
 })
 
 describe('analyzeCoverage — placement suggestions', () => {
   test('sends a credential to certificates and a degree to education', () => {
-    const report = analyzeCoverage(RESUME, 'AWS Certified Developer certification. PhD preferred.')
+    const report = analyzeCoverage(
+      RESUME,
+      'AWS Certified Developer certification. PhD preferred.'
+    )
 
     const credential = report.missing.find((t) => /certified/i.test(t.term))
     assert.equal(credential?.suggestions[0].section, 'certificates')
     assert.ok(credential?.suggestions[0].reason.length)
 
     const degree = report.missing.find((t) => /phd/i.test(t.term))
-    assert.deepEqual(degree?.suggestions.map((s) => s.section), ['education'])
+    assert.deepEqual(
+      degree?.suggestions.map((s) => s.section),
+      ['education']
+    )
   })
 
   test('sends a single-token term to skills and a phrase to work', () => {
-    const report = analyzeCoverage(RESUME, 'Rust required. Incident response is expected.')
+    const report = analyzeCoverage(
+      RESUME,
+      'Rust required. Incident response is expected.'
+    )
 
     assert.equal(missing(report, 'Rust')?.suggestions[0].section, 'skills')
-    assert.equal(missing(report, 'Incident response')?.suggestions[0].section, 'work')
+    assert.equal(
+      missing(report, 'Incident response')?.suggestions[0].section,
+      'work'
+    )
   })
 
   test('suggests only sections the blueprint actually renders', () => {
     const trimmed = { ...RESUME, sections: ['profile', 'work'] }
-    const report = analyzeCoverage(trimmed, 'AWS Certified Developer certification. Rust required.')
+    const report = analyzeCoverage(
+      trimmed,
+      'AWS Certified Developer certification. Rust required.'
+    )
 
     for (const term of report.missing) {
       for (const suggestion of term.suggestions) {
-        assert.ok(['profile', 'work'].includes(suggestion.section), `leaked ${suggestion.section}`)
+        assert.ok(
+          ['profile', 'work'].includes(suggestion.section),
+          `leaked ${suggestion.section}`
+        )
       }
     }
     // Every suggestion for a credential named certificates or skills, and this
     // blueprint renders neither -- an empty list, not a wrong one.
-    assert.deepEqual(report.missing.find((t) => /certified/i.test(t.term))?.suggestions, [])
+    assert.deepEqual(
+      report.missing.find((t) => /certified/i.test(t.term))?.suggestions,
+      []
+    )
   })
 })
 
@@ -210,7 +305,9 @@ describe('analyzeCoverage — contract', () => {
   })
 
   test('throws a ZodError on an invalid blueprint, same as blueprintToText', () => {
-    assert.throws(() => analyzeCoverage({ selectedTemplate: 'not-a-number' }, 'Rust.'))
+    assert.throws(() =>
+      analyzeCoverage({ selectedTemplate: 'not-a-number' }, 'Rust.')
+    )
   })
 
   test('reports an empty posting rather than throwing', () => {
@@ -231,7 +328,8 @@ describe('analyzeCoverage — contract', () => {
   })
 
   test('maxTerms caps the report and says how much was left out', () => {
-    const jd = 'Rust, Elixir, Haskell, Scala, Kafka, Erlang, Clojure, Nim, Zig, Crystal.'
+    const jd =
+      'Rust, Elixir, Haskell, Scala, Kafka, Erlang, Clojure, Nim, Zig, Crystal.'
     const report = analyzeCoverage(RESUME, jd, { maxTerms: 3 })
 
     assert.equal(report.matched.length + report.missing.length, 3)
@@ -243,11 +341,15 @@ describe('analyzeCoverage — contract', () => {
     // output size should not get a validation failure it cannot interpret.
     const jd = 'Rust, Elixir, Haskell, Scala, Kafka.'
     assert.equal(analyzeCoverage(RESUME, jd, { maxTerms: 0 }).missing.length, 1)
-    assert.equal(analyzeCoverage(RESUME, jd, { maxTerms: 10_000 }).missing.length, 5)
+    assert.equal(
+      analyzeCoverage(RESUME, jd, { maxTerms: 10_000 }).missing.length,
+      5
+    )
   })
 
   test('is deterministic across runs', () => {
-    const jd = 'Kubernetes, Rust, distributed systems, Terraform, and incident response.'
+    const jd =
+      'Kubernetes, Rust, distributed systems, Terraform, and incident response.'
     assert.deepEqual(analyzeCoverage(RESUME, jd), analyzeCoverage(RESUME, jd))
   })
 })
@@ -256,7 +358,10 @@ describe('analyzeCoverage — no sanitization on this path', () => {
   test('LaTeX specials in the posting come back exactly as written', () => {
     // The counterpart to text.test.ts's injection case: this report reaches a
     // reader, not a TeX engine, so escapeLatex would corrupt what it shows.
-    const report = analyzeCoverage(RESUME, 'Experience with R&D tooling and \\input{/etc/passwd} pipelines.')
+    const report = analyzeCoverage(
+      RESUME,
+      'Experience with R&D tooling and \\input{/etc/passwd} pipelines.'
+    )
     const found = terms(report).join(' ')
 
     assert.match(found, /R&D/)
@@ -268,9 +373,16 @@ describe('analyzeCoverage — no sanitization on this path', () => {
     const raw = await readFile(resolve(FIXTURES, 'injection.json'), 'utf8')
     const injection = JSON.parse(raw)
 
-    const report = analyzeCoverage(injection, 'We need \\textbf{leadership} and R&D depth.')
+    const report = analyzeCoverage(
+      injection,
+      'We need \\textbf{leadership} and R&D depth.'
+    )
 
-    assert.equal(JSON.stringify(injection), JSON.stringify(JSON.parse(raw)), 'fixture must not be mutated')
+    assert.equal(
+      JSON.stringify(injection),
+      JSON.stringify(JSON.parse(raw)),
+      'fixture must not be mutated'
+    )
     assert.doesNotMatch(JSON.stringify(report), /textbackslash/)
   })
 })

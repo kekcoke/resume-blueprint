@@ -44,7 +44,9 @@ interface Harness {
 }
 
 /** Starts a server on an ephemeral port with the given env overrides applied for its lifetime. */
-async function startServer(envOverrides: Record<string, string | undefined>): Promise<Harness> {
+async function startServer(
+  envOverrides: Record<string, string | undefined>
+): Promise<Harness> {
   const saved: Record<string, string | undefined> = {}
   for (const key of Object.keys(envOverrides)) {
     saved[key] = process.env[key]
@@ -65,7 +67,9 @@ async function startServer(envOverrides: Record<string, string | undefined>): Pr
   const baseUrl = `http://${config.bind}:${address.port}`
 
   const close = async (): Promise<void> => {
-    await new Promise<void>((resolvePromise) => server.close(() => resolvePromise()))
+    await new Promise<void>((resolvePromise) =>
+      server.close(() => resolvePromise())
+    )
     for (const key of Object.keys(saved)) {
       if (saved[key] === undefined) delete process.env[key]
       else process.env[key] = saved[key]
@@ -89,7 +93,10 @@ afterEach(async () => {
 
 describe('POST /render', () => {
   test('renders a valid blueprint to PDF bytes', async () => {
-    harness = await startServer({ RESUME_BLUEPRINT_HOME: dir, RESUME_BLUEPRINT_PORT: '0' })
+    harness = await startServer({
+      RESUME_BLUEPRINT_HOME: dir,
+      RESUME_BLUEPRINT_PORT: '0'
+    })
     const sample = await readFixture('sample.json')
 
     const res = await fetch(`${harness.baseUrl}/render`, {
@@ -107,12 +114,18 @@ describe('POST /render', () => {
   // body like every other field and is resolved by the same
   // renderBlueprint() call every other route already uses.
   test('a document block in the body renders without a route change', async () => {
-    harness = await startServer({ RESUME_BLUEPRINT_HOME: dir, RESUME_BLUEPRINT_PORT: '0' })
+    harness = await startServer({
+      RESUME_BLUEPRINT_HOME: dir,
+      RESUME_BLUEPRINT_PORT: '0'
+    })
     const sample = await readFixture('sample.json')
 
     const res = await fetch(`${harness.baseUrl}/render`, {
       method: 'POST',
-      body: JSON.stringify({ ...sample, document: { fontSize: 12, margin: '1in' } })
+      body: JSON.stringify({
+        ...sample,
+        document: { fontSize: 12, margin: '1in' }
+      })
     })
 
     assert.equal(res.status, 200)
@@ -123,7 +136,10 @@ describe('POST /render', () => {
 
 describe('CRUD + delete round-trip', () => {
   test('create, get, patch, list, delete', async () => {
-    harness = await startServer({ RESUME_BLUEPRINT_HOME: dir, RESUME_BLUEPRINT_PORT: '0' })
+    harness = await startServer({
+      RESUME_BLUEPRINT_HOME: dir,
+      RESUME_BLUEPRINT_PORT: '0'
+    })
 
     const createRes = await fetch(`${harness.baseUrl}/blueprints`, {
       method: 'POST',
@@ -153,7 +169,9 @@ describe('CRUD + delete round-trip', () => {
     const list = (await listRes.json()) as Array<{ id: string }>
     assert.ok(list.some((b) => b.id === 'x'))
 
-    const deleteRes = await fetch(`${harness.baseUrl}/blueprints/x`, { method: 'DELETE' })
+    const deleteRes = await fetch(`${harness.baseUrl}/blueprints/x`, {
+      method: 'DELETE'
+    })
     assert.equal(deleteRes.status, 200)
     const deleted = (await deleteRes.json()) as { id: string; rev: string }
     assert.equal(deleted.id, 'x')
@@ -165,7 +183,10 @@ describe('CRUD + delete round-trip', () => {
 
 describe('error responses', () => {
   test('malformed JSON body returns 400 with readable error', async () => {
-    harness = await startServer({ RESUME_BLUEPRINT_HOME: dir, RESUME_BLUEPRINT_PORT: '0' })
+    harness = await startServer({
+      RESUME_BLUEPRINT_HOME: dir,
+      RESUME_BLUEPRINT_PORT: '0'
+    })
 
     const res = await fetch(`${harness.baseUrl}/blueprints`, {
       method: 'POST',
@@ -177,7 +198,10 @@ describe('error responses', () => {
   })
 
   test('invalid blueprint returns 400 with validation error text', async () => {
-    harness = await startServer({ RESUME_BLUEPRINT_HOME: dir, RESUME_BLUEPRINT_PORT: '0' })
+    harness = await startServer({
+      RESUME_BLUEPRINT_HOME: dir,
+      RESUME_BLUEPRINT_PORT: '0'
+    })
 
     const res = await fetch(`${harness.baseUrl}/blueprints`, {
       method: 'POST',
@@ -223,7 +247,10 @@ describe('auth', () => {
 
 describe('bind', () => {
   test('defaults to loopback', async () => {
-    harness = await startServer({ RESUME_BLUEPRINT_HOME: dir, RESUME_BLUEPRINT_PORT: '0' })
+    harness = await startServer({
+      RESUME_BLUEPRINT_HOME: dir,
+      RESUME_BLUEPRINT_PORT: '0'
+    })
     const address = harness.server.address() as AddressInfo
     assert.equal(address.address, '127.0.0.1')
   })
@@ -231,7 +258,10 @@ describe('bind', () => {
 
 describe('security', () => {
   test('POST /render with injection fixture is stateless and neutralized', async () => {
-    harness = await startServer({ RESUME_BLUEPRINT_HOME: dir, RESUME_BLUEPRINT_PORT: '0' })
+    harness = await startServer({
+      RESUME_BLUEPRINT_HOME: dir,
+      RESUME_BLUEPRINT_PORT: '0'
+    })
     const injection = await readFixture('injection.json')
 
     const before = await listFilesRecursive(dir)
@@ -252,19 +282,28 @@ describe('security', () => {
 
 describe('resource limits', () => {
   test('body over 5MB returns 413', async () => {
-    harness = await startServer({ RESUME_BLUEPRINT_HOME: dir, RESUME_BLUEPRINT_PORT: '0' })
+    harness = await startServer({
+      RESUME_BLUEPRINT_HOME: dir,
+      RESUME_BLUEPRINT_PORT: '0'
+    })
 
     const big = Buffer.alloc(6 * 1024 * 1024, 'a').toString()
     const res = await fetch(`${harness.baseUrl}/blueprints`, {
       method: 'POST',
-      body: JSON.stringify({ id: 'big', blueprint: { basics: { summary: big } } })
+      body: JSON.stringify({
+        id: 'big',
+        blueprint: { basics: { summary: big } }
+      })
     })
     assert.equal(res.status, 413)
     await res.text() // drain the body, matching every other test in this file
   })
 
   test('deeply nested patch is rejected cleanly, not a crash', async () => {
-    harness = await startServer({ RESUME_BLUEPRINT_HOME: dir, RESUME_BLUEPRINT_PORT: '0' })
+    harness = await startServer({
+      RESUME_BLUEPRINT_HOME: dir,
+      RESUME_BLUEPRINT_PORT: '0'
+    })
 
     await fetch(`${harness.baseUrl}/blueprints`, {
       method: 'POST',
@@ -288,13 +327,19 @@ describe('resource limits', () => {
 
 describe('render concurrency cap', () => {
   test('excess concurrent renders get 503, the rest still produce valid PDFs', async () => {
-    harness = await startServer({ RESUME_BLUEPRINT_HOME: dir, RESUME_BLUEPRINT_PORT: '0' })
+    harness = await startServer({
+      RESUME_BLUEPRINT_HOME: dir,
+      RESUME_BLUEPRINT_PORT: '0'
+    })
     const sample = await readFixture('sample.json')
 
     const totalRequests = MAX_CONCURRENT_RENDERS + 11 // 15 when the cap is 4
     const responses = await Promise.all(
       Array.from({ length: totalRequests }, () =>
-        fetch(`${harness.baseUrl}/render`, { method: 'POST', body: JSON.stringify(sample) })
+        fetch(`${harness.baseUrl}/render`, {
+          method: 'POST',
+          body: JSON.stringify(sample)
+        })
       )
     )
 
@@ -302,9 +347,19 @@ describe('render concurrency cap', () => {
     const throttled = responses.filter((res) => res.status === 503)
 
     assert.ok(succeeded.length > 0, 'expected at least one 200')
-    assert.ok(throttled.length > 0, 'expected at least one 503 once the cap is exceeded')
-    assert.equal(succeeded.length + throttled.length, totalRequests, 'no other status codes expected')
-    assert.ok(succeeded.length <= totalRequests, 'sanity: cannot succeed more than requested')
+    assert.ok(
+      throttled.length > 0,
+      'expected at least one 503 once the cap is exceeded'
+    )
+    assert.equal(
+      succeeded.length + throttled.length,
+      totalRequests,
+      'no other status codes expected'
+    )
+    assert.ok(
+      succeeded.length <= totalRequests,
+      'sanity: cannot succeed more than requested'
+    )
 
     for (const res of throttled) {
       assert.equal(res.headers.get('retry-after'), '5')
@@ -322,7 +377,10 @@ describe('render concurrency cap', () => {
 
 describe('conflicts', () => {
   test('stale expectedRev on patch returns 409', async () => {
-    harness = await startServer({ RESUME_BLUEPRINT_HOME: dir, RESUME_BLUEPRINT_PORT: '0' })
+    harness = await startServer({
+      RESUME_BLUEPRINT_HOME: dir,
+      RESUME_BLUEPRINT_PORT: '0'
+    })
 
     const createRes = await fetch(`${harness.baseUrl}/blueprints`, {
       method: 'POST',
@@ -338,13 +396,19 @@ describe('conflicts', () => {
 
     const stalePatch = await fetch(`${harness.baseUrl}/blueprints/conf`, {
       method: 'PATCH',
-      body: JSON.stringify({ patch: { basics: { name: 'Second' } }, expectedRev: created.rev })
+      body: JSON.stringify({
+        patch: { basics: { name: 'Second' } },
+        expectedRev: created.rev
+      })
     })
     assert.equal(stalePatch.status, 409)
   })
 
   test('creating a duplicate id returns 409', async () => {
-    harness = await startServer({ RESUME_BLUEPRINT_HOME: dir, RESUME_BLUEPRINT_PORT: '0' })
+    harness = await startServer({
+      RESUME_BLUEPRINT_HOME: dir,
+      RESUME_BLUEPRINT_PORT: '0'
+    })
 
     const first = await fetch(`${harness.baseUrl}/blueprints`, {
       method: 'POST',

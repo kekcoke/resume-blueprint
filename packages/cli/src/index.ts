@@ -74,7 +74,9 @@ async function readRaw(path: string): Promise<string> {
   try {
     return await readFile(path, 'utf8')
   } catch (error) {
-    throw new CliError(`cannot read ${path}: ${(error as NodeJS.ErrnoException).code ?? (error as Error).message}`)
+    throw new CliError(
+      `cannot read ${path}: ${(error as NodeJS.ErrnoException).code ?? (error as Error).message}`
+    )
   }
 }
 
@@ -84,7 +86,9 @@ async function readInput(path: string): Promise<unknown> {
   try {
     return JSON.parse(raw)
   } catch (error) {
-    throw new CliError(`${path === '-' ? 'stdin' : path} is not valid JSON: ${(error as Error).message}`)
+    throw new CliError(
+      `${path === '-' ? 'stdin' : path} is not valid JSON: ${(error as Error).message}`
+    )
   }
 }
 
@@ -100,7 +104,8 @@ class CliError extends Error {}
  */
 function formatCoverage(report: CoverageReport): string {
   const total = report.matched.length + report.missing.length
-  if (!total) return `${report.notes.map((note) => `note: ${note}`).join('\n')}\n`
+  if (!total)
+    return `${report.notes.map((note) => `note: ${note}`).join('\n')}\n`
 
   const lines = [
     `coverage ${Math.round(report.coverage * 100)}%  (${report.matched.length} of ${total} terms present)`,
@@ -112,7 +117,9 @@ function formatCoverage(report: CoverageReport): string {
     lines.push('missing, most prominent first:')
     for (const term of report.missing) {
       const where = term.suggestions[0]?.section ?? '-'
-      lines.push(`  ${term.term.padEnd(width)}  ${String(term.count).padStart(2)}x  -> ${where}`)
+      lines.push(
+        `  ${term.term.padEnd(width)}  ${String(term.count).padStart(2)}x  -> ${where}`
+      )
     }
   } else {
     lines.push('every reported term already appears in the resume.')
@@ -126,7 +133,8 @@ function formatCoverage(report: CoverageReport): string {
     }
   }
 
-  if (report.notes.length) lines.push('', ...report.notes.map((note) => `note: ${note}`))
+  if (report.notes.length)
+    lines.push('', ...report.notes.map((note) => `note: ${note}`))
 
   return `${lines.join('\n')}\n`
 }
@@ -151,7 +159,10 @@ function withTemplate(blueprint: unknown, template?: number): unknown {
  * for what's valid, and an invalid value surfaces as the same
  * formatValidationError output any other bad blueprint field would.
  */
-function withDocument(blueprint: unknown, override: Record<string, unknown>): unknown {
+function withDocument(
+  blueprint: unknown,
+  override: Record<string, unknown>
+): unknown {
   if (Object.keys(override).length === 0) return blueprint
   const bp = blueprint as { document?: Record<string, unknown> }
   return { ...(blueprint as object), document: { ...bp.document, ...override } }
@@ -162,7 +173,8 @@ function withDocument(blueprint: unknown, override: Record<string, unknown>): un
  * silently pass DocumentConfigSchema's numeric clamps untouched. */
 function parseNumberFlag(name: string, raw: string): number {
   const n = Number(raw)
-  if (!Number.isFinite(n)) throw new CliError(`${name} must be a number, got "${raw}"`)
+  if (!Number.isFinite(n))
+    throw new CliError(`${name} must be a number, got "${raw}"`)
   return n
 }
 
@@ -254,7 +266,10 @@ async function main(argv: string[]): Promise<number> {
     return 0
   }
 
-  if (!path) throw new CliError(`${command} needs a ${command === 'import' ? 'profile' : 'blueprint'} path (or "-" for stdin)`)
+  if (!path)
+    throw new CliError(
+      `${command} needs a ${command === 'import' ? 'profile' : 'blueprint'} path (or "-" for stdin)`
+    )
 
   // Handled before the JSON read below: this one takes markdown.
   if (command === 'import') {
@@ -268,7 +283,8 @@ async function main(argv: string[]): Promise<number> {
     return values.strict && warnings.length ? 1 : 0
   }
 
-  const template = values.template === undefined ? undefined : Number(values.template)
+  const template =
+    values.template === undefined ? undefined : Number(values.template)
   if (template !== undefined && !TEMPLATE_IDS.includes(template as never)) {
     throw new CliError(`--template must be one of ${TEMPLATE_IDS.join(', ')}`)
   }
@@ -276,20 +292,31 @@ async function main(argv: string[]): Promise<number> {
   const documentOverride: Record<string, unknown> = {}
   if (values.font !== undefined) documentOverride.fontFamily = values.font
   if (values['font-size'] !== undefined) {
-    documentOverride.fontSize = parseNumberFlag('--font-size', values['font-size'])
+    documentOverride.fontSize = parseNumberFlag(
+      '--font-size',
+      values['font-size']
+    )
   }
   if (values.margin !== undefined) documentOverride.margin = values.margin
   if (values['line-spacing'] !== undefined) {
-    documentOverride.lineSpacing = parseNumberFlag('--line-spacing', values['line-spacing'])
+    documentOverride.lineSpacing = parseNumberFlag(
+      '--line-spacing',
+      values['line-spacing']
+    )
   }
 
-  const blueprint = withDocument(withTemplate(await readInput(path), template), documentOverride)
+  const blueprint = withDocument(
+    withTemplate(await readInput(path), template),
+    documentOverride
+  )
 
   switch (command) {
     case 'validate': {
       const result = BlueprintSchema.safeParse(blueprint)
       if (!result.success) {
-        process.stderr.write(`invalid blueprint:\n${formatValidationError(result.error)}\n`)
+        process.stderr.write(
+          `invalid blueprint:\n${formatValidationError(result.error)}\n`
+        )
         return 1
       }
       process.stderr.write('blueprint is valid\n')
@@ -321,19 +348,30 @@ async function main(argv: string[]): Promise<number> {
     }
 
     case 'target': {
-      if (!values.jd) throw new CliError('target needs --jd <path> (or "-" to read the posting from stdin)')
+      if (!values.jd)
+        throw new CliError(
+          'target needs --jd <path> (or "-" to read the posting from stdin)'
+        )
       // Only one of the two can be stdin, and silently picking a winner would
       // hand the analysis half a document.
       if (values.jd === '-' && path === '-') {
         throw new CliError('only one of <blueprint.json> and --jd can be "-"')
       }
 
-      const maxTerms = values['max-terms'] === undefined
-        ? undefined
-        : parseNumberFlag('--max-terms', values['max-terms'])
+      const maxTerms =
+        values['max-terms'] === undefined
+          ? undefined
+          : parseNumberFlag('--max-terms', values['max-terms'])
 
-      const report = analyzeCoverage(blueprint, await readRaw(values.jd), { maxTerms })
-      await emit(values.json ? `${JSON.stringify(report, null, 2)}\n` : formatCoverage(report), values.output)
+      const report = analyzeCoverage(blueprint, await readRaw(values.jd), {
+        maxTerms
+      })
+      await emit(
+        values.json
+          ? `${JSON.stringify(report, null, 2)}\n`
+          : formatCoverage(report),
+        values.output
+      )
 
       const warnings = citationsIn(blueprint)
       reportCitations(warnings)
@@ -361,7 +399,9 @@ main(process.argv.slice(2))
   .then((code) => process.exit(code))
   .catch((error: unknown) => {
     if (isValidationError(error)) {
-      process.stderr.write(`invalid blueprint:\n${formatValidationError(error)}\n`)
+      process.stderr.write(
+        `invalid blueprint:\n${formatValidationError(error)}\n`
+      )
     } else if (error instanceof TectonicError) {
       process.stderr.write(`compilation failed: ${error.message}\n`)
       const relevant = error.log

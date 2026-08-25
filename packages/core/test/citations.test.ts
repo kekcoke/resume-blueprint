@@ -29,7 +29,10 @@ describe('stripCitations', () => {
   })
 
   test('removes the bare [cite_start] marker', () => {
-    assert.equal(stripCitations('[cite_start]Amazon Web Services'), 'Amazon Web Services')
+    assert.equal(
+      stripCitations('[cite_start]Amazon Web Services'),
+      'Amazon Web Services'
+    )
   })
 
   test('leaves the period that follows a marker attached to the word', () => {
@@ -46,7 +49,9 @@ describe('stripCitations', () => {
     // external_feedback.md's convention: space before the marker, punctuation
     // after. Deleting only the brackets leaves `re-engineering"* .`
     assert.equal(
-      stripCitations('*"business process re-engineering"* [cite: 64-65, 70, 76, 88].'),
+      stripCitations(
+        '*"business process re-engineering"* [cite: 64-65, 70, 76, 88].'
+      ),
       '*"business process re-engineering"*.'
     )
     assert.equal(
@@ -60,18 +65,24 @@ describe('stripCitations', () => {
     // marker to the bold run and markdown would read `***Targeted` as a
     // different construct entirely.
     assert.equal(
-      stripCitations('* [cite_start]**Targeted Positioning:** Strong pivot language'),
+      stripCitations(
+        '* [cite_start]**Targeted Positioning:** Strong pivot language'
+      ),
       '* **Targeted Positioning:** Strong pivot language'
     )
     assert.equal(
-      stripCitations('1. [cite_start]**Fix Fragmented Certifications Table:** The grid'),
+      stripCitations(
+        '1. [cite_start]**Fix Fragmented Certifications Table:** The grid'
+      ),
       '1. **Fix Fragmented Certifications Table:** The grid'
     )
   })
 
   test('handles the two marker families adjacent on one line', () => {
     assert.equal(
-      stripCitations('> London, UK | [cite_start][LinkedIn](https://example.com) [cite: 61-63]'),
+      stripCitations(
+        '> London, UK | [cite_start][LinkedIn](https://example.com) [cite: 61-63]'
+      ),
       '> London, UK | [LinkedIn](https://example.com)'
     )
   })
@@ -80,7 +91,9 @@ describe('stripCitations', () => {
     // Two trailing spaces after a marker are a hard break, not slop. Trimming
     // the line would silently change how the document renders.
     assert.equal(
-      stripCitations('**AWS Certified Cloud Practitioner** | Amazon Web Services (2025) [cite: 104-107]  '),
+      stripCitations(
+        '**AWS Certified Cloud Practitioner** | Amazon Web Services (2025) [cite: 104-107]  '
+      ),
       '**AWS Certified Cloud Practitioner** | Amazon Web Services (2025)  '
     )
   })
@@ -88,7 +101,8 @@ describe('stripCitations', () => {
   test('never joins two lines together', () => {
     // `[ \t]*` rather than `\s*`: a marker at end-of-line is followed by the
     // newline, and absorbing it would merge the bullet into the next one.
-    const input = '- Redesigned an Azure-native API[cite: 1, 2, 3]\n- Engineered a platform[cite: 2]'
+    const input =
+      '- Redesigned an Azure-native API[cite: 1, 2, 3]\n- Engineered a platform[cite: 2]'
     assert.equal(
       stripCitations(input),
       '- Redesigned an Azure-native API\n- Engineered a platform'
@@ -108,7 +122,10 @@ describe('stripCitations', () => {
     // truncated file should lose text, not gain corruption.
     assert.equal(stripCitations('see [cite: 1, 2'), 'see [cite: 1, 2')
     assert.equal(stripCitations('a [citation] needed'), 'a [citation] needed')
-    assert.equal(stripCitations('[LinkedIn](https://example.com)'), '[LinkedIn](https://example.com)')
+    assert.equal(
+      stripCitations('[LinkedIn](https://example.com)'),
+      '[LinkedIn](https://example.com)'
+    )
   })
 
   test('is idempotent, unlike escapeLatex', () => {
@@ -123,14 +140,18 @@ describe('stripCitations', () => {
   })
 
   test('leaves prose with no markers untouched', () => {
-    const clean = '- **Languages:** C# (.NET Core), Go (Golang), TypeScript, SQL'
+    const clean =
+      '- **Languages:** C# (.NET Core), Go (Golang), TypeScript, SQL'
     assert.equal(stripCitations(clean), clean)
   })
 })
 
 describe('countCitations', () => {
   test('counts both marker families', () => {
-    assert.equal(countCitations('a[cite: 1, 2, 3] b[cite: 5] c[cite_start]d'), 3)
+    assert.equal(
+      countCitations('a[cite: 1, 2, 3] b[cite: 5] c[cite_start]d'),
+      3
+    )
   })
 
   test('returns 0 for clean text rather than throwing', () => {
@@ -154,8 +175,16 @@ describe('findCitations', () => {
    *  actually reaches a template. */
   const dirty = () =>
     parseBlueprint({
-      basics: { name: 'Ada[cite: 1, 2, 3]', summary: '[cite_start]Led the group.' },
-      work: [{ name: 'Clean Co', highlights: ['a[cite: 5]', 'clean', 'b[cite: 1][cite: 2]'] }],
+      basics: {
+        name: 'Ada[cite: 1, 2, 3]',
+        summary: '[cite_start]Led the group.'
+      },
+      work: [
+        {
+          name: 'Clean Co',
+          highlights: ['a[cite: 5]', 'clean', 'b[cite: 1][cite: 2]']
+        }
+      ],
       headings: { work: 'Experience[cite: 5]' },
       document: { margin: '0.75in', accentColor: '#4A90D9' }
     })
@@ -173,7 +202,9 @@ describe('findCitations', () => {
   test('walks headings, which the ATS harness skips', () => {
     // Heading overrides are free user text that renders into the document, so
     // they are the one control-adjacent key worth checking.
-    const sites = findCitations(parseBlueprint({ headings: { work: 'Experience[cite: 5]' } }))
+    const sites = findCitations(
+      parseBlueprint({ headings: { work: 'Experience[cite: 5]' } })
+    )
     assert.deepEqual(sites, [{ path: 'headings.work', count: 1 }])
   })
 
@@ -182,7 +213,10 @@ describe('findCitations', () => {
     // Walking them would be harmless but is pointless, and the skip documents
     // which fields are closed by construction.
     const sites = findCitations(
-      parseBlueprint({ selectedTemplate: 3, document: { margin: '0.75in', accentColor: '#4A90D9' } })
+      parseBlueprint({
+        selectedTemplate: 3,
+        document: { margin: '0.75in', accentColor: '#4A90D9' }
+      })
     )
     assert.deepEqual(sites, [])
   })
@@ -194,7 +228,10 @@ describe('findCitations', () => {
   })
 
   test('returns nothing for a clean blueprint', () => {
-    assert.deepEqual(findCitations(parseBlueprint({ basics: { name: 'Ada Lovelace' } })), [])
+    assert.deepEqual(
+      findCitations(parseBlueprint({ basics: { name: 'Ada Lovelace' } })),
+      []
+    )
   })
 
   test('tolerates non-object input rather than throwing', () => {
@@ -216,22 +253,38 @@ describe('findCitations', () => {
         .split(/\.|\[(\d+)\]/)
         .filter(Boolean)
         .reduce<any>((node, step) => node[step], blueprint)
-      assert.notEqual(stripCitations(value), value, `${path} was reported but is not strippable`)
+      assert.notEqual(
+        stripCitations(value),
+        value,
+        `${path} was reported but is not strippable`
+      )
       assert.equal(countCitations(stripCitations(value)), 0)
     }
   })
 
   test('does not report what stripCitations deliberately leaves alone', () => {
-    assert.deepEqual(findCitations({ basics: { summary: 'see [cite: 1, 2' } }), [])
-    assert.deepEqual(findCitations({ basics: { summary: 'a [citation] needed' } }), [])
+    assert.deepEqual(
+      findCitations({ basics: { summary: 'see [cite: 1, 2' } }),
+      []
+    )
+    assert.deepEqual(
+      findCitations({ basics: { summary: 'a [citation] needed' } }),
+      []
+    )
   })
 })
 
 describe('citationWarnings', () => {
   test('renders one sentence per site, singular and plural', () => {
     assert.deepEqual(
-      citationWarnings({ basics: { name: 'Ada[cite: 1]' }, work: [{ summary: 'x[cite: 1][cite: 2]' }] }),
-      ['basics.name carries 1 citation artifact', 'work[0].summary carries 2 citation artifacts']
+      citationWarnings({
+        basics: { name: 'Ada[cite: 1]' },
+        work: [{ summary: 'x[cite: 1][cite: 2]' }]
+      }),
+      [
+        'basics.name carries 1 citation artifact',
+        'work[0].summary carries 2 citation artifacts'
+      ]
     )
   })
 

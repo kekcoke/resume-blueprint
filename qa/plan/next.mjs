@@ -114,7 +114,10 @@ function withheldReasons(node, graph, claims) {
   const status = statusOf(node.id, claims)
 
   if (TERMINAL.has(status)) return [`already ${status}`]
-  if (ACTIVE.has(status)) return [`already ${status}${claims[node.id]?.worktree ? ` in ${claims[node.id].worktree}` : ''}`]
+  if (ACTIVE.has(status))
+    return [
+      `already ${status}${claims[node.id]?.worktree ? ` in ${claims[node.id].worktree}` : ''}`
+    ]
 
   // 1. Phase gating. B1's phases are serial with respect to each other; the
   //    within-phase ordering is carried by blockedBy.
@@ -125,12 +128,18 @@ function withheldReasons(node, graph, claims) {
     // Name only the LOWEST open phase. Listing every open node across every
     // earlier phase under one phase number reads as a bug in the graph.
     const lowest = Math.min(...earlierOpen.map((n) => n.phase))
-    const blocking = earlierOpen.filter((n) => n.phase === lowest).map((n) => n.id)
-    reasons.push(`phase ${node.phase} is not open — phase ${lowest} still has ${blocking.join(', ')}`)
+    const blocking = earlierOpen
+      .filter((n) => n.phase === lowest)
+      .map((n) => n.id)
+    reasons.push(
+      `phase ${node.phase} is not open — phase ${lowest} still has ${blocking.join(', ')}`
+    )
   }
 
   // 2. Blocking edges.
-  const blockers = (node.blockedBy ?? []).filter((id) => !TERMINAL.has(statusOf(id, claims)))
+  const blockers = (node.blockedBy ?? []).filter(
+    (id) => !TERMINAL.has(statusOf(id, claims))
+  )
   if (blockers.length) reasons.push(`blocked by ${blockers.join(', ')}`)
 
   // 3. Mutexes. NOT edges — this is the check that keeps Lane B serial and
@@ -150,7 +159,8 @@ function withheldReasons(node, graph, claims) {
   if (node.check === 'gate') {
     const record = node.acceptance?.decision
     if (!record) reasons.push('marked as a gate but names no decision record')
-    else if (!existsSync(join(REPO_ROOT, record))) reasons.push(`gate: ${record} does not exist yet`)
+    else if (!existsSync(join(REPO_ROOT, record)))
+      reasons.push(`gate: ${record} does not exist yet`)
   }
 
   return reasons
@@ -177,7 +187,13 @@ async function cmdReady(graph, claims) {
   const ready = resolve(graph, claims).filter((r) => !r.reasons.length)
 
   if (flags.has('--json')) {
-    process.stdout.write(`${JSON.stringify(ready.map((r) => r.node), null, 2)}\n`)
+    process.stdout.write(
+      `${JSON.stringify(
+        ready.map((r) => r.node),
+        null,
+        2
+      )}\n`
+    )
     return 0
   }
 
@@ -188,13 +204,21 @@ async function cmdReady(graph, claims) {
 
   process.stdout.write(`${ready.length} ready\n\n`)
   for (const { node } of ready) {
-    process.stdout.write(`  ${node.id.padEnd(6)} ${node.model.padEnd(7)} ${node.kind.padEnd(12)} lane ${node.lane}  ${node.title}\n`)
-    process.stdout.write(`         paths: ${(node.paths ?? []).join(', ') || '—'}\n`)
-    if (node.rows?.length) process.stdout.write(`         rows:  ${node.rows.join(', ')}\n`)
-    if (node.mutex?.length) process.stdout.write(`         mutex: ${node.mutex.join(', ')}\n`)
+    process.stdout.write(
+      `  ${node.id.padEnd(6)} ${node.model.padEnd(7)} ${node.kind.padEnd(12)} lane ${node.lane}  ${node.title}\n`
+    )
+    process.stdout.write(
+      `         paths: ${(node.paths ?? []).join(', ') || '—'}\n`
+    )
+    if (node.rows?.length)
+      process.stdout.write(`         rows:  ${node.rows.join(', ')}\n`)
+    if (node.mutex?.length)
+      process.stdout.write(`         mutex: ${node.mutex.join(', ')}\n`)
     process.stdout.write('\n')
   }
-  process.stdout.write(`claim one:  node qa/plan/next.mjs --claim ${ready[0].node.id}\n`)
+  process.stdout.write(
+    `claim one:  node qa/plan/next.mjs --claim ${ready[0].node.id}\n`
+  )
   return 0
 }
 
@@ -203,7 +227,9 @@ async function cmdAll(graph, claims) {
   process.stdout.write('node   phase lane status     why not\n')
   for (const { node, status, reasons } of rows) {
     const why = reasons.length ? reasons.join('; ') : 'READY'
-    process.stdout.write(`${node.id.padEnd(6)} ${String(node.phase).padEnd(5)} ${node.lane.padEnd(4)} ${status.padEnd(10)} ${why}\n`)
+    process.stdout.write(
+      `${node.id.padEnd(6)} ${String(node.phase).padEnd(5)} ${node.lane.padEnd(4)} ${status.padEnd(10)} ${why}\n`
+    )
   }
   return 0
 }
@@ -216,7 +242,9 @@ async function cmdClaim(graph, claims, id) {
   if (reasons.length && !flags.has('--force')) {
     process.stderr.write(`${id} is not ready:\n`)
     for (const reason of reasons) process.stderr.write(`  - ${reason}\n`)
-    process.stderr.write('\nRefusing to claim. --force overrides, and is how K1 gets violated.\n')
+    process.stderr.write(
+      '\nRefusing to claim. --force overrides, and is how K1 gets violated.\n'
+    )
     return 1
   }
 
@@ -230,8 +258,13 @@ async function cmdClaim(graph, claims, id) {
     mutexHeld: node.mutex ?? [],
     notes: ''
   }
-  await writeFile(join(CLAIMS_DIR, `${id}.json`), `${JSON.stringify(claim, null, 2)}\n`)
-  process.stdout.write(`claimed ${id}${claim.mutexHeld.length ? ` — holding ${claim.mutexHeld.join(', ')}` : ''}\n`)
+  await writeFile(
+    join(CLAIMS_DIR, `${id}.json`),
+    `${JSON.stringify(claim, null, 2)}\n`
+  )
+  process.stdout.write(
+    `claimed ${id}${claim.mutexHeld.length ? ` — holding ${claim.mutexHeld.join(', ')}` : ''}\n`
+  )
   return 0
 }
 
@@ -240,7 +273,11 @@ async function cmdRelease(graph, claims, id) {
   const path = join(CLAIMS_DIR, `${id}.json`)
   if (!existsSync(path)) return fail(`${id} is not claimed`)
 
-  const status = flags.has('--abandoned') ? 'abandoned' : flags.has('--done') ? 'done' : 'todo'
+  const status = flags.has('--abandoned')
+    ? 'abandoned'
+    : flags.has('--done')
+      ? 'done'
+      : 'todo'
   if (status === 'todo') {
     await unlink(path)
     process.stdout.write(`released ${id} back to todo; its mutexes are free\n`)
@@ -267,7 +304,10 @@ async function cmdBrief(graph, id) {
   if (!node) return fail(`unknown node "${id}"`)
 
   const template = node.check === 'gate' ? 'gate.md' : 'node.md'
-  const text = await readFile(join(REPO_ROOT, 'docs', 'prompts', template), 'utf8')
+  const text = await readFile(
+    join(REPO_ROOT, 'docs', 'prompts', template),
+    'utf8'
+  )
 
   const before = Object.entries(node.acceptance?.before ?? {})
   const rowLine = before.length
@@ -285,7 +325,10 @@ async function cmdBrief(graph, id) {
     .replaceAll('{{rows}}', (node.rows ?? []).join(', ') || '(none)')
     .replaceAll('{{acceptance}}', node.acceptance?.statement ?? '(none stated)')
     .replaceAll('{{pinned}}', rowLine)
-    .replaceAll('{{commands}}', (node.acceptance?.commands ?? []).join(' && ') || 'npm test')
+    .replaceAll(
+      '{{commands}}',
+      (node.acceptance?.commands ?? []).join(' && ') || 'npm test'
+    )
     .replaceAll('{{decision}}', node.acceptance?.decision ?? '(none)')
     .replaceAll('{{why}}', node.why ?? '')
 
@@ -330,12 +373,18 @@ async function cmdEscalate(graph, claims, id) {
   if (!node) return fail(`unknown node "${id}"`)
 
   const path = join(CLAIMS_DIR, `${id}.json`)
-  if (!existsSync(path)) return fail(`${id} is not claimed — nothing to escalate`)
+  if (!existsSync(path))
+    return fail(`${id} is not claimed — nothing to escalate`)
 
   const reason = positional.slice(1).join(' ') || '(no reason given)'
   const claim = JSON.parse(await readFile(path, 'utf8'))
   claim.escalations = claim.escalations ?? []
-  claim.escalations.push({ from: node.model, to: 'opus', reason, at: new Date().toISOString() })
+  claim.escalations.push({
+    from: node.model,
+    to: 'opus',
+    reason,
+    at: new Date().toISOString()
+  })
   claim.status = 'wip'
   await writeFile(path, `${JSON.stringify(claim, null, 2)}\n`)
 
@@ -345,7 +394,7 @@ async function cmdEscalate(graph, claims, id) {
       'Do not start a new session. The files already read and the dead ends already\n' +
       'eliminated are the expensive part; the tokens are not (A7).\n\n' +
       `If this node has already been escalated ${claim.escalations.length} time(s) with no\n` +
-      'progress, that is A9\'s fourth row: abandon it, record what was learned in\n' +
+      "progress, that is A9's fourth row: abandon it, record what was learned in\n" +
       'qa/findings.md, and release it with --abandoned.\n'
   )
   return 0
@@ -364,13 +413,20 @@ async function cmdConflicts(graph) {
     const lanes = [...new Set(nodes.map((n) => n.lane))]
     const crossLane = lanes.length > 1
     process.stdout.write(`\n${token}\n`)
-    process.stdout.write(`  held by: ${nodes.map((n) => `${n.id}(lane ${n.lane})`).join(', ')}\n`)
+    process.stdout.write(
+      `  held by: ${nodes.map((n) => `${n.id}(lane ${n.lane})`).join(', ')}\n`
+    )
     if (crossLane) {
-      process.stdout.write(`  CROSS-LANE — these lanes cannot run concurrently while both are open\n`)
+      process.stdout.write(
+        `  CROSS-LANE — these lanes cannot run concurrently while both are open\n`
+      )
     }
     const note = graph.mutexNotes?.[token]
     if (note) process.stdout.write(`  ${note}\n`)
-    else process.stdout.write(`  (no note in graph.json — add one; an unexplained mutex gets ignored)\n`)
+    else
+      process.stdout.write(
+        `  (no note in graph.json — add one; an unexplained mutex gets ignored)\n`
+      )
   }
   return 0
 }
@@ -378,12 +434,17 @@ async function cmdConflicts(graph) {
 async function cmdGraph(graph) {
   process.stdout.write('```mermaid\nflowchart TD\n')
   for (const node of graph.nodes) {
-    const shape = node.check === 'gate' ? `{{"${node.id} ${node.title}"}}` : `["${node.id} ${node.title}"]`
+    const shape =
+      node.check === 'gate'
+        ? `{{"${node.id} ${node.title}"}}`
+        : `["${node.id} ${node.title}"]`
     process.stdout.write(`  ${node.id.replace('-', '_')}${shape}\n`)
   }
   for (const node of graph.nodes) {
     for (const dep of node.blockedBy ?? []) {
-      process.stdout.write(`  ${dep.replace('-', '_')} --> ${node.id.replace('-', '_')}\n`)
+      process.stdout.write(
+        `  ${dep.replace('-', '_')} --> ${node.id.replace('-', '_')}\n`
+      )
     }
   }
   process.stdout.write('```\n')
@@ -397,20 +458,26 @@ async function cmdCheck(graph) {
 
   for (const node of graph.nodes) {
     for (const dep of node.blockedBy ?? []) {
-      if (!ids.has(dep)) problems.push(`${node.id}: blockedBy names unknown node "${dep}"`)
+      if (!ids.has(dep))
+        problems.push(`${node.id}: blockedBy names unknown node "${dep}"`)
     }
     for (const token of node.mutex ?? []) {
-      if (!graph.mutexNotes?.[token]) problems.push(`${node.id}: mutex "${token}" has no note in mutexNotes`)
+      if (!graph.mutexNotes?.[token])
+        problems.push(`${node.id}: mutex "${token}" has no note in mutexNotes`)
     }
     if (node.check === 'gate' && !node.acceptance?.decision) {
-      problems.push(`${node.id}: is a gate but names no decision record — it could never become ready`)
+      problems.push(
+        `${node.id}: is a gate but names no decision record — it could never become ready`
+      )
     }
     // A path a node edits but does not hold a mutex on is not automatically a
     // bug — most paths are touched by exactly one node — but a path claimed by
     // two nodes without a mutex is the K9 failure mode exactly.
     for (const other of graph.nodes) {
       if (other.id <= node.id) continue
-      const shared = (node.paths ?? []).filter((p) => (other.paths ?? []).includes(p))
+      const shared = (node.paths ?? []).filter((p) =>
+        (other.paths ?? []).includes(p)
+      )
       for (const path of shared) {
         const guarded = overlap(node.mutex ?? [], other.mutex ?? []).length > 0
         // Different phases are already serialised by phase gating, so a shared
@@ -420,7 +487,9 @@ async function cmdCheck(graph) {
           (other.blockedBy ?? []).includes(node.id) ||
           (node.blockedBy ?? []).includes(other.id)
         if (!guarded && !ordered && path !== '**') {
-          problems.push(`${node.id} and ${other.id} both edit "${path}" with no mutex and no ordering — this is the K9 shape`)
+          problems.push(
+            `${node.id} and ${other.id} both edit "${path}" with no mutex and no ordering — this is the K9 shape`
+          )
         }
       }
     }
@@ -429,7 +498,8 @@ async function cmdCheck(graph) {
   // Cycle detection over blockedBy.
   const seen = new Map()
   const visit = (id, trail) => {
-    if (trail.includes(id)) return problems.push(`cycle: ${[...trail, id].join(' -> ')}`)
+    if (trail.includes(id))
+      return problems.push(`cycle: ${[...trail, id].join(' -> ')}`)
     if (seen.get(id)) return
     seen.set(id, true)
     const node = graph.nodes.find((n) => n.id === id)
@@ -438,7 +508,9 @@ async function cmdCheck(graph) {
   for (const node of graph.nodes) visit(node.id, [])
 
   if (!problems.length) {
-    process.stdout.write(`graph ok — ${graph.nodes.length} nodes, no dangling edges, no cycles, every mutex explained\n`)
+    process.stdout.write(
+      `graph ok — ${graph.nodes.length} nodes, no dangling edges, no cycles, every mutex explained\n`
+    )
     return 0
   }
   process.stdout.write(`${problems.length} problem(s):\n`)
@@ -473,7 +545,9 @@ async function main() {
   if (flags.has('--all')) return cmdAll(graph, claims)
   if (flags.has('--ready') || !argv.length) return cmdReady(graph, claims)
 
-  return fail(`unknown flag. See the header of ${'qa/plan/next.mjs'} for the command list.`)
+  return fail(
+    `unknown flag. See the header of ${'qa/plan/next.mjs'} for the command list.`
+  )
 }
 
 main()

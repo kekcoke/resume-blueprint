@@ -75,7 +75,8 @@ function realStore(tool, input) {
   const command = String(input?.command ?? '')
   if (!command.includes('.resume-blueprint')) return
 
-  const readOnly = /\b(status|log|diff|show|rev-parse|cat-file|ls-files|ls|head|tail|wc|stat)\b/
+  const readOnly =
+    /\b(status|log|diff|show|rev-parse|cat-file|ls-files|ls|head|tail|wc|stat)\b/
   if (readOnly.test(command)) return
   deny(
     `this command touches ${REAL_STORE} and is not obviously read-only:\n  ${command}\n` +
@@ -151,9 +152,13 @@ function coreDeps(tool, input) {
   const text = payload(input)
   if (!text.trim()) return
 
-  const added = [...text.matchAll(/"([@a-z0-9][^"]*)"\s*:\s*"[\^~>=<\d*][^"]*"/gi)]
+  const added = [
+    ...text.matchAll(/"([@a-z0-9][^"]*)"\s*:\s*"[\^~>=<\d*][^"]*"/gi)
+  ]
     .map((m) => m[1])
-    .filter((name) => !CORE_ALLOWED_DEPS.has(name) && !name.startsWith('@types/'))
+    .filter(
+      (name) => !CORE_ALLOWED_DEPS.has(name) && !name.startsWith('@types/')
+    )
 
   if (!added.length) return
   deny(
@@ -173,7 +178,9 @@ process.stdin.on('end', () => {
   try {
     event = JSON.parse(raw)
   } catch {
-    process.stderr.write('[guard] could not parse the hook payload; allowing.\n')
+    process.stderr.write(
+      '[guard] could not parse the hook payload; allowing.\n'
+    )
     allow()
     return
   }
@@ -187,7 +194,9 @@ process.stdin.on('end', () => {
     contract(tool, input)
     coreDeps(tool, input)
   } catch (error) {
-    process.stderr.write(`[guard] rule threw, allowing: ${error?.message ?? error}\n`)
+    process.stderr.write(
+      `[guard] rule threw, allowing: ${error?.message ?? error}\n`
+    )
   }
   allow()
 })

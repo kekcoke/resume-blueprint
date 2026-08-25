@@ -137,7 +137,8 @@ const BULLET_BONUS = 1.2
  * that it split into `Bachelor` + `s`, and the orphaned `s` went on to anchor
  * the phrase `s degree` — a term the posting never contained.
  */
-const TOKEN_PATTERN = /(?<![A-Za-z0-9])[.#]?[A-Za-z0-9][A-Za-z0-9+#._/'\u2019-]*[A-Za-z0-9+#]|[A-Za-z0-9]/g
+const TOKEN_PATTERN =
+  /(?<![A-Za-z0-9])[.#]?[A-Za-z0-9][A-Za-z0-9+#._/'\u2019-]*[A-Za-z0-9+#]|[A-Za-z0-9]/g
 
 /** Any of these between two tokens ends a phrase. An n-gram that spans a comma
  * or a line break is a coincidence of adjacency, not a phrase: `TypeScript,
@@ -172,26 +173,193 @@ const NUMERIC_ONLY = /^[\d+.#/-]+$/
  * anyone can read and amend.
  */
 const STOPWORDS = new Set([
-  'a', 'about', 'above', 'across', 'after', 'again', 'against', 'all', 'almost', 'also',
-  'although', 'always', 'am', 'among', 'an', 'and', 'another', 'any', 'anyone', 'are',
-  'around', 'as', 'at', 'be', 'because', 'been', 'before', 'being', 'below', 'best',
-  'better', 'between', 'both', 'but', 'by', 'can', 'cannot', 'could', 'did', 'do', 'does',
-  'doing', 'done', 'down', 'during', 'each', 'either', 'else', 'enough', 'especially',
-  'etc', 'even', 'every', 'few', 'for', 'from', 'further', 'get', 'give', 'good', 'great',
-  'had', 'has', 'have', 'having', 'he', 'her', 'here', 'hers', 'him', 'his', 'how',
-  'however', 'i', 'if', 'in', 'include', 'includes', 'including', 'into', 'is', 'it',
-  'its', 'itself', 'just', 'keep', 'like', 'made', 'make', 'makes', 'making', 'many',
-  'may', 'me', 'might', 'more', 'most', 'much', 'multiple', 'must', 'my', 'need', 'needs',
+  'a',
+  'about',
+  'above',
+  'across',
+  'after',
+  'again',
+  'against',
+  'all',
+  'almost',
+  'also',
+  'although',
+  'always',
+  'am',
+  'among',
+  'an',
+  'and',
+  'another',
+  'any',
+  'anyone',
+  'are',
+  'around',
+  'as',
+  'at',
+  'be',
+  'because',
+  'been',
+  'before',
+  'being',
+  'below',
+  'best',
+  'better',
+  'between',
+  'both',
+  'but',
+  'by',
+  'can',
+  'cannot',
+  'could',
+  'did',
+  'do',
+  'does',
+  'doing',
+  'done',
+  'down',
+  'during',
+  'each',
+  'either',
+  'else',
+  'enough',
+  'especially',
+  'etc',
+  'even',
+  'every',
+  'few',
+  'for',
+  'from',
+  'further',
+  'get',
+  'give',
+  'good',
+  'great',
+  'had',
+  'has',
+  'have',
+  'having',
+  'he',
+  'her',
+  'here',
+  'hers',
+  'him',
+  'his',
+  'how',
+  'however',
+  'i',
+  'if',
+  'in',
+  'include',
+  'includes',
+  'including',
+  'into',
+  'is',
+  'it',
+  'its',
+  'itself',
+  'just',
+  'keep',
+  'like',
+  'made',
+  'make',
+  'makes',
+  'making',
+  'many',
+  'may',
+  'me',
+  'might',
+  'more',
+  'most',
+  'much',
+  'multiple',
+  'must',
+  'my',
+  'need',
+  'needs',
   'neither',
-  'never', 'new', 'no', 'nor', 'not', 'of', 'off', 'often', 'on', 'once', 'one', 'only',
-  'or', 'other', 'others', 'our', 'ours', 'out', 'over', 'per', 'perhaps',
-  'please', 'same', 'shall', 'she', 'should', 'since', 'so', 'some', 'such', 'take',
-  'than', 'that', 'the', 'their', 'theirs', 'them', 'then', 'there', 'these', 'they',
-  'this', 'those', 'though', 'through', 'to', 'together', 'too', 'toward', 'towards',
-  'under', 'until', 'up', 'upon', 'us', 'use', 'used', 'using', 'very', 'via', 'want',
-  'was', 'we', 'well', 'were', 'what', 'when', 'where', 'whether', 'which', 'while',
-  'who', 'whom', 'whose', 'why', 'will', 'with', 'within', 'without', 'would', 'you',
-  'your', 'yours'
+  'never',
+  'new',
+  'no',
+  'nor',
+  'not',
+  'of',
+  'off',
+  'often',
+  'on',
+  'once',
+  'one',
+  'only',
+  'or',
+  'other',
+  'others',
+  'our',
+  'ours',
+  'out',
+  'over',
+  'per',
+  'perhaps',
+  'please',
+  'same',
+  'shall',
+  'she',
+  'should',
+  'since',
+  'so',
+  'some',
+  'such',
+  'take',
+  'than',
+  'that',
+  'the',
+  'their',
+  'theirs',
+  'them',
+  'then',
+  'there',
+  'these',
+  'they',
+  'this',
+  'those',
+  'though',
+  'through',
+  'to',
+  'together',
+  'too',
+  'toward',
+  'towards',
+  'under',
+  'until',
+  'up',
+  'upon',
+  'us',
+  'use',
+  'used',
+  'using',
+  'very',
+  'via',
+  'want',
+  'was',
+  'we',
+  'well',
+  'were',
+  'what',
+  'when',
+  'where',
+  'whether',
+  'which',
+  'while',
+  'who',
+  'whom',
+  'whose',
+  'why',
+  'will',
+  'with',
+  'within',
+  'without',
+  'would',
+  'you',
+  'your',
+  'yours'
 ])
 
 /**
@@ -206,15 +374,65 @@ const STOPWORDS = new Set([
  * both, and "you are missing the term `experience`" is advice no one can act on.
  */
 const JD_BOILERPLATE = new Set([
-  'ability', 'applicant', 'applicants', 'application', 'apply', 'benefits', 'candidate',
-  'candidates', 'career', 'company', 'compensation', 'department', 'description',
-  'desired', 'diverse', 'diversity', 'employee', 'employees', 'employer', 'employment',
-  'equal', 'experience', 'experiences', 'ideal', 'inclusion', 'job', 'join', 'looking',
-  'must-have', 'nice-to-have', 'offer', 'opportunity', 'organization', 'plus',
-  'position', 'preferred', 'qualification', 'qualifications', 'qualified', 'range',
-  'relevant', 'requirement', 'requirements', 'required', 'responsibilities',
-  'responsibility', 'role', 'salary', 'skill', 'skills', 'strong', 'successful', 'team',
-  'teams', 'us', 'work', 'working', 'year', 'years',
+  'ability',
+  'applicant',
+  'applicants',
+  'application',
+  'apply',
+  'benefits',
+  'candidate',
+  'candidates',
+  'career',
+  'company',
+  'compensation',
+  'department',
+  'description',
+  'desired',
+  'diverse',
+  'diversity',
+  'employee',
+  'employees',
+  'employer',
+  'employment',
+  'equal',
+  'experience',
+  'experiences',
+  'ideal',
+  'inclusion',
+  'job',
+  'join',
+  'looking',
+  'must-have',
+  'nice-to-have',
+  'offer',
+  'opportunity',
+  'organization',
+  'plus',
+  'position',
+  'preferred',
+  'qualification',
+  'qualifications',
+  'qualified',
+  'range',
+  'relevant',
+  'requirement',
+  'requirements',
+  'required',
+  'responsibilities',
+  'responsibility',
+  'role',
+  'salary',
+  'skill',
+  'skills',
+  'strong',
+  'successful',
+  'team',
+  'teams',
+  'us',
+  'work',
+  'working',
+  'year',
+  'years',
 
   // Verbs and nouns every posting reaches for regardless of the role. Dropping
   // them cleans up the report twice over: the bare verb stops occupying a row,
@@ -227,10 +445,36 @@ const JD_BOILERPLATE = new Set([
   // being just as common -- `system design` and `design systems` are terms an
   // applicant is genuinely measured on, and edge-stopword rejection would take
   // them out with the noise.
-  'background', 'build', 'building', 'built', 'collaborate', 'comfort', 'contribute',
-  'deliver', 'drive', 'ensure', 'expertise', 'familiarity', 'help', 'hire', 'hiring',
-  'knowledge', 'lead', 'maintain', 'manage', 'mindset', 'operate', 'own', 'passion',
-  'proficiency', 'provide', 'review', 'ship', 'support', 'understanding', 'write'
+  'background',
+  'build',
+  'building',
+  'built',
+  'collaborate',
+  'comfort',
+  'contribute',
+  'deliver',
+  'drive',
+  'ensure',
+  'expertise',
+  'familiarity',
+  'help',
+  'hire',
+  'hiring',
+  'knowledge',
+  'lead',
+  'maintain',
+  'manage',
+  'mindset',
+  'operate',
+  'own',
+  'passion',
+  'proficiency',
+  'provide',
+  'review',
+  'ship',
+  'support',
+  'understanding',
+  'write'
 ])
 
 function isStopword(normalized: string): boolean {
@@ -263,8 +507,10 @@ function round2(n: number): number {
  */
 function singular(word: string): string {
   if (word.length > 4 && word.endsWith('ies')) return `${word.slice(0, -3)}y`
-  if (word.length > 4 && /(?:ss|sh|ch|x|z)es$/.test(word)) return word.slice(0, -2)
-  if (word.length > 3 && word.endsWith('s') && !/(?:ss|us|is)$/.test(word)) return word.slice(0, -1)
+  if (word.length > 4 && /(?:ss|sh|ch|x|z)es$/.test(word))
+    return word.slice(0, -2)
+  if (word.length > 3 && word.endsWith('s') && !/(?:ss|us|is)$/.test(word))
+    return word.slice(0, -1)
   return word
 }
 
@@ -319,7 +565,8 @@ function tokenize(text: string): Token[] {
       norm: raw.toLowerCase(),
       index,
       end: index + raw.length,
-      breaksBefore: previousEnd < 0 || PHRASE_BREAK.test(text.slice(previousEnd, index)),
+      breaksBefore:
+        previousEnd < 0 || PHRASE_BREAK.test(text.slice(previousEnd, index)),
       bullet: bulletLine[line]
     })
 
@@ -368,8 +615,14 @@ function candidates(text: string, tokens: Token[]): Map<string, Candidate> {
 
       if (isStopword(first.norm) || isStopword(last.norm)) continue
       if (isWeakEdge(first) || isWeakEdge(last)) continue
-      if (n === 1 && (first.norm.length < 2 || NUMERIC_ONLY.test(first.norm))) continue
-      if (span.slice(1, -1).some((t) => isStopword(t.norm) && !INTERIOR_STOPWORDS.has(t.norm))) continue
+      if (n === 1 && (first.norm.length < 2 || NUMERIC_ONLY.test(first.norm)))
+        continue
+      if (
+        span
+          .slice(1, -1)
+          .some((t) => isStopword(t.norm) && !INTERIOR_STOPWORDS.has(t.norm))
+      )
+        continue
 
       const key = span.map((t) => t.norm).join(' ')
       const existing = found.get(key)
@@ -383,7 +636,12 @@ function candidates(text: string, tokens: Token[]): Map<string, Candidate> {
       if (existing) {
         existing.occurrences.push(occurrence)
       } else {
-        found.set(key, { key, display: text.slice(first.index, last.end), n, occurrences: [occurrence] })
+        found.set(key, {
+          key,
+          display: text.slice(first.index, last.end),
+          n,
+          occurrences: [occurrence]
+        })
       }
     }
   }
@@ -417,7 +675,8 @@ function dropRedundant(found: Map<string, Candidate>): Candidate[] {
       for (let i = 0; i + n <= parts.length; i += 1) {
         const sub = parts.slice(i, i + n).join(' ')
         const inner = found.get(sub)
-        if (inner && inner.occurrences.length === candidate.occurrences.length) redundant.add(sub)
+        if (inner && inner.occurrences.length === candidate.occurrences.length)
+          redundant.add(sub)
       }
     }
   }
@@ -457,7 +716,12 @@ function dropOverlapping(ranked: Ranked[]): Ranked[] {
     )
     if (taken) return false
 
-    spans.push(...candidate.occurrences.map(({ index, end }): [number, number] => [index, end]))
+    spans.push(
+      ...candidate.occurrences.map(({ index, end }): [number, number] => [
+        index,
+        end
+      ])
+    )
     claimed.set(candidate.n, spans)
     return true
   })
@@ -509,8 +773,10 @@ function indexSection(section: SectionName, text: string): SectionIndex {
   return { section, exact, folded }
 }
 
-const CREDENTIAL = /\b(?:certified|certification|certifications|certificate|certificates|licen[cs]ed?|credential|credentials)\b/i
-const DEGREE = /\b(?:bachelors?|masters?|phd|doctorate|undergraduate|degree|bsc|msc|b\.?s\.?|b\.?a\.?|m\.?s\.?)\b/i
+const CREDENTIAL =
+  /\b(?:certified|certification|certifications|certificate|certificates|licen[cs]ed?|credential|credentials)\b/i
+const DEGREE =
+  /\b(?:bachelors?|masters?|phd|doctorate|undergraduate|degree|bsc|msc|b\.?s\.?|b\.?a\.?|m\.?s\.?)\b/i
 
 /**
  * Where a missing term would plausibly go, best first.
@@ -519,30 +785,62 @@ const DEGREE = /\b(?:bachelors?|masters?|phd|doctorate|undergraduate|degree|bsc|
  * `certificates` to a blueprint whose `sections` omits it is advice that would
  * produce content nobody sees.
  */
-function suggestPlacement(candidate: Candidate, rendered: Set<SectionName>): PlacementSuggestion[] {
+function suggestPlacement(
+  candidate: Candidate,
+  rendered: Set<SectionName>
+): PlacementSuggestion[] {
   const all: PlacementSuggestion[] = CREDENTIAL.test(candidate.display)
     ? [
-        { section: 'certificates', reason: 'names a credential, and certificates carries the issuer and date' },
-        { section: 'skills', reason: 'the subject of the credential also reads as a skill keyword' }
+        {
+          section: 'certificates',
+          reason:
+            'names a credential, and certificates carries the issuer and date'
+        },
+        {
+          section: 'skills',
+          reason: 'the subject of the credential also reads as a skill keyword'
+        }
       ]
     : DEGREE.test(candidate.display)
-      ? [{ section: 'education', reason: 'names a degree, which belongs in education' }]
+      ? [
+          {
+            section: 'education',
+            reason: 'names a degree, which belongs in education'
+          }
+        ]
       : candidate.n === 1
         ? [
-            { section: 'skills', reason: 'a single-token term reads as a skill keyword' },
-            { section: 'work', reason: 'a work highlight is where a skill gets its evidence' }
+            {
+              section: 'skills',
+              reason: 'a single-token term reads as a skill keyword'
+            },
+            {
+              section: 'work',
+              reason: 'a work highlight is where a skill gets its evidence'
+            }
           ]
         : [
-            { section: 'work', reason: 'a multi-word phrase reads as a responsibility' },
-            { section: 'skills', reason: 'or as a skill keyword, if it names a technology' },
-            { section: 'projects', reason: 'a project highlight is the alternative when no role covers it' }
+            {
+              section: 'work',
+              reason: 'a multi-word phrase reads as a responsibility'
+            },
+            {
+              section: 'skills',
+              reason: 'or as a skill keyword, if it names a technology'
+            },
+            {
+              section: 'projects',
+              reason:
+                'a project highlight is the alternative when no role covers it'
+            }
           ]
 
   return all.filter(({ section }) => rendered.has(section))
 }
 
 function clampMaxTerms(requested: number | undefined): number {
-  if (requested === undefined || !Number.isFinite(requested)) return DEFAULT_MAX_TERMS
+  if (requested === undefined || !Number.isFinite(requested))
+    return DEFAULT_MAX_TERMS
   return Math.min(MAX_MAX_TERMS, Math.max(MIN_MAX_TERMS, Math.trunc(requested)))
 }
 
@@ -568,11 +866,17 @@ export function analyzeCoverage(
 
   const bodies = sectionBodies(blueprint)
   const indexes = bodies.map(({ section, text }) => indexSection(section, text))
-  if (!indexes.length) notes.push('the blueprint renders no text, so every term is reported missing')
+  if (!indexes.length)
+    notes.push(
+      'the blueprint renders no text, so every term is reported missing'
+    )
 
   const jd = jobDescription ?? ''
   const scored: Ranked[] = dropRedundant(candidates(jd, tokenize(jd)))
-    .map((candidate) => ({ candidate, prominence: prominence(candidate, jd.length) }))
+    .map((candidate) => ({
+      candidate,
+      prominence: prominence(candidate, jd.length)
+    }))
     // Ties broken deterministically: more occurrences, then earlier in the
     // posting, then alphabetically. A report that reshuffles between identical
     // runs is one nobody can diff.
@@ -586,9 +890,12 @@ export function analyzeCoverage(
 
   const ranked = dropOverlapping(scored)
 
-  if (!ranked.length) notes.push('the job description yielded no terms after stopword filtering')
+  if (!ranked.length)
+    notes.push('the job description yielded no terms after stopword filtering')
   if (ranked.length > maxTerms) {
-    notes.push(`reporting the top ${maxTerms} of ${ranked.length} terms by prominence`)
+    notes.push(
+      `reporting the top ${maxTerms} of ${ranked.length} terms by prominence`
+    )
   }
 
   const rendered = new Set(blueprint.sections)
@@ -621,23 +928,34 @@ export function analyzeCoverage(
     if (sections.length) {
       // An exact hit anywhere means the resume already uses the posting's own
       // wording, so there is no alternative wording worth reporting.
-      matched.push({ ...base, sections, ...(!exactly && matchedAs && { matchedAs }) })
+      matched.push({
+        ...base,
+        sections,
+        ...(!exactly && matchedAs && { matchedAs })
+      })
     } else {
-      missing.push({ ...base, suggestions: suggestPlacement(candidate, rendered) })
+      missing.push({
+        ...base,
+        suggestions: suggestPlacement(candidate, rendered)
+      })
     }
   }
 
   const total = matched.length + missing.length
   const counted = new Map(bodies.map(({ section }) => [section, 0]))
   for (const term of matched) {
-    for (const section of term.sections) counted.set(section, (counted.get(section) ?? 0) + 1)
+    for (const section of term.sections)
+      counted.set(section, (counted.get(section) ?? 0) + 1)
   }
 
   return {
     coverage: total ? round2(matched.length / total) : 0,
     matched,
     missing,
-    sections: [...counted].map(([section, count]) => ({ section, matched: count })),
+    sections: [...counted].map(([section, count]) => ({
+      section,
+      matched: count
+    })),
     notes
   }
 }

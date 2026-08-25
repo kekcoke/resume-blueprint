@@ -37,7 +37,13 @@ import {
 
 const execFileAsync = promisify(execFile)
 
-const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'fixtures')
+const FIXTURES = resolve(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  '..',
+  'fixtures'
+)
 
 /** Tectonic's first run for a given document class downloads packages. */
 const COMPILE_TIMEOUT_MS = 180_000
@@ -93,12 +99,16 @@ const POPPLER = hasBinary('pdftotext') && hasBinary('pdfinfo')
  * A dedicated test rather than a throw at module load: this names the problem in
  * the runner output instead of surfacing as an opaque file-level error.
  */
-test('poppler is installed', { skip: !process.env.CI && 'not CI: skipping is allowed locally' }, () => {
-  assert.ok(
-    POPPLER,
-    'pdftotext and pdfinfo are not both on PATH, so every parse-fidelity gate in this file would skip and the suite would pass having checked none of them. Install poppler.'
-  )
-})
+test(
+  'poppler is installed',
+  { skip: !process.env.CI && 'not CI: skipping is allowed locally' },
+  () => {
+    assert.ok(
+      POPPLER,
+      'pdftotext and pdfinfo are not both on PATH, so every parse-fidelity gate in this file would skip and the suite would pass having checked none of them. Install poppler.'
+    )
+  }
+)
 
 const NO_POPPLER = !POPPLER && 'poppler not on PATH'
 
@@ -228,7 +238,12 @@ const URL_KEYS = new Set(['url', 'website'])
  * this, collectLeaves would hunt the PDF text layer for values like '#4A90D9'
  * or '0.75in' and report every one as clipped or missing (see F3's C8).
  */
-const SKIPPED_ROOT_KEYS = new Set(['sections', 'headings', 'selectedTemplate', 'document'])
+const SKIPPED_ROOT_KEYS = new Set([
+  'sections',
+  'headings',
+  'selectedTemplate',
+  'document'
+])
 
 function collectLeaves(value: unknown, path: string, key: string): Leaf[] {
   if (typeof value === 'string') {
@@ -242,7 +257,11 @@ function collectLeaves(value: unknown, path: string, key: string): Leaf[] {
   if (value && typeof value === 'object') {
     return Object.entries(value).flatMap(([childKey, child]) => {
       if (!path && SKIPPED_ROOT_KEYS.has(childKey)) return []
-      return collectLeaves(child, path ? `${path}.${childKey}` : childKey, childKey)
+      return collectLeaves(
+        child,
+        path ? `${path}.${childKey}` : childKey,
+        childKey
+      )
     })
   }
 
@@ -295,7 +314,8 @@ function classify(leaf: Leaf, haystack: string): Finding | undefined {
   if (!needle || haystack.includes(needle)) return undefined
 
   const matched = longestPrefixPresent(needle, haystack)
-  const clipped = matched >= MIN_PREFIX_CHARS && matched >= needle.length * MIN_PREFIX_RATIO
+  const clipped =
+    matched >= MIN_PREFIX_CHARS && matched >= needle.length * MIN_PREFIX_RATIO
 
   return {
     path: leaf.path,
@@ -329,9 +349,15 @@ function fixtureFor(name: FixtureName): Promise<Record<string, unknown>> {
 
 const extractions = new Map<string, Promise<Extraction>>()
 
-async function extract(fixture: FixtureName, templateId: number): Promise<Extraction> {
+async function extract(
+  fixture: FixtureName,
+  templateId: number
+): Promise<Extraction> {
   const blueprint = await fixtureFor(fixture)
-  const pdf = await renderBlueprint({ ...blueprint, selectedTemplate: templateId })
+  const pdf = await renderBlueprint({
+    ...blueprint,
+    selectedTemplate: templateId
+  })
 
   const dir = await mkdtemp(join(tmpdir(), 'rb-ats-'))
   const pdfPath = join(dir, `${fixture}-template${templateId}.pdf`)
@@ -371,7 +397,10 @@ async function extract(fixture: FixtureName, templateId: number): Promise<Extrac
   }
 }
 
-function extractionFor(fixture: FixtureName, templateId: number): Promise<Extraction> {
+function extractionFor(
+  fixture: FixtureName,
+  templateId: number
+): Promise<Extraction> {
   const key = `${fixture}:${templateId}`
   let pending = extractions.get(key)
   if (!pending) {
@@ -381,7 +410,10 @@ function extractionFor(fixture: FixtureName, templateId: number): Promise<Extrac
   return pending
 }
 
-async function findingsFor(fixture: FixtureName, templateId: number): Promise<Finding[]> {
+async function findingsFor(
+  fixture: FixtureName,
+  templateId: number
+): Promise<Finding[]> {
   const blueprint = await fixtureFor(fixture)
   const haystack = readings(await extractionFor(fixture, templateId)).join('\n')
 
@@ -392,7 +424,10 @@ async function findingsFor(fixture: FixtureName, templateId: number): Promise<Fi
 
 function describeFindings(findings: Finding[]): string {
   return findings
-    .map((f) => `    ${f.path}: expected ${JSON.stringify(f.expected)}, PDF had ${JSON.stringify(f.found)}`)
+    .map(
+      (f) =>
+        `    ${f.path}: expected ${JSON.stringify(f.expected)}, PDF had ${JSON.stringify(f.found)}`
+    )
     .join('\n')
 }
 
@@ -424,130 +459,183 @@ function isCritical(path: string): boolean {
 describe('no template clips content off the page', { skip: NO_POPPLER }, () => {
   for (const fixture of FIXTURE_NAMES) {
     for (const id of TEMPLATE_IDS) {
-      test(`template${id} wraps long content instead of truncating it (${fixture})`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
-        const clipped = (await findingsFor(fixture, id)).filter((f) => f.kind === 'clipped')
+      test(
+        `template${id} wraps long content instead of truncating it (${fixture})`,
+        { timeout: COMPILE_TIMEOUT_MS },
+        async () => {
+          const clipped = (await findingsFor(fixture, id)).filter(
+            (f) => f.kind === 'clipped'
+          )
 
-        assert.deepEqual(
-          clipped,
-          [],
-          `template${id} truncated ${clipped.length} field(s) mid-string on ${fixture}.json:\n${describeFindings(clipped)}`
-        )
-      })
+          assert.deepEqual(
+            clipped,
+            [],
+            `template${id} truncated ${clipped.length} field(s) mid-string on ${fixture}.json:\n${describeFindings(clipped)}`
+          )
+        }
+      )
     }
   }
 })
 
-describe('critical resume fields survive into the PDF', { skip: NO_POPPLER }, () => {
-  for (const fixture of FIXTURE_NAMES) {
-    for (const id of TEMPLATE_IDS) {
-      test(`template${id} renders every critical field (${fixture})`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
-        const lost = (await findingsFor(fixture, id)).filter((f) => isCritical(f.path))
+describe(
+  'critical resume fields survive into the PDF',
+  { skip: NO_POPPLER },
+  () => {
+    for (const fixture of FIXTURE_NAMES) {
+      for (const id of TEMPLATE_IDS) {
+        test(
+          `template${id} renders every critical field (${fixture})`,
+          { timeout: COMPILE_TIMEOUT_MS },
+          async () => {
+            const lost = (await findingsFor(fixture, id)).filter((f) =>
+              isCritical(f.path)
+            )
 
-        assert.deepEqual(
-          lost,
-          [],
-          `template${id} lost ${lost.length} critical field(s) on ${fixture}.json:\n${describeFindings(lost)}`
+            assert.deepEqual(
+              lost,
+              [],
+              `template${id} lost ${lost.length} critical field(s) on ${fixture}.json:\n${describeFindings(lost)}`
+            )
+          }
         )
-      })
+      }
     }
   }
-})
+)
 
-describe('extracted text preserves the blueprint reading order', { skip: NO_POPPLER }, () => {
-  for (const fixture of FIXTURE_NAMES) {
-    for (const id of TEMPLATE_IDS) {
-      test(`template${id} emits sections in the declared order (${fixture})`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
-        const blueprint = await fixtureFor(fixture)
-        const extraction = await extractionFor(fixture, id)
+describe(
+  'extracted text preserves the blueprint reading order',
+  { skip: NO_POPPLER },
+  () => {
+    for (const fixture of FIXTURE_NAMES) {
+      for (const id of TEMPLATE_IDS) {
+        test(
+          `template${id} emits sections in the declared order (${fixture})`,
+          { timeout: COMPILE_TIMEOUT_MS },
+          async () => {
+            const blueprint = await fixtureFor(fixture)
+            const extraction = await extractionFor(fixture, id)
 
-        const headings = (blueprint.headings ?? {}) as Record<string, string>
+            const headings = (blueprint.headings ?? {}) as Record<
+              string,
+              string
+            >
 
-        // A fixture only declares headings for the sections it populates. Asking
-        // for the rest would have the gate hunting the text layer for the string
-        // "undefined".
-        const expected: string[] = (blueprint.sections as string[])
-          .filter((section) => section !== 'profile' && headings[section])
-          .map((section) => squash(headings[section]))
+            // A fixture only declares headings for the sections it populates. Asking
+            // for the rest would have the gate hunting the text layer for the string
+            // "undefined".
+            const expected: string[] = (blueprint.sections as string[])
+              .filter((section) => section !== 'profile' && headings[section])
+              .map((section) => squash(headings[section]))
 
-        // Positions are only comparable inside a single reading, so each of the
-        // two parser-shaped modes is scored whole and the section order has to
-        // hold in one of them. Both are readings a real parser arrives at, and
-        // a heading that wraps inside a narrow label column survives only one:
-        // the default mode interleaves the column beside it, `-raw` does not.
-        const scored = [extraction.raw, extraction.stream].map((mode) => {
-          const haystack = squash(mode)
-          const positions = expected.map((heading) => ({ heading, at: haystack.indexOf(heading) }))
-          const absent = positions.filter((p) => p.at === -1).map((p) => p.heading)
-          const order = positions.map((p) => p.heading)
-          const sorted = [...positions].sort((a, b) => a.at - b.at).map((p) => p.heading)
+            // Positions are only comparable inside a single reading, so each of the
+            // two parser-shaped modes is scored whole and the section order has to
+            // hold in one of them. Both are readings a real parser arrives at, and
+            // a heading that wraps inside a narrow label column survives only one:
+            // the default mode interleaves the column beside it, `-raw` does not.
+            const scored = [extraction.raw, extraction.stream].map((mode) => {
+              const haystack = squash(mode)
+              const positions = expected.map((heading) => ({
+                heading,
+                at: haystack.indexOf(heading)
+              }))
+              const absent = positions
+                .filter((p) => p.at === -1)
+                .map((p) => p.heading)
+              const order = positions.map((p) => p.heading)
+              const sorted = [...positions]
+                .sort((a, b) => a.at - b.at)
+                .map((p) => p.heading)
 
-          return { absent, order, sorted, ok: absent.length === 0 && sorted.join() === order.join() }
-        })
+              return {
+                absent,
+                order,
+                sorted,
+                ok: absent.length === 0 && sorted.join() === order.join()
+              }
+            })
 
-        if (scored.some((reading) => reading.ok)) return
+            if (scored.some((reading) => reading.ok)) return
 
-        const worst = scored[0]
+            const worst = scored[0]
 
-        assert.deepEqual(
-          worst.absent,
-          [],
-          `template${id} omitted section heading(s) on ${fixture}.json: ${worst.absent.join(', ')}`
+            assert.deepEqual(
+              worst.absent,
+              [],
+              `template${id} omitted section heading(s) on ${fixture}.json: ${worst.absent.join(', ')}`
+            )
+
+            assert.deepEqual(
+              worst.sorted,
+              worst.order,
+              `template${id} extracts sections on ${fixture}.json as [${worst.sorted.join(', ')}] but the blueprint declared [${worst.order.join(', ')}] — a parser reads them in the wrong order`
+            )
+          }
         )
-
-        assert.deepEqual(
-          worst.sorted,
-          worst.order,
-          `template${id} extracts sections on ${fixture}.json as [${worst.sorted.join(', ')}] but the blueprint declared [${worst.order.join(', ')}] — a parser reads them in the wrong order`
-        )
-      })
+      }
     }
   }
-})
+)
 
-describe('the contact block is contiguous enough for a parser to find', { skip: NO_POPPLER }, () => {
-  /** Roughly a header's worth of text. Beyond this the fields are not one block. */
-  const WINDOW_CHARS = 400
+describe(
+  'the contact block is contiguous enough for a parser to find',
+  { skip: NO_POPPLER },
+  () => {
+    /** Roughly a header's worth of text. Beyond this the fields are not one block. */
+    const WINDOW_CHARS = 400
 
-  for (const fixture of FIXTURE_NAMES) {
-    for (const id of TEMPLATE_IDS) {
-      test(`template${id} keeps name, email, and phone together (${fixture})`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
-        const blueprint = await fixtureFor(fixture)
-        const basics = (blueprint.basics ?? {}) as Record<string, string>
-        const all = readings(await extractionFor(fixture, id))
+    for (const fixture of FIXTURE_NAMES) {
+      for (const id of TEMPLATE_IDS) {
+        test(
+          `template${id} keeps name, email, and phone together (${fixture})`,
+          { timeout: COMPILE_TIMEOUT_MS },
+          async () => {
+            const blueprint = await fixtureFor(fixture)
+            const basics = (blueprint.basics ?? {}) as Record<string, string>
+            const all = readings(await extractionFor(fixture, id))
 
-        // Only fields the fixture actually carries. `sparse.json` deliberately
-        // has no website or address; a gate that failed on their absence would
-        // be measuring the fixture, not the template.
-        const needles = ['name', 'email', 'phone']
-          .filter((key) => basics[key])
-          .map((key) => ({ key, needle: squash(basics[key]) }))
+            // Only fields the fixture actually carries. `sparse.json` deliberately
+            // has no website or address; a gate that failed on their absence would
+            // be measuring the fixture, not the template.
+            const needles = ['name', 'email', 'phone']
+              .filter((key) => basics[key])
+              .map((key) => ({ key, needle: squash(basics[key]) }))
 
-        if (needles.length < 2) return
+            if (needles.length < 2) return
 
-        // Positions only mean anything within a single reading, so measure the
-        // spread in the first one that carries all the fields.
-        const haystack =
-          all.find((text) => needles.every((n) => text.includes(n.needle))) ?? all[0]
+            // Positions only mean anything within a single reading, so measure the
+            // spread in the first one that carries all the fields.
+            const haystack =
+              all.find((text) =>
+                needles.every((n) => text.includes(n.needle))
+              ) ?? all[0]
 
-        const fields = needles.map(({ key, needle }) => ({
-          key,
-          at: haystack.indexOf(needle)
-        }))
+            const fields = needles.map(({ key, needle }) => ({
+              key,
+              at: haystack.indexOf(needle)
+            }))
 
-        const absent = fields.filter((f) => f.at === -1).map((f) => f.key)
-        assert.deepEqual(absent, [], `template${id} did not render contact field(s) on ${fixture}.json: ${absent.join(', ')}`)
+            const absent = fields.filter((f) => f.at === -1).map((f) => f.key)
+            assert.deepEqual(
+              absent,
+              [],
+              `template${id} did not render contact field(s) on ${fixture}.json: ${absent.join(', ')}`
+            )
 
-        const at = fields.map((f) => f.at)
-        const spread = Math.max(...at) - Math.min(...at)
+            const at = fields.map((f) => f.at)
+            const spread = Math.max(...at) - Math.min(...at)
 
-        assert.ok(
-          spread <= WINDOW_CHARS,
-          `template${id} spread name/email/phone across ${spread} characters on ${fixture}.json (limit ${WINDOW_CHARS}) — a parser will not read them as one contact block`
+            assert.ok(
+              spread <= WINDOW_CHARS,
+              `template${id} spread name/email/phone across ${spread} characters on ${fixture}.json (limit ${WINDOW_CHARS}) — a parser will not read them as one contact block`
+            )
+          }
         )
-      })
+      }
     }
   }
-})
+)
 
 // ---------------------------------------------------------------------------
 // Skill rows
@@ -579,7 +667,10 @@ function probeKeyword(keywords: string[]): string {
 }
 
 function skillRowsOf(blueprint: Record<string, unknown>): SkillRow[] {
-  const skills = (blueprint.skills ?? []) as Array<{ name?: string; keywords?: string[] }>
+  const skills = (blueprint.skills ?? []) as Array<{
+    name?: string
+    keywords?: string[]
+  }>
 
   return skills
     .map((skill) => ({
@@ -595,7 +686,9 @@ function skillRowDefects(rows: SkillRow[], lines: string[]): string[] {
   const defects: string[] = []
 
   for (const row of rows) {
-    const together = lines.some((line) => line.includes(row.label) && line.includes(row.probe))
+    const together = lines.some(
+      (line) => line.includes(row.label) && line.includes(row.probe)
+    )
     if (!together) {
       defects.push(
         `"${row.name}" and its keywords extract onto different lines — a parser reads the category as a value of its own`
@@ -618,36 +711,46 @@ function skillRowDefects(rows: SkillRow[], lines: string[]): string[] {
 /** Fixtures whose skills sections are shaped to exercise the column defect. */
 const SKILL_FIXTURES: FixtureName[] = ['grid', 'dense']
 
-describe('a skill category and its keywords extract as one row', { skip: NO_POPPLER }, () => {
-  for (const profile of TEMPLATE_PROFILES) {
-    test(`template${profile.id} cohesiveSkillRows is ${profile.cohesiveSkillRows}`, { timeout: SUITE_TIMEOUT_MS }, async () => {
-      const reported: string[] = []
+describe(
+  'a skill category and its keywords extract as one row',
+  { skip: NO_POPPLER },
+  () => {
+    for (const profile of TEMPLATE_PROFILES) {
+      test(
+        `template${profile.id} cohesiveSkillRows is ${profile.cohesiveSkillRows}`,
+        { timeout: SUITE_TIMEOUT_MS },
+        async () => {
+          const reported: string[] = []
 
-      for (const fixture of SKILL_FIXTURES) {
-        const rows = skillRowsOf(await fixtureFor(fixture))
-        if (!rows.length) continue
+          for (const fixture of SKILL_FIXTURES) {
+            const rows = skillRowsOf(await fixtureFor(fixture))
+            if (!rows.length) continue
 
-        // A row only has to survive into one plausible reading, so the fixture
-        // is clean if any reading is clean, and the shortest defect list is the
-        // one worth reporting.
-        const perReading = lineReadings(await extractionFor(fixture, profile.id)).map((lines) =>
-          skillRowDefects(rows, lines)
-        )
-        const best = perReading.sort((a, b) => a.length - b.length)[0]
+            // A row only has to survive into one plausible reading, so the fixture
+            // is clean if any reading is clean, and the shortest defect list is the
+            // one worth reporting.
+            const perReading = lineReadings(
+              await extractionFor(fixture, profile.id)
+            ).map((lines) => skillRowDefects(rows, lines))
+            const best = perReading.sort((a, b) => a.length - b.length)[0]
 
-        reported.push(...best.map((defect) => `    ${fixture}.json: ${defect}`))
-      }
+            reported.push(
+              ...best.map((defect) => `    ${fixture}.json: ${defect}`)
+            )
+          }
 
-      assert.equal(
-        reported.length === 0,
-        profile.cohesiveSkillRows,
-        profile.cohesiveSkillRows
-          ? `template${profile.id} is recorded as keeping skill rows together but does not:\n${reported.join('\n')}`
-          : `template${profile.id} is recorded as merging skill columns, but every row now extracts cleanly — update TEMPLATE_PROFILES`
+          assert.equal(
+            reported.length === 0,
+            profile.cohesiveSkillRows,
+            profile.cohesiveSkillRows
+              ? `template${profile.id} is recorded as keeping skill rows together but does not:\n${reported.join('\n')}`
+              : `template${profile.id} is recorded as merging skill columns, but every row now extracts cleanly — update TEMPLATE_PROFILES`
+          )
+        }
       )
-    })
+    }
   }
-})
+)
 
 // ---------------------------------------------------------------------------
 // Certificate records
@@ -664,9 +767,16 @@ describe('a skill category and its keywords extract as one row', { skip: NO_POPP
 // and the number says how badly.
 // ---------------------------------------------------------------------------
 
-type CertificateRecord = { name: string; issuer: string; date: string; needles: string[] }
+type CertificateRecord = {
+  name: string
+  issuer: string
+  date: string
+  needles: string[]
+}
 
-function certificateRecordsOf(blueprint: Record<string, unknown>): CertificateRecord[] {
+function certificateRecordsOf(
+  blueprint: Record<string, unknown>
+): CertificateRecord[] {
   const certificates = (blueprint.certificates ?? []) as Array<{
     name?: string
     issuer?: string
@@ -679,7 +789,9 @@ function certificateRecordsOf(blueprint: Record<string, unknown>): CertificateRe
       name: cert.name as string,
       issuer: cert.issuer as string,
       date: cert.date as string,
-      needles: [cert.name, cert.issuer, cert.date].map((value) => squash(value as string))
+      needles: [cert.name, cert.issuer, cert.date].map((value) =>
+        squash(value as string)
+      )
     }))
 }
 
@@ -707,47 +819,65 @@ function recordSpan(record: CertificateRecord, lines: string[]): number {
   const anchor = lines.findIndex((line) => line.includes(name))
   if (anchor === -1) return -1
 
-  const at = [anchor, nearestLine(lines, issuer, anchor), nearestLine(lines, date, anchor)]
+  const at = [
+    anchor,
+    nearestLine(lines, issuer, anchor),
+    nearestLine(lines, date, anchor)
+  ]
   if (at.includes(-1)) return -1
 
   return Math.max(...at) - Math.min(...at)
 }
 
-describe('a certificate extracts as one record, not three fragments', { skip: NO_POPPLER }, () => {
-  for (const profile of TEMPLATE_PROFILES) {
-    test(`template${profile.id} cohesiveRecords is ${profile.cohesiveRecords}`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
-      // `grid.json` only. Its certificates are exactly name/issuer/date, which
-      // is the shape the review asked for; dense.json's single award carries a
-      // prose summary that legitimately wraps, and measuring line spans across
-      // a wrapped paragraph would report the fixture rather than the template.
-      const records = certificateRecordsOf(await fixtureFor('grid'))
-      const perReading = lineReadings(await extractionFor('grid', profile.id))
+describe(
+  'a certificate extracts as one record, not three fragments',
+  { skip: NO_POPPLER },
+  () => {
+    for (const profile of TEMPLATE_PROFILES) {
+      test(
+        `template${profile.id} cohesiveRecords is ${profile.cohesiveRecords}`,
+        { timeout: COMPILE_TIMEOUT_MS },
+        async () => {
+          // `grid.json` only. Its certificates are exactly name/issuer/date, which
+          // is the shape the review asked for; dense.json's single award carries a
+          // prose summary that legitimately wraps, and measuring line spans across
+          // a wrapped paragraph would report the fixture rather than the template.
+          const records = certificateRecordsOf(await fixtureFor('grid'))
+          const perReading = lineReadings(
+            await extractionFor('grid', profile.id)
+          )
 
-      const reported: string[] = []
+          const reported: string[] = []
 
-      for (const record of records) {
-        const spans = perReading.map((lines) => recordSpan(record, lines))
-        const best = spans.filter((span) => span >= 0).sort((a, b) => a - b)[0]
+          for (const record of records) {
+            const spans = perReading.map((lines) => recordSpan(record, lines))
+            const best = spans
+              .filter((span) => span >= 0)
+              .sort((a, b) => a - b)[0]
 
-        if (best === undefined) {
-          reported.push(`    "${record.name}": one of name/issuer/date never reached the text layer`)
-        } else if (best > 0) {
-          reported.push(
-            `    "${record.name}": name, "${record.issuer}", and ${record.date} span ${best + 1} extracted lines`
+            if (best === undefined) {
+              reported.push(
+                `    "${record.name}": one of name/issuer/date never reached the text layer`
+              )
+            } else if (best > 0) {
+              reported.push(
+                `    "${record.name}": name, "${record.issuer}", and ${record.date} span ${best + 1} extracted lines`
+              )
+            }
+          }
+
+          assert.equal(
+            reported.length === 0,
+            profile.cohesiveRecords,
+            profile.cohesiveRecords
+              ? `template${profile.id} is recorded as keeping certificate records whole but does not:\n${reported.join('\n')}`
+              : `template${profile.id} is recorded as splitting certificate records, but every record now extracts on one line — update TEMPLATE_PROFILES`
           )
         }
-      }
-
-      assert.equal(
-        reported.length === 0,
-        profile.cohesiveRecords,
-        profile.cohesiveRecords
-          ? `template${profile.id} is recorded as keeping certificate records whole but does not:\n${reported.join('\n')}`
-          : `template${profile.id} is recorded as splitting certificate records, but every record now extracts on one line — update TEMPLATE_PROFILES`
       )
-    })
+    }
   }
-})
+)
 
 // ---------------------------------------------------------------------------
 // Orphan bullets
@@ -773,30 +903,43 @@ function bareBulletLines(text: string): string[] {
     .filter((line) => line.length > 0 && BARE_BULLET.test(line))
 }
 
-describe('no extracted line is a bullet with nothing after it', { skip: NO_POPPLER }, () => {
-  for (const profile of TEMPLATE_PROFILES) {
-    test(`template${profile.id} orphanBullets is ${profile.orphanBullets}`, { timeout: SUITE_TIMEOUT_MS }, async () => {
-      const reported: string[] = []
+describe(
+  'no extracted line is a bullet with nothing after it',
+  { skip: NO_POPPLER },
+  () => {
+    for (const profile of TEMPLATE_PROFILES) {
+      test(
+        `template${profile.id} orphanBullets is ${profile.orphanBullets}`,
+        { timeout: SUITE_TIMEOUT_MS },
+        async () => {
+          const reported: string[] = []
 
-      for (const fixture of FIXTURE_NAMES) {
-        const { layout, raw, stream } = await extractionFor(fixture, profile.id)
-        const orphans = [layout, raw, stream].flatMap(bareBulletLines)
+          for (const fixture of FIXTURE_NAMES) {
+            const { layout, raw, stream } = await extractionFor(
+              fixture,
+              profile.id
+            )
+            const orphans = [layout, raw, stream].flatMap(bareBulletLines)
 
-        if (orphans.length) {
-          reported.push(`    ${fixture}.json: ${orphans.length} line(s) reading only ${JSON.stringify(orphans[0])}`)
+            if (orphans.length) {
+              reported.push(
+                `    ${fixture}.json: ${orphans.length} line(s) reading only ${JSON.stringify(orphans[0])}`
+              )
+            }
+          }
+
+          assert.equal(
+            reported.length > 0,
+            profile.orphanBullets,
+            profile.orphanBullets
+              ? `template${profile.id} is recorded as emitting orphan bullets but none appeared — update TEMPLATE_PROFILES`
+              : `template${profile.id} is recorded as bullet-clean but emits bullets with no text:\n${reported.join('\n')}`
+          )
         }
-      }
-
-      assert.equal(
-        reported.length > 0,
-        profile.orphanBullets,
-        profile.orphanBullets
-          ? `template${profile.id} is recorded as emitting orphan bullets but none appeared — update TEMPLATE_PROFILES`
-          : `template${profile.id} is recorded as bullet-clean but emits bullets with no text:\n${reported.join('\n')}`
       )
-    })
+    }
   }
-})
+)
 
 // ---------------------------------------------------------------------------
 // Page geometry
@@ -834,7 +977,8 @@ function parsePageBoxes(bbox: string): PageBox[] {
 
   let page: RegExpExecArray | null
   while ((page = pageRe.exec(bbox)) !== null) {
-    const wordRe = /<word xMin="(-?[\d.]+)" yMin="(-?[\d.]+)" xMax="(-?[\d.]+)" yMax="(-?[\d.]+)"/g
+    const wordRe =
+      /<word xMin="(-?[\d.]+)" yMin="(-?[\d.]+)" xMax="(-?[\d.]+)" yMax="(-?[\d.]+)"/g
 
     let minX = Infinity
     let maxX = -Infinity
@@ -851,7 +995,15 @@ function parsePageBoxes(bbox: string): PageBox[] {
       maxY = Math.max(maxY, Number(word[4]))
     }
 
-    pages.push({ width: Number(page[1]), height: Number(page[2]), words, minX, maxX, minY, maxY })
+    pages.push({
+      width: Number(page[1]),
+      height: Number(page[2]),
+      words,
+      minX,
+      maxX,
+      minY,
+      maxY
+    })
   }
 
   return pages
@@ -869,7 +1021,10 @@ function paperFromInfo(info: string): string {
 
 type MarginReading = { inches: number; where: string }
 
-function tightestMargin(fixture: FixtureName, pages: PageBox[]): MarginReading | undefined {
+function tightestMargin(
+  fixture: FixtureName,
+  pages: PageBox[]
+): MarginReading | undefined {
   let tightest: MarginReading | undefined
 
   pages.forEach((page, index) => {
@@ -887,7 +1042,10 @@ function tightestMargin(fixture: FixtureName, pages: PageBox[]): MarginReading |
     for (const [edge, points] of edges) {
       const inches = points / PDF_POINTS_PER_INCH
       if (!tightest || inches < tightest.inches) {
-        tightest = { inches, where: `${fixture}.json page ${index + 1} ${edge}` }
+        tightest = {
+          inches,
+          where: `${fixture}.json page ${index + 1} ${edge}`
+        }
       }
     }
   })
@@ -897,41 +1055,49 @@ function tightestMargin(fixture: FixtureName, pages: PageBox[]): MarginReading |
 
 describe('text stays clear of the page edges', { skip: NO_POPPLER }, () => {
   for (const profile of TEMPLATE_PROFILES) {
-    test(`template${profile.id} clearsMarginFloor is ${profile.clearsMarginFloor}`, { timeout: SUITE_TIMEOUT_MS }, async () => {
-      let tightest: MarginReading | undefined
-      const papers = new Set<string>()
+    test(
+      `template${profile.id} clearsMarginFloor is ${profile.clearsMarginFloor}`,
+      { timeout: SUITE_TIMEOUT_MS },
+      async () => {
+        let tightest: MarginReading | undefined
+        const papers = new Set<string>()
 
-      for (const fixture of FIXTURE_NAMES) {
-        const { bbox, info } = await extractionFor(fixture, profile.id)
-        const pages = parsePageBoxes(bbox)
+        for (const fixture of FIXTURE_NAMES) {
+          const { bbox, info } = await extractionFor(fixture, profile.id)
+          const pages = parsePageBoxes(bbox)
 
-        // Cross-check the two tools against each other. A bbox extraction that
-        // silently stopped short would otherwise measure a document that is not
-        // the one that was rendered.
-        assert.equal(
-          pages.length,
-          pageCountFromInfo(info),
-          `template${profile.id} on ${fixture}.json: pdftotext -bbox reported ${pages.length} page(s) but pdfinfo reported ${pageCountFromInfo(info)}`
+          // Cross-check the two tools against each other. A bbox extraction that
+          // silently stopped short would otherwise measure a document that is not
+          // the one that was rendered.
+          assert.equal(
+            pages.length,
+            pageCountFromInfo(info),
+            `template${profile.id} on ${fixture}.json: pdftotext -bbox reported ${pages.length} page(s) but pdfinfo reported ${pageCountFromInfo(info)}`
+          )
+
+          papers.add(paperFromInfo(info))
+
+          const reading = tightestMargin(fixture, pages)
+          if (reading && (!tightest || reading.inches < tightest.inches))
+            tightest = reading
+        }
+
+        assert.ok(
+          tightest,
+          `template${profile.id} produced no measurable text on any fixture`
         )
 
-        papers.add(paperFromInfo(info))
+        const measured = tightest.inches.toFixed(3)
 
-        const reading = tightestMargin(fixture, pages)
-        if (reading && (!tightest || reading.inches < tightest.inches)) tightest = reading
+        assert.equal(
+          tightest.inches >= MARGIN_FLOOR_IN,
+          profile.clearsMarginFloor,
+          profile.clearsMarginFloor
+            ? `template${profile.id} is recorded as clearing the ${MARGIN_FLOOR_IN}in floor but its text comes within ${measured}in of the edge (${tightest.where}; paper ${[...papers].join(', ')})`
+            : `template${profile.id} is recorded as breaching the ${MARGIN_FLOOR_IN}in floor but its tightest margin is now ${measured}in (${tightest.where}) — update TEMPLATE_PROFILES`
+        )
       }
-
-      assert.ok(tightest, `template${profile.id} produced no measurable text on any fixture`)
-
-      const measured = tightest.inches.toFixed(3)
-
-      assert.equal(
-        tightest.inches >= MARGIN_FLOOR_IN,
-        profile.clearsMarginFloor,
-        profile.clearsMarginFloor
-          ? `template${profile.id} is recorded as clearing the ${MARGIN_FLOOR_IN}in floor but its text comes within ${measured}in of the edge (${tightest.where}; paper ${[...papers].join(', ')})`
-          : `template${profile.id} is recorded as breaching the ${MARGIN_FLOOR_IN}in floor but its tightest margin is now ${measured}in (${tightest.where}) — update TEMPLATE_PROFILES`
-      )
-    })
+    )
   }
 })
 
@@ -1001,22 +1167,35 @@ describe('the template catalog is internally consistent', () => {
   }
 })
 
-describe('the template catalog matches what the harness measures', { skip: NO_POPPLER }, () => {
-  for (const profile of TEMPLATE_PROFILES) {
-    test(`template${profile.id} iconLabeledContacts is ${profile.iconLabeledContacts}`, { timeout: COMPILE_TIMEOUT_MS }, async () => {
-      const blueprint = await fixtureFor('dense')
-      const { raw } = await extractionFor('dense', profile.id)
-      const stray = strayGlyphs(raw, parseBlueprint(blueprint))
+describe(
+  'the template catalog matches what the harness measures',
+  { skip: NO_POPPLER },
+  () => {
+    for (const profile of TEMPLATE_PROFILES) {
+      test(
+        `template${profile.id} iconLabeledContacts is ${profile.iconLabeledContacts}`,
+        { timeout: COMPILE_TIMEOUT_MS },
+        async () => {
+          const blueprint = await fixtureFor('dense')
+          const { raw } = await extractionFor('dense', profile.id)
+          const stray = strayGlyphs(raw, parseBlueprint(blueprint))
 
-      assert.equal(
-        stray.size > 0,
-        profile.iconLabeledContacts,
-        profile.iconLabeledContacts
-          ? `template${profile.id} is marked as icon-labeled but its text layer is clean — update TEMPLATE_PROFILES`
-          : `template${profile.id} is marked as icon-free but its text layer carries ${[...stray]
-              .map((c) => `U+${(c.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')}`)
-              .join(' ')} — update TEMPLATE_PROFILES`
+          assert.equal(
+            stray.size > 0,
+            profile.iconLabeledContacts,
+            profile.iconLabeledContacts
+              ? `template${profile.id} is marked as icon-labeled but its text layer is clean — update TEMPLATE_PROFILES`
+              : `template${profile.id} is marked as icon-free but its text layer carries ${[
+                  ...stray
+                ]
+                  .map(
+                    (c) =>
+                      `U+${(c.codePointAt(0) ?? 0).toString(16).toUpperCase().padStart(4, '0')}`
+                  )
+                  .join(' ')} — update TEMPLATE_PROFILES`
+          )
+        }
       )
-    })
+    }
   }
-})
+)

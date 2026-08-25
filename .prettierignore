@@ -1,0 +1,25 @@
+node_modules/
+dist/
+*.pdf
+package-lock.json
+
+# Vendored/binary/generated — see CLAUDE.md "Do not read these into context".
+packages/core/assets/
+
+# Test fixtures: exact bytes (whitespace, trailing newline, markdown wrapping)
+# are part of what's under test — reformatting them silently changes what the
+# tests exercise. See profile.test.ts for cases that depend on this.
+fixtures/
+
+# Gitignored personal data; never touched by tooling that writes to disk.
+profile_templates/
+external_feedback.md
+*_feedback.md
+
+# Untracked scratch notes from another project (see .gitignore).
+docs/iauth.txt
+docs/policy.txt
+docs/printall.sh
+docs/shema.txt
+docs/some_thing.yml
+docs/wf.txt

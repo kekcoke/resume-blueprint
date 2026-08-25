@@ -14,31 +14,32 @@ says so in a comment, so that fixing it turns the row red and forces
 `qa/contract.md` to be updated in the same change. G4 and G11 are pinned that
 way today.
 
-| # | Finding | Severity |
-|---|---|---|
-| [G1](#g1) | CLI collapses every failure to exit 1 | medium |
-| [G2](#g2) | MCP has no render concurrency cap | medium |
-| [G3](#g3) | HTTP exposes 8 routes against MCP's 18 tools | **high** |
-| [G4](#g4) | `--timeout` is the one unvalidated numeric CLI flag | low |
-| [G5](#g5) | Four different render-timeout ceilings, no shared constant | medium |
-| [G6](#g6) | HTTP 503 carries two unrelated meanings | medium |
-| [G7](#g7) | No `tectonic` presence check in the test suite | medium |
-| [G8](#g8) | Tests are never typechecked | medium |
-| [G9](#g9) | No linter or formatter | low |
-| [G10](#g10) | CI fetches the Tectonic bundle per run | **high** |
-| [G11](#g11) | The depth guard is applied asymmetrically | medium |
-| [G12](#g12) | README drift | low |
-| [G13](#g13) | `store.list()` silently drops unreadable blueprints | low |
-| [G14](#g14) | `renderStored` reads the store before acquiring a render slot | low |
-| [G15](#g15) | F12 residue still open | low |
+| #           | Finding                                                       | Severity |
+| ----------- | ------------------------------------------------------------- | -------- |
+| [G1](#g1)   | CLI collapses every failure to exit 1                         | medium   |
+| [G2](#g2)   | MCP has no render concurrency cap                             | medium   |
+| [G3](#g3)   | HTTP exposes 8 routes against MCP's 18 tools                  | **high** |
+| [G4](#g4)   | `--timeout` is the one unvalidated numeric CLI flag           | low      |
+| [G5](#g5)   | Four different render-timeout ceilings, no shared constant    | medium   |
+| [G6](#g6)   | HTTP 503 carries two unrelated meanings                       | medium   |
+| [G7](#g7)   | No `tectonic` presence check in the test suite                | medium   |
+| [G8](#g8)   | Tests are never typechecked                                   | medium   |
+| [G9](#g9)   | No linter or formatter                                        | low      |
+| [G10](#g10) | CI fetches the Tectonic bundle per run                        | **high** |
+| [G11](#g11) | The depth guard is applied asymmetrically                     | medium   |
+| [G12](#g12) | README drift                                                  | low      |
+| [G13](#g13) | `store.list()` silently drops unreadable blueprints           | low      |
+| [G14](#g14) | `renderStored` reads the store before acquiring a render slot | low      |
+| [G15](#g15) | F12 residue still open                                        | low      |
 
 ---
 
 ## G1
+
 ### CLI collapses every failure to exit 1 — medium
 
 **Evidence.** `packages/cli/src/index.ts:360` — the top-level catch branches
-five ways to produce five different *messages*, then every branch ends
+five ways to produce five different _messages_, then every branch ends
 `process.exit(1)`.
 
 A calling script therefore cannot distinguish a typo in a flag, a schema
@@ -55,6 +56,7 @@ before an MVP freezes it.
 **Size.** Small — one function, plus the contract rows.
 
 ## G2
+
 ### MCP has no render concurrency cap — medium
 
 **Evidence.** `packages/mcp/src/tools.ts:411` runs `renderBlueprint` **outside**
@@ -67,7 +69,7 @@ HTTP caps at 4 (`packages/http/src/renderLimit.ts`) precisely because each
 render is a real subprocess with real CPU cost. MCP has the same cost and no
 cap: N parallel `resume_render` calls spawn N `tectonic` processes.
 
-This is *observable in the harness transcript*: in `qa/mcp/01-render.jsonl` the
+This is _observable in the harness transcript_: in `qa/mcp/01-render.jsonl` the
 response to id 5 arrives before the response to id 4, because both renders are
 in flight at once. `qa/mcp/08-concurrency.sh` deliberately uses 20 rather than
 200 for exactly this reason.
@@ -78,12 +80,13 @@ is. That is why this is medium and not high.
 
 **Proposed fix.** Reuse `renderLimit.ts` from a shared location, or add the
 equivalent to `packages/mcp/src/render.ts`. Unlike HTTP, MCP should probably
-*queue* rather than reject — an agent has no sensible retry behaviour for
+_queue_ rather than reject — an agent has no sensible retry behaviour for
 "busy".
 
 **Size.** Small, once the shared-module question is settled.
 
 ## G3
+
 ### HTTP exposes 8 routes against MCP's 18 tools — high
 
 **Evidence.** `packages/http/src/server.ts:26-35` lists eight routes.
@@ -111,6 +114,7 @@ current state reads as the second by accident.
 **Size.** Medium to large, and the decision matters more than the code.
 
 ## G4
+
 ### `--timeout` is the one unvalidated numeric CLI flag — low
 
 **Evidence.** `packages/cli/src/index.ts:345` —
@@ -128,16 +132,17 @@ happened. Pinned as current behaviour in
 **Size.** One line, plus flipping the contract row.
 
 ## G5
+
 ### Four different render-timeout ceilings, no shared constant — medium
 
 **Evidence.**
 
-| Surface | Budget | Caller-settable |
-|---|---|---|
-| core default | 60 s | via option |
-| CLI | whatever `--timeout` says (unvalidated, see G4) | yes |
-| HTTP | 180 s, hardcoded at `packages/http/src/routes.ts` | no |
-| MCP | caller's `timeoutMs`, capped at 300 s in `schemas.ts` | yes |
+| Surface      | Budget                                                | Caller-settable |
+| ------------ | ----------------------------------------------------- | --------------- |
+| core default | 60 s                                                  | via option      |
+| CLI          | whatever `--timeout` says (unvalidated, see G4)       | yes             |
+| HTTP         | 180 s, hardcoded at `packages/http/src/routes.ts`     | no              |
+| MCP          | caller's `timeoutMs`, capped at 300 s in `schemas.ts` | yes             |
 
 Each is individually justified in a comment — and the four justifications were
 written independently, so the same document can take 60 s, 180 s or 300 s
@@ -151,6 +156,7 @@ than as a literal.
 **Size.** Small.
 
 ## G6
+
 ### HTTP 503 carries two unrelated meanings — medium
 
 **Evidence.** `packages/http/src/routes.ts` returns 503 with
@@ -169,6 +175,7 @@ its own status (`409` or a 5xx that is not 503) so the two are branchable.
 **Size.** Small.
 
 ## G7
+
 ### No `tectonic` presence check in the test suite — medium
 
 **Evidence.** `packages/core/test/ats.test.ts:75-84` defines `hasBinary` and
@@ -177,7 +184,7 @@ gates the poppler-dependent assertions on it, so a machine without
 does this for `tectonic` — it is simply assumed, and its absence surfaces as a
 wall of render failures rather than "the engine is not installed".
 
-**Proposed fix.** Reuse the existing `hasBinary` and fail *once*, early, with
+**Proposed fix.** Reuse the existing `hasBinary` and fail _once_, early, with
 the install hint core already knows how to print. Note that CI deliberately
 treats a missing poppler as a hard failure — that intent should be preserved,
 not flattened into a skip.
@@ -186,6 +193,7 @@ not flattened into a skip.
 the model.
 
 ## G8
+
 ### Tests are never typechecked — medium
 
 **Evidence.** All five `packages/*/tsconfig.json` set
@@ -201,6 +209,7 @@ to the main `include` — that would emit the tests into `dist/`.
 **Size.** Small, but expect it to surface real errors on first run.
 
 ## G9
+
 ### No linter or formatter — low
 
 **Evidence.** No ESLint or Prettier config anywhere in the repo, and no
@@ -214,6 +223,7 @@ larger conversation; Prettier alone removes the ambiguity CLAUDE.md creates.
 **Size.** Small.
 
 ## G10
+
 ### CI fetches the Tectonic bundle per run — high
 
 **Evidence.** `.github/workflows/ci.yml` caches `~/.cache/Tectonic` and pins
@@ -242,20 +252,21 @@ template edit does not force a refetch.
 **Size.** Medium. Mostly the bundle-hosting decision.
 
 ## G11
+
 ### The depth guard is applied asymmetrically — medium
 
 **Evidence.** `assertReasonableDepth` exists twice — `packages/mcp/src/validate.ts`
 and `packages/http/src/body.ts` — and both copies document the duplication as
 deliberate (a shared package for one 8-line helper being disproportionate).
-Fine. The problem is where it is *called*:
+Fine. The problem is where it is _called_:
 
-| Entry point | Guarded |
-|---|---|
-| `POST /blueprints` (`body.blueprint`) | yes |
-| `PATCH /blueprints/:id` (`body.patch`) | yes |
-| `resume_patch` (`patch`) | yes |
-| **`POST /render`** (whole body) | **no** |
-| **`resume_create`** (`blueprint`) | **no** |
+| Entry point                            | Guarded |
+| -------------------------------------- | ------- |
+| `POST /blueprints` (`body.blueprint`)  | yes     |
+| `PATCH /blueprints/:id` (`body.patch`) | yes     |
+| `resume_patch` (`patch`)               | yes     |
+| **`POST /render`** (whole body)        | **no**  |
+| **`resume_create`** (`blueprint`)      | **no**  |
 
 The guard's stated purpose is protecting store's `applyMergePatch` from
 unbounded recursion, and `resume_create` reaches the store. `POST /render` does
@@ -269,6 +280,7 @@ themselves and this silence reads as an oversight.
 **Size.** Two lines, plus flipping the contract row.
 
 ## G12
+
 ### README drift — low
 
 **Evidence.**
@@ -293,6 +305,7 @@ response-contract section to the HTTP docs.
 **Size.** Small.
 
 ## G13
+
 ### `store.list()` silently drops unreadable blueprints — low
 
 **Evidence.** `packages/store/src/index.ts:216-228` — the per-file `try` ends in
@@ -309,6 +322,7 @@ only — invariant 2), or return the id with an `error` field so a UI can show
 **Size.** Small.
 
 ## G14
+
 ### `renderStored` reads the store before acquiring a render slot — low
 
 **Evidence.** `packages/http/src/routes.ts:183` — `store.get(params.id)` runs,
@@ -322,10 +336,11 @@ the ones being served.
 
 **Proposed fix.** Acquire the slot first, then read.
 
-**Size.** A few lines. Note the ordering is *load-bearing* for the 404: a
+**Size.** A few lines. Note the ordering is _load-bearing_ for the 404: a
 missing id must still 404 rather than 503, so the fix has to keep that.
 
 ## G15
+
 ### F12 residue still open — low
 
 Carried forward from `docs/next-features.md`, unchanged and still true:

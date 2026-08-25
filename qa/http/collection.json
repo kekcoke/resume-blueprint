@@ -54,12 +54,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/render",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "render"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["render"]
         },
         "description": "Generated from qa/http/01-render-stateless.sh. Edit the script, not this file."
       }
@@ -71,12 +67,8 @@
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/healthz",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "healthz"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["healthz"]
         },
         "description": "Generated from qa/http/01-render-stateless.sh. Edit the script, not this file."
       }
@@ -102,12 +94,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/render",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "render"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["render"]
         },
         "description": "Generated from qa/http/01-render-stateless.sh. Edit the script, not this file."
       }
@@ -133,12 +121,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/render",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "render"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["render"]
         },
         "description": "Generated from qa/http/02-render-invalid.sh. Edit the script, not this file."
       }
@@ -164,12 +148,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/render",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "render"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["render"]
         },
         "description": "Generated from qa/http/02-render-invalid.sh. Edit the script, not this file."
       }
@@ -195,12 +175,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/render",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "render"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["render"]
         },
         "description": "Generated from qa/http/02-render-invalid.sh. Edit the script, not this file."
       }
@@ -226,12 +202,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/render",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "render"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["render"]
         },
         "description": "Generated from qa/http/03-injection.sh. Edit the script, not this file."
       }
@@ -257,12 +229,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/blueprints",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "blueprints"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["blueprints"]
         },
         "description": "Generated from qa/http/04-limits.sh. Edit the script, not this file."
       }
@@ -288,12 +256,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/blueprints",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "blueprints"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["blueprints"]
         },
         "description": "Generated from qa/http/05-store-lifecycle.sh. Edit the script, not this file."
       }
@@ -319,12 +283,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/blueprints",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "blueprints"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["blueprints"]
         },
         "description": "Generated from qa/http/05-store-lifecycle.sh. Edit the script, not this file."
       }
@@ -336,13 +296,8 @@
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/blueprints/{{blueprintId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "blueprints",
-            "{{blueprintId}}"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["blueprints", "{{blueprintId}}"]
         },
         "description": "Generated from qa/http/05-store-lifecycle.sh. Edit the script, not this file."
       }
@@ -354,13 +309,8 @@
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/blueprints/qa-does-not-exist",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "blueprints",
-            "qa-does-not-exist"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["blueprints", "qa-does-not-exist"]
         },
         "description": "Generated from qa/http/05-store-lifecycle.sh. Edit the script, not this file."
       }
@@ -372,13 +322,8 @@
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/blueprints/..%2Fetc",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "blueprints",
-            "..%2Fetc"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["blueprints", "..%2Fetc"]
         },
         "description": "Generated from qa/http/05-store-lifecycle.sh. Edit the script, not this file."
       }
@@ -404,13 +349,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/blueprints/{{blueprintId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "blueprints",
-            "{{blueprintId}}"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["blueprints", "{{blueprintId}}"]
         },
         "description": "Generated from qa/http/05-store-lifecycle.sh. Edit the script, not this file."
       }
@@ -436,13 +376,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/blueprints/{{blueprintId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "blueprints",
-            "{{blueprintId}}"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["blueprints", "{{blueprintId}}"]
         },
         "description": "Generated from qa/http/05-store-lifecycle.sh. Edit the script, not this file."
       }
@@ -468,13 +403,8 @@
         },
         "url": {
           "raw": "{{baseUrl}}/blueprints/{{blueprintId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "blueprints",
-            "{{blueprintId}}"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["blueprints", "{{blueprintId}}"]
         },
         "description": "Generated from qa/http/05-store-lifecycle.sh. Edit the script, not this file."
       }
@@ -486,14 +416,8 @@
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/blueprints/{{blueprintId}}/render",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "blueprints",
-            "{{blueprintId}}",
-            "render"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["blueprints", "{{blueprintId}}", "render"]
         },
         "description": "Generated from qa/http/05-store-lifecycle.sh. Edit the script, not this file."
       }
@@ -505,14 +429,8 @@
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/blueprints/qa-does-not-exist/render",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "blueprints",
-            "qa-does-not-exist",
-            "render"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["blueprints", "qa-does-not-exist", "render"]
         },
         "description": "Generated from qa/http/05-store-lifecycle.sh. Edit the script, not this file."
       }
@@ -524,13 +442,8 @@
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/blueprints/{{blueprintId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "blueprints",
-            "{{blueprintId}}"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["blueprints", "{{blueprintId}}"]
         },
         "description": "Generated from qa/http/05-store-lifecycle.sh. Edit the script, not this file."
       }
@@ -542,12 +455,8 @@
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/blueprints",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "blueprints"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["blueprints"]
         },
         "description": "Generated from qa/http/07-auth.sh. Edit the script, not this file."
       }
@@ -559,12 +468,8 @@
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/no-such-route",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "no-such-route"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["no-such-route"]
         },
         "description": "Generated from qa/http/07-auth.sh. Edit the script, not this file."
       }

@@ -35,7 +35,9 @@ const raw = args.includes('--raw')
 const file = args.find((a) => !a.startsWith('--'))
 
 if (!file) {
-  process.stderr.write('usage: node qa/lib/mcp-pipe.mjs <session.jsonl> [--raw]\n')
+  process.stderr.write(
+    'usage: node qa/lib/mcp-pipe.mjs <session.jsonl> [--raw]\n'
+  )
   process.exit(2)
 }
 
@@ -45,16 +47,23 @@ assertIsolated()
 function expand(value) {
   if (typeof value === 'string') {
     if (value.startsWith('@file:')) {
-      return JSON.parse(readFileSync(resolve(REPO_ROOT, value.slice('@file:'.length)), 'utf8'))
+      return JSON.parse(
+        readFileSync(resolve(REPO_ROOT, value.slice('@file:'.length)), 'utf8')
+      )
     }
     if (value.startsWith('@text:')) {
-      return readFileSync(resolve(REPO_ROOT, value.slice('@text:'.length)), 'utf8')
+      return readFileSync(
+        resolve(REPO_ROOT, value.slice('@text:'.length)),
+        'utf8'
+      )
     }
     return value
   }
   if (Array.isArray(value)) return value.map(expand)
   if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, expand(v)]))
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [k, expand(v)])
+    )
   }
   return value
 }
@@ -68,13 +77,19 @@ const lines = readFileSync(resolve(process.cwd(), file), 'utf8')
   .map((line) => (raw ? line : JSON.stringify(expand(JSON.parse(line)))))
 
 const expectedIds = new Set(
-  lines.map((line) => JSON.parse(line).id).filter((id) => id !== undefined && id !== null)
+  lines
+    .map((line) => JSON.parse(line).id)
+    .filter((id) => id !== undefined && id !== null)
 )
 
-const child = spawn(process.execPath, [join(REPO_ROOT, 'packages', 'mcp', 'dist', 'index.js')], {
-  env: process.env,
-  stdio: ['pipe', 'pipe', 'pipe']
-})
+const child = spawn(
+  process.execPath,
+  [join(REPO_ROOT, 'packages', 'mcp', 'dist', 'index.js')],
+  {
+    env: process.env,
+    stdio: ['pipe', 'pipe', 'pipe']
+  }
+)
 
 let stderrText = ''
 child.stderr.setEncoding('utf8')
@@ -106,7 +121,8 @@ child.stdout.on('data', (chunk) => {
     }
     if (message.id !== undefined && message.id !== null) seen.add(message.id)
     process.stdout.write(`${JSON.stringify(message)}\n`)
-    if (expectedIds.size && [...expectedIds].every((id) => seen.has(id))) finish(0)
+    if (expectedIds.size && [...expectedIds].every((id) => seen.has(id)))
+      finish(0)
   }
 })
 
@@ -139,7 +155,9 @@ function finish(code) {
 }
 
 child.on('error', (error) => {
-  process.stderr.write(`mcp-pipe: failed to start the server: ${error.message}\n`)
+  process.stderr.write(
+    `mcp-pipe: failed to start the server: ${error.message}\n`
+  )
   finish(1)
 })
 
