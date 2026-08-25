@@ -16,7 +16,12 @@ expensive _and_ no test would catch it:
 | `g3.md`    | G3    | Is HTTP a deliberate subset, or an incomplete adapter?                                          |
 | `g2.md`    | G2    | Should MCP queue renders or reject them, unlike HTTP?                                           |
 | `g1.md`    | G1    | Do CLI exit codes become a taxonomy, breaking anything branching on 1?                          |
-| `g8.md`    | G8    | (gate _after_ the report) What did typechecking the tests surface, and what is in scope to fix? |
+| `g8.md`    | G8-b  | (gate _after_ the report) What did typechecking the tests surface, and what is in scope to fix? |
+
+G8 is split into G8-a (mechanical: add the tsconfig, run the typecheck,
+report) → G8-b (this gate) → G8-c (fix what was triaged) — the same shape as
+the G10-a/G10-b split, for the same reason. See `qa/plan/graph.json` and
+`docs/orchestration.md` Part B.
 
 ## Writing one
 

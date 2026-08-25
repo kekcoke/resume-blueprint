@@ -55,7 +55,7 @@ different definition of done.
 | ---------------- | ----------------------------------------------------------- | -------------------------------------------------- | -------------------- |
 | **Mechanical**   | bounded edit, mechanical verification, fails loudly         | a named test flips                                 | G4, G11              |
 | **Judgment**     | the code is trivial; deciding what it should do is the work | a written decision                                 | G3                   |
-| **Exploratory**  | blast radius unknown until you start                        | a report, then a scoped plan                       | G8                   |
+| **Exploratory**  | blast radius unknown until you start                        | a report, then a scoped plan                       | G8-a → G8-b          |
 | **Verification** | proves other nodes; produces no product change              | the check itself passes _and_ fails when it should | the negative control |
 
 The distinction that matters most is **judgment vs. mechanical**. A judgment node handed
@@ -212,6 +212,7 @@ PHASE 0 — serial, alone, in this order. Each touches everything; none may over
 G10 CI bundle pin ─────────► every later PR's CI becomes trustworthy
 G9  Prettier + lint script ► rewrites every file; alone, or never
 G8  typecheck the tests ───► may surface real errors across all five packages
+      (split like G10: G8-a report ─► G8-b gate ─► G8-c fix, see B2)
 
 PHASE 1 — decision node. No code.
 
@@ -246,32 +247,38 @@ not merely the same file.
 
 Model, checkpoint and acceptance test per node. `sonnet`/`opus` are the `--model` aliases.
 
-| Node      | Work                                                               | Lane | Kind        | Model    | Check                     | Acceptance test                                                                           |
-| --------- | ------------------------------------------------------------------ | ---- | ----------- | -------- | ------------------------- | ----------------------------------------------------------------------------------------- |
-| **G10-a** | Decide where the Tectonic bundle is hosted                         | 0    | judgment    | `opus`   | **gate**                  | A written decision naming the host and the checksum strategy                              |
-| **G10-b** | Pin it, pass `--bundle`, split the cache key off the template hash | 0    | mechanical  | `sonnet` | review                    | CI green twice consecutively with a cold cache                                            |
-| **G9**    | Prettier config + repo-wide run + `lint` script                    | 0    | mechanical  | `sonnet` | review                    | `npx prettier --check .` clean; `npm test` unchanged at 584                               |
-| **G8**    | `tsconfig.test.json` × 5, then fix what it surfaces                | 0    | exploratory | `opus`   | **gate** after the report | Typecheck passes over `test/`; every error triaged, not silenced                          |
-| **G3**    | Decide: is HTTP a deliberate subset or an incomplete adapter?      | 1    | judgment    | `opus`   | **gate**                  | A decision record in `docs/`; `qa/contract.md`'s two "no surface" cells resolve to a plan |
-| **G5**    | One shared default + one shared ceiling for render timeouts        | A    | mechanical  | `opus`   | review                    | Four packages read one constant; C23's bounds still hold                                  |
-| **G2**    | Render concurrency cap for MCP                                     | A    | judgment    | `opus`   | **gate**                  | Queue-vs-reject decided and written; C15's MCP row updated                                |
-| **G6**    | Split render-cap 503 from lock-timeout 503                         | A    | mechanical  | `sonnet` | review                    | The two are distinguishable without reading the message string                            |
-| **G4**    | Route `--timeout` through `parseNumberFlag`                        | B    | mechanical  | `sonnet` | review                    | C23's `NaN` assertion **goes red**, then is rewritten to expect a usage error             |
-| **G11**   | Apply the depth guard to `POST /render` and `resume_create`        | B    | mechanical  | `sonnet` | review                    | C8's "G11 still ungated" assertion **goes red**, then is rewritten                        |
-| **G1**    | Exit-code taxonomy: 2 usage / 3 validation / 4 render / 5 busy     | B    | judgment    | `opus`   | **gate**                  | Seven contract rows updated together; the change is called breaking in the commit         |
-| **G7**    | `hasBinary` gate for `tectonic`                                    | C    | mechanical  | `sonnet` | review                    | A machine without Tectonic reports it once, not as N render failures                      |
-| **G12**   | README flag list + HTTP response-contract section                  | C    | mechanical  | `sonnet` | review                    | Flag list matches `resume --help` exactly                                                 |
-| **G13**   | Report the swallowed error in `store.list()`                       | C    | mechanical  | `sonnet` | review                    | A corrupt blueprint is visible to the caller; stderr only                                 |
-| **G14**   | Acquire the render slot before reading the store                   | A    | mechanical  | `sonnet` | review                    | C9's "unknown id returns 404" still passes — the ordering is load-bearing                 |
-| **G15**   | Three F12 residue items                                            | 3    | mechanical  | `sonnet` | review                    | Golden re-baselined **with** the diff explained                                           |
+| Node      | Work                                                               | Lane | Kind       | Model    | Check                     | Acceptance test                                                                           |
+| --------- | ------------------------------------------------------------------ | ---- | ---------- | -------- | ------------------------- | ----------------------------------------------------------------------------------------- |
+| **G10-a** | Decide where the Tectonic bundle is hosted                         | 0    | judgment   | `opus`   | **gate**                  | A written decision naming the host and the checksum strategy                              |
+| **G10-b** | Pin it, pass `--bundle`, split the cache key off the template hash | 0    | mechanical | `sonnet` | review                    | CI green twice consecutively with a cold cache                                            |
+| **G9**    | Prettier config + repo-wide run + `lint` script                    | 0    | mechanical | `sonnet` | review                    | `npx prettier --check .` clean; `npm test` unchanged at 584                               |
+| **G8-a**  | `tsconfig.test.json` × 5, run the typecheck, report what surfaces  | 0    | mechanical | `sonnet` | review                    | The 5 configs exist; `npm test` unaffected; `qa/findings.md` carries the real output      |
+| **G8-b**  | Triage the report, decide what is in scope to fix                  | 0    | judgment   | `opus`   | **gate** after the report | Every surfaced error triaged: fix now, suppress with a reason, or deferred                |
+| **G8-c**  | Fix the in-scope errors, wire the typecheck into `build`/`test`    | 0    | mechanical | `sonnet` | review                    | Typecheck passes over `test/`; every error triaged, not silenced                          |
+| **G3**    | Decide: is HTTP a deliberate subset or an incomplete adapter?      | 1    | judgment   | `opus`   | **gate**                  | A decision record in `docs/`; `qa/contract.md`'s two "no surface" cells resolve to a plan |
+| **G5**    | One shared default + one shared ceiling for render timeouts        | A    | mechanical | `opus`   | review                    | Four packages read one constant; C23's bounds still hold                                  |
+| **G2**    | Render concurrency cap for MCP                                     | A    | judgment   | `opus`   | **gate**                  | Queue-vs-reject decided and written; C15's MCP row updated                                |
+| **G6**    | Split render-cap 503 from lock-timeout 503                         | A    | mechanical | `sonnet` | review                    | The two are distinguishable without reading the message string                            |
+| **G4**    | Route `--timeout` through `parseNumberFlag`                        | B    | mechanical | `sonnet` | review                    | C23's `NaN` assertion **goes red**, then is rewritten to expect a usage error             |
+| **G11**   | Apply the depth guard to `POST /render` and `resume_create`        | B    | mechanical | `sonnet` | review                    | C8's "G11 still ungated" assertion **goes red**, then is rewritten                        |
+| **G1**    | Exit-code taxonomy: 2 usage / 3 validation / 4 render / 5 busy     | B    | judgment   | `opus`   | **gate**                  | Seven contract rows updated together; the change is called breaking in the commit         |
+| **G7**    | `hasBinary` gate for `tectonic`                                    | C    | mechanical | `sonnet` | review                    | A machine without Tectonic reports it once, not as N render failures                      |
+| **G12**   | README flag list + HTTP response-contract section                  | C    | mechanical | `sonnet` | review                    | Flag list matches `resume --help` exactly                                                 |
+| **G13**   | Report the swallowed error in `store.list()`                       | C    | mechanical | `sonnet` | review                    | A corrupt blueprint is visible to the caller; stderr only                                 |
+| **G14**   | Acquire the render slot before reading the store                   | A    | mechanical | `sonnet` | review                    | C9's "unknown id returns 404" still passes — the ordering is load-bearing                 |
+| **G15**   | Three F12 residue items                                            | 3    | mechanical | `sonnet` | review                    | Golden re-baselined **with** the diff explained                                           |
 
 **The non-obvious routing calls.**
 
 - **G10 splits.** Choosing where to host a TeX bundle has no obvious right answer and real
   consequences; pinning it once chosen is mechanical. Splitting stops an Opus session from
   spending its reasoning on `curl` flags.
-- **G8 is Opus purely for blast radius.** Adding a `tsconfig.test.json` is trivial; what
-  it _surfaces_ across five packages of previously unchecked test code is not.
+- **G8 splits three ways, not two.** Adding a `tsconfig.test.json` is trivial (G8-a,
+  Sonnet); what it _surfaces_ across five packages of previously unchecked test code is
+  not, and cannot be judged from the finding alone — the gate needs G8-a's real report
+  first, hence "gate after the report" rather than before. G8-c then implements whatever
+  G8-b decided. This is the same shape as the G10 split, one node further, because unlike
+  G10-a's decision G8-b's has to be executed afterward rather than just consumed by CI.
 - **G6 is Sonnet despite "medium" severity.** Severity measures impact, not difficulty.
   C15's contract row already defines done.
 - **G5 is Opus despite being a constants change** — it crosses four packages (core, cli,
@@ -291,7 +298,7 @@ Reviewed before starting. Each row is a real collision, checked against the file
 | K1  | **G1, G4 and G11 all edit `qa/contract.md`** — and G1 and G4 both edit row **C23**             | Lane B is strictly serial, in the order G4 → G11 → G1. This phase's `fixtures/golden/`                                                              |
 | K2  | G9's repo-wide format run rewrites every file                                                  | Phase 0, alone. Any concurrent diff becomes unreviewable. Land it before lanes open, or defer it to the end entirely                                |
 | K3  | G5 and G2 both answer "where do shared adapter constants live"                                 | G5 settles it and G2 consumes the answer. Never concurrent                                                                                          |
-| K4  | G8 may surface type errors in test files other lanes are editing                               | Phase 0 gate. Lanes open only after the typecheck is clean                                                                                          |
+| K4  | G8-a may surface type errors in test files other lanes are editing                             | Phase 0 gate (G8-a → G8-b → G8-c). Lanes open only after G8-c lands and the typecheck is clean                                                      |
 | K5  | G15's template4 comment removal rewrites `fixtures/golden/template4*.tex` (3 of 25 files)      | Phase 3, serial. Re-baseline at the end, with the diff explained                                                                                    |
 | K6  | G14 reorders slot acquisition against the store read                                           | The current ordering is load-bearing: a missing id must still 404, not 503. C9 asserts it                                                           |
 | K7  | G3's decision gates every new HTTP route                                                       | No route work in any lane until G3 is written down                                                                                                  |
