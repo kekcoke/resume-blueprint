@@ -31,6 +31,15 @@ that fetches only the packages a document actually needs. The first render of a 
 template downloads those packages and caches them; later renders are offline and take
 well under a second.
 
+CI is sealed to a pre-warmed package cache (`docs/decisions/g10-a.md`) and runs Tectonic
+with `--only-cached`: it never fetches over the network, so a template that needs a
+package the cache doesn't have yet fails the build instead of downloading it. Local
+development is unaffected — it always uses Tectonic's normal fetch-on-first-compile
+behavior described above. If a CI run fails this way, re-run the
+`Warm Tectonic cache` workflow (`.github/workflows/warm-tectonic-cache.yml`, manual
+dispatch) to republish the cache, then update the three `TECTONIC_CACHE_*` env values at
+the top of `.github/workflows/ci.yml` to match what it published.
+
 ## Quick start
 
 ```bash

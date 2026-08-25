@@ -1,0 +1,103 @@
+name: Warm Tectonic cache
+
+# Manually triggered only. Populates $TECTONIC_CACHE_DIR by compiling every
+# template against Tectonic's default (unsealed) bundle resolution, then
+# publishes the result as a GitHub Release asset -- the cache ci.yml's test
+# job restores and seals itself to via --only-cached. See
+# docs/decisions/g10-a.md (Option D) for why this exists and what it
+# replaces: the CI-gating job never talks to a third-party bundle host, this
+# one does, deliberately, as a rare manual action rather than on every PR.
+#
+# Run this whenever: the bundle digest changes upstream, a new template needs
+# a package not yet in the cache, or Tectonic is bumped past 0.17.0.
+# ci.yml's TECTONIC_CACHE_RELEASE_TAG / TECTONIC_CACHE_ASSET /
+# TECTONIC_CACHE_SHA256 must then be updated by hand to point at what this
+# publishes -- there is no automatic link between the two workflows, by
+# design: rolling the published cache forward is a deliberate act, not a
+# side effect of running this job.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write # publishes a Release asset; ci.yml's job stays read-only
+
+jobs:
+  warm:
+    name: warm and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      TECTONIC_CACHE_DIR: ${{ github.workspace }}/.tectonic-cache
+      # Pinned resolved-bundle digest this cache must contain, per
+      # docs/decisions/g10-a.md. If Tectonic resolves a different one,
+      # upstream re-cut the bundle -- fail rather than silently publish a
+      # cache the golden snapshots were never checked against.
+      EXPECTED_BUNDLE_DIGEST: 6ffe055852f8faf66c0acbe1a7fb27f87b869a90bad1204f3bf4d9683f597c7c
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+
+      - name: Install poppler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends poppler-utils
+
+      # Unwrapped, deliberately: this is the one job allowed to reach
+      # Tectonic's default bundle host and actually populate a cache from
+      # nothing.
+      - name: Install Tectonic 0.17.0
+        run: |
+          curl -fsSL --retry 3 -o tectonic.tar.gz \
+            'https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.17.0/tectonic-0.17.0-x86_64-unknown-linux-gnu.tar.gz'
+          sudo tar xzf tectonic.tar.gz -C /usr/local/bin tectonic
+          rm tectonic.tar.gz
+          tectonic --version
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # Both suites: qa/ compiles fixtures the unit tests don't, and every
+      # template needs to be exercised at least once to populate the cache.
+      - name: Warm the cache
+        run: |
+          npm test
+          npm run qa:all
+
+      - name: Verify the resolved bundle digest matches the pin
+        run: |
+          if [ ! -d "$TECTONIC_CACHE_DIR/bundles/data/$EXPECTED_BUNDLE_DIGEST" ]; then
+            echo "::error::resolved bundle digest under \$TECTONIC_CACHE_DIR/bundles/data/ does not match the pinned $EXPECTED_BUNDLE_DIGEST -- upstream likely re-cut the bundle. Do not publish this cache without re-checking fixtures/golden/ and docs/decisions/g10-a.md first."
+            ls "$TECTONIC_CACHE_DIR/bundles/data/" || true
+            exit 1
+          fi
+
+      - name: Package the cache
+        run: |
+          tar czf tectonic-cache.tar.gz -C "$TECTONIC_CACHE_DIR" .
+          sha256sum tectonic-cache.tar.gz | tee tectonic-cache.sha256
+
+      - name: Publish as a GitHub Release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="tectonic-cache-${EXPECTED_BUNDLE_DIGEST:0:8}"
+          sha="$(cut -d' ' -f1 tectonic-cache.sha256)"
+          notes="Warmed package cache for Tectonic 0.17.0, bundle digest ${EXPECTED_BUNDLE_DIGEST}. Asset sha256: ${sha}. Restored by .github/workflows/ci.yml -- update its TECTONIC_CACHE_RELEASE_TAG/TECTONIC_CACHE_ASSET/TECTONIC_CACHE_SHA256 to match after publishing a new one."
+
+          gh release create "$tag" tectonic-cache.tar.gz \
+            --title "Tectonic package cache ($tag)" \
+            --notes "$notes" \
+            || gh release upload "$tag" tectonic-cache.tar.gz --clobber
+
+          {
+            echo "tag=$tag"
+            echo "asset=tectonic-cache.tar.gz"
+            echo "sha256=$sha"
+          } >> "$GITHUB_STEP_SUMMARY"
