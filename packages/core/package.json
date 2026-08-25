@@ -16,7 +16,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node --test test/*.test.ts",
-    "test:update-golden": "UPDATE_GOLDEN=1 node --test test/render.test.ts"
+    "test:update-golden": "UPDATE_GOLDEN=1 node --test test/render.test.ts",
+    "typecheck:test": "tsc -p tsconfig.test.json"
   },
   "dependencies": {
     "common-tags": "^1.8.2",

@@ -208,6 +208,26 @@ to the main `include` — that would emit the tests into `dist/`.
 
 **Size.** Small, but expect it to surface real errors on first run.
 
+**G8-a report (2026-08-24).** The five `tsconfig.test.json` files exist,
+scoped to `test/**/*.ts` with `noEmit`, extending each package's base config.
+`npm run typecheck:test` (root-level, chained after `npm run build`) surfaced
+exactly one error across all five packages:
+
+```
+test/http.test.ts(126,9): error TS2698: Spread types may only be created from object types.
+```
+
+`packages/http/test/http.test.ts`'s `readFixture()` returns `Promise<unknown>`
+(line 17). Every call site passes the result straight to `JSON.stringify`,
+which accepts `unknown` — except one, at line 126, which spreads it into an
+object literal (`{ ...sample, document: {...} }`). Spreading `unknown` is
+exactly the class of error this finding predicted: nothing before this ran a
+type check on test code, so a fixture whose shape changed underneath a spread
+like this would have been silently wrong at runtime with no signal anywhere.
+
+Core, store, mcp and cli all pass `typecheck:test` clean with zero errors.
+G8-b triages this one finding and decides scope; see `docs/decisions/g8.md`.
+
 ## G9
 
 ### No linter or formatter — low
