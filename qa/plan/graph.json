@@ -94,29 +94,71 @@
       "why": "K2 — rewrites every file. Land it before lanes open, or defer it to the end entirely."
     },
     {
-      "id": "G8",
-      "title": "tsconfig.test.json x 5, then fix what it surfaces",
+      "id": "G8-a",
+      "title": "tsconfig.test.json x 5, run the typecheck, report what surfaces",
       "finding": "G8",
       "phase": 0,
       "lane": "0",
-      "kind": "exploratory",
-      "model": "opus",
-      "check": "gate",
+      "kind": "mechanical",
+      "model": "sonnet",
+      "check": "review",
       "blockedBy": ["G9"],
       "mutex": [],
       "rows": [],
       "paths": [
-        "docs/decisions/g8.md",
         "packages/*/tsconfig.test.json",
+        "packages/*/package.json",
+        "package.json",
+        "qa/findings.md"
+      ],
+      "acceptance": {
+        "statement": "The 5 configs exist; npm run build && npm test unaffected; qa/findings.md carries the real typecheck output.",
+        "commands": ["npm run build", "npm test"]
+      },
+      "why": "Split from G8-b so the judgment half has real evidence instead of speculation, and so an Opus session isn't spent adding boilerplate tsconfig files. Does not wire typecheck:test into build/test yet — that is G8-c, once the errors it surfaces are triaged."
+    },
+    {
+      "id": "G8-b",
+      "title": "Triage the typecheck report, decide what is in scope to fix",
+      "finding": "G8",
+      "phase": 0,
+      "lane": "0",
+      "kind": "judgment",
+      "model": "opus",
+      "check": "gate",
+      "blockedBy": ["G8-a"],
+      "mutex": [],
+      "rows": [],
+      "paths": ["docs/decisions/g8.md"],
+      "acceptance": {
+        "decision": "docs/decisions/g8.md",
+        "statement": "Every error in G8-a's report triaged: fix now, suppress with a stated reason, or deferred as a new finding.",
+        "commands": []
+      },
+      "why": "gate.md's brief says 'do not touch packages/', which is right for a pure judgment call but wrong here without G8-a's report first — this is the '(gate after the report)' node B2 describes."
+    },
+    {
+      "id": "G8-c",
+      "title": "Fix the in-scope errors, wire typecheck:test into build/test",
+      "finding": "G8",
+      "phase": 0,
+      "lane": "0",
+      "kind": "mechanical",
+      "model": "sonnet",
+      "check": "review",
+      "blockedBy": ["G8-a", "G8-b"],
+      "mutex": [],
+      "rows": [],
+      "paths": [
         "packages/*/test/",
+        "packages/*/tsconfig.test.json",
         "packages/*/package.json"
       ],
       "acceptance": {
-        "decision": "docs/decisions/g8.md",
         "statement": "Typecheck passes over test/; every error triaged, not silenced.",
         "commands": ["npm run build", "npm test"]
       },
-      "why": "Adding the tsconfig is trivial; what it surfaces across five packages of previously unchecked test code is not. K4 — lanes open only after the typecheck is clean."
+      "why": "Implements G8-b's decision. K4 — lanes open only after the typecheck is clean, and this is the node that makes it clean."
     },
     {
       "id": "G3",
@@ -127,7 +169,7 @@
       "kind": "judgment",
       "model": "opus",
       "check": "gate",
-      "blockedBy": ["G8"],
+      "blockedBy": ["G8-c"],
       "mutex": ["qa/contract.md"],
       "rows": ["C17", "C18"],
       "paths": ["docs/decisions/g3.md", "qa/contract.md", "README.md"],
