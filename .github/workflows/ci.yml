@@ -31,10 +31,13 @@ jobs:
       TECTONIC_CACHE_DIR: ${{ github.workspace }}/.tectonic-cache
       # Where the warmed cache is published. .github/workflows/warm-tectonic-cache.yml
       # writes these; re-run it and update the three lines below when the
-      # bundle moves (see docs/decisions/g10-a.md).
-      TECTONIC_CACHE_RELEASE_TAG: tectonic-cache-PENDING-G10-B-WARM-RUN
-      TECTONIC_CACHE_ASSET: tectonic-cache-PENDING-G10-B-WARM-RUN.tar.gz
-      TECTONIC_CACHE_SHA256: PENDING-G10-B-WARM-RUN
+      # bundle moves (see docs/decisions/g10-a.md). Published by run
+      # https://github.com/kekcoke/resume-blueprint/actions/runs/32801513601
+      # on 2026-08-25; asset sha256 verified independently by downloading it
+      # and re-hashing, not just copied from the release notes it also wrote.
+      TECTONIC_CACHE_RELEASE_TAG: tectonic-cache-6ffe0558
+      TECTONIC_CACHE_ASSET: tectonic-cache.tar.gz
+      TECTONIC_CACHE_SHA256: 80055bc255d5b4aa0c7d394ae0692f6b394684a961071d11f7e1a027d860a3af
 
     strategy:
       fail-fast: false
